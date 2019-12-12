@@ -6,8 +6,33 @@ Tools for verification and analysis of deep neural networks.
 
 ### Installation
 
+Clone this network:
+
+```bash
+$ git clone https://github.com/dlshriver/DNNV.git
+```
+
+Create a python virtual environment for this project:
+
+```bash
+$ ./manage.sh init
+```
+
+To activate the virtual environment and set environment variables correctly for tools installed using the provided `manage.sh` script, run:
+
+```bash
+$ . .env.d/openenv.sh
+```
+
+Install any of the supported verifiers ([Reluplex](https://github.com/guykatzz/ReluplexCav2017), [planet](https://github.com/progirep/planet), [MIPVerify.jl](https://github.com/vtjeng/MIPVerify.jl), [Neurify](https://github.com/tcwangshiqi-columbia/Neurify), [ERAN](https://github.com/eth-sri/eran)):
+
+```bash
+$ ./manage.sh install reluplex planet mipverify neurify eran
+```
 
 ### Usage
+
+Properties are specified in our property DSL, extended from Python. A property specification can import python modules, and define variables. The only required component is the property expression, which must appear at the end of the file. An example of a local robustness property is shown below.
 
 ```python
 from dnnv.properties import *
@@ -23,7 +48,18 @@ Forall(
         argmax(N(x_)) == argmax(N(x))),
     ),
 )
+```
 
+To check whether property holds for some network using the ERAN verifier, run:
+
+```bash
+$ python -m dnnv network.onnx property.prop --eran
+```
+
+Additionally, if the property defines parameters, using the `Parameter` keyword, they can be specified on the command line using the option `--prop.PARAMETER_NAME`, where `PARAMETER_NAME` is the name of the parameter. For the property defined above, a value for `epsilon` can be provided with a command line option as follows:
+
+```bash
+$ python -m dnnv network.onnx property.prop --eran --prop.epsilon=2.0
 ```
 
 ## Contributing
