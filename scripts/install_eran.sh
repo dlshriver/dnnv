@@ -6,6 +6,7 @@ cd lib
 git clone https://github.com/eth-sri/eran.git
 cd eran
 git pull
+git checkout 0c97e11
 
 export LD_LIBRARY_PATH=$PROJECT_DIR/lib:$LD_LIBRARY_PATH
 
