@@ -1,6 +1,7 @@
 # Deep Neural Network Verification Toolbox
 
-Tools for verification and analysis of deep neural networks.
+Tools for verification and analysis of deep neural networks. 
+Watch our [demo video](https://youtu.be/M5G_OWfCF2o) for a quick description!
 
 ## Getting Started
 
