@@ -6,6 +6,7 @@ build-backend = "flit.buildapi"
 module = "dnnv"
 author = "David Shriver"
 author-email = "dls2fc@virginia.edu"
+home-page="https://github.com/dlshriver/DNNV"
 description-file="README.md"
 requires=[
     "numpy==1.16.4",
