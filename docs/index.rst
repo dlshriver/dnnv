@@ -18,10 +18,19 @@ multiple verification tools to run on a single network and property.
 This facilitates both verifier comparison, and artifact re-use.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Getting Started
 
    getting_started/installation
+   getting_started/basic_usage
+   getting_started/examples
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Going Further
+
+   going_further/specifying_properties
+   going_further/new_verifier
 
 .. Indices and tables
 .. ==================
