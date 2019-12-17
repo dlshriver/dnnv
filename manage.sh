@@ -9,6 +9,7 @@ if [ "$1" == "init" ]
 then
     python3 -m venv .venv
     . .venv/bin/activate
+    python -m pip install --upgrade pip setuptools
     while read req || [ -n "$req" ]
     do
         echo "pip install $req"
@@ -25,11 +26,12 @@ then
         exit 1
     fi
     . .venv/bin/activate
+    python -m pip install --upgrade pip setuptools
     while read req || [ -n "$req" ]
     do
-        echo "pip install $req"
-        pip install $req
-    done < <(cat requirements.txt)
+        echo "pip install --upgrade $req"
+        pip install --upgrade $req
+    done < requirements.txt
 fi
 
 if [ "$1" == "install" ]

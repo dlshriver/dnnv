@@ -13,7 +13,7 @@ requires=[
     "onnx==1.6",
     "psutil==5.6.5",
     "scipy==1.3",
-    "tensorflow==1.14",
+    "tensorflow==1.15",
     "keras==2.3",
 ]
 requires-python=">=3.6"
