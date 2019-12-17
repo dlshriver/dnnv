@@ -53,6 +53,9 @@ DNNV can be used to check whether a given property holds
 for a network. It accepts networks specified in the ONNX format,
 and properties specified in our property DSL (which is explained
 in more detail :doc:`here <../going_further/specifying_properties>`).
+Networks can be converted to ONNX format by using native export
+utilities, such as ``torch.onnx.export`` in `PyTorch`_, or by
+using an external conversion tool, such as `MMDNN`_.
 
 We provide several example networks and properties,
 `available here <http://cs.virginia.edu/~dls2fc/eran_benchmark.tar.gz>`_.
@@ -104,4 +107,6 @@ above should resemble the output below:
     time: 2.4884
 
 
+.. _MMDNN: https://github.com/microsoft/MMdnn
+.. _PyTorch: https://pytorch.org/
 .. _ERAN: https://github.com/eth-sri/eran
