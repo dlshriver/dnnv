@@ -23,23 +23,21 @@ class MIPTranslator:
         network.concretize(dnn)
         self.phi = phi.propagate_constants().to_cnf()
         self.not_phi = ~self.phi
-        operation_graph = self.phi.networks[0].concrete_value
-        self.op_graph = operation_graph
         self.layers = []
         self.tempdir = tempfile.TemporaryDirectory()
 
     def __iter__(self):
         property_extractor = PropertyExtractor()
         for conjunction in self.not_phi:
-            constraint_type, input_bounds, output_constraint = property_extractor.extract(
+            op_graph, constraint_type, input_bounds, output_constraint = property_extractor.extract(
                 conjunction
             )
             lb = np.asarray(input_bounds[0])
             ub = np.asarray(input_bounds[1])
-            # if np.any(lb < 0) or np.any(ub > 1):
-            #     raise MIPVerifyTranslatorError(
-            #         "MIPVerify does not support inputs outside of the range [0, 1]"
-            #     )
+            if np.any(lb < 0) or np.any(ub > 1):
+                raise MIPVerifyTranslatorError(
+                    "MIPVerify does not support inputs outside of the range [0, 1]"
+                )
             sample_input = (lb + ub) / 2
             linf = (ub.flatten() - lb.flatten()) / 2
             if not np.allclose(linf, linf[0], atol=1e-5):
@@ -47,7 +45,7 @@ class MIPTranslator:
                     "MIPVerify does not support multiple l-inf values"
                 )
             self.layers = as_layers(
-                self.op_graph,
+                op_graph,
                 layer_types=[InputLayer, Convolutional, FullyConnected]
                 + MIPVERIFY_LAYER_TYPES,
             )
@@ -230,7 +228,7 @@ class MIPVerifyCheck:
         output_lines = []
         while proc.poll() is None:
             line = proc.stdout.readline()
-            logger.info(line.strip())
+            logger.debug(line.strip())
             output_lines.append(line)
         output_lines.extend(proc.stdout.readlines())
         output_lines = [line for line in output_lines if line]
@@ -247,8 +245,10 @@ class MIPVerifyCheck:
 def verify(dnn, phi):
     translator = MIPTranslator(dnn, phi)
 
-    result = UNSAT
-    for mip_property in translator:
-        result |= mip_property.check()
-    translator.tempdir.cleanup()
-    return result
+    try:
+        result = UNSAT
+        for mip_property in translator:
+            result |= mip_property.check()
+        return result
+    finally:
+        translator.tempdir.cleanup()

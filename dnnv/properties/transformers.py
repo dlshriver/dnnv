@@ -90,7 +90,7 @@ class PropagateConstants(ExpressionTransformer):
         args = tuple([self.visit(arg) for arg in expression.args])
         kwargs = {name: self.visit(value) for name, value in expression.kwargs.items()}
         params = args + tuple(kwargs.values())
-        if function.concrete_value is not None and all(
+        if function.is_concrete and all(
             isinstance(param, Constant) for param in params
         ):
             args = tuple(arg.value for arg in args)
@@ -171,6 +171,9 @@ class PropagateConstants(ExpressionTransformer):
             return expressions[0]
         return Or(*expressions)
 
+    def visit_SlicedNetwork(self, expression: "SlicedNetwork"):
+        return expression
+
     def visit_Subtract(self, expression: "Subtract"):
         expr1 = self.visit(expression.expr1)
         expr2 = self.visit(expression.expr2)
@@ -179,7 +182,7 @@ class PropagateConstants(ExpressionTransformer):
         return Subtract(expr1, expr2)
 
     def visit_Symbol(self, expression: "Symbol"):
-        if expression.concrete_value is not None:
+        if expression.is_concrete:
             return Constant(expression.concrete_value)
         return expression
 

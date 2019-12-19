@@ -2,8 +2,9 @@ import numpy as np
 import subprocess as sp
 import tempfile
 
-from ... import logging
-from ..common import (
+from dnnv import logging
+from dnnv.nn.layers import Convolutional, FullyConnected, InputLayer
+from dnnv.verifiers.common import (
     SAT,
     UNSAT,
     UNKNOWN,
@@ -12,7 +13,6 @@ from ..common import (
     VerifierTranslatorError,
     as_layers,
 )
-from ...nn.layers import Convolutional, FullyConnected, InputLayer
 
 
 class ReluplexTranslatorError(VerifierTranslatorError):
@@ -31,21 +31,18 @@ class ReluplexTranslator:
         network.concretize(dnn)
         self.phi = phi.propagate_constants().to_cnf()
         self.not_phi = ~self.phi
-        operation_graph = self.phi.networks[0].concrete_value
         self.layers = []
-        self.op_graph = operation_graph
-        self.property_checks = {}
         self.tempdir = tempfile.TemporaryDirectory()
 
     def __iter__(self):
         property_extractor = PropertyExtractor()
         for conjunction in self.not_phi:
-            constraint_type, input_bounds, output_constraint = property_extractor.extract(
+            op_graph, constraint_type, input_bounds, output_constraint = property_extractor.extract(
                 conjunction
             )
             self.input_lower_bound = np.asarray(input_bounds[0])
             self.input_upper_bound = np.asarray(input_bounds[1])
-            self.layers = as_layers(self.op_graph)
+            self.layers = as_layers(op_graph)
             if constraint_type == "classification-argmax":
                 assert len(output_constraint) == 1
                 assert "!=" in output_constraint
@@ -164,7 +161,7 @@ class ReluplexCheck:
         output_lines = []
         while proc.poll() is None:
             line = proc.stdout.readline()
-            logger.info(line.strip())
+            logger.debug(line.strip())
             output_lines.append(line)
         output_lines.extend(proc.stdout.readlines())
 
@@ -187,8 +184,10 @@ class ReluplexCheck:
 def verify(dnn, phi):
     translator = ReluplexTranslator(dnn, phi)
 
-    result = UNSAT
-    for property_check in translator:
-        result |= property_check.check()
-    translator.tempdir.cleanup()
-    return result
+    try:
+        result = UNSAT
+        for property_check in translator:
+            result |= property_check.check()
+        return result
+    finally:
+        translator.tempdir.cleanup()

@@ -8,6 +8,7 @@ from dnnv.properties.base import (
     Constant,
     FunctionCall,
     Network,
+    SlicedNetwork,
     Symbol,
     ExpressionVisitor,
 )
@@ -78,12 +79,14 @@ UNSAT = PropertyCheckResult("unsat")
 
 class PropertyExtractor(ExpressionVisitor):
     def __init__(self):
+        self.op_graph = None
         self.constraint_type = None
         self.input_lower_bound = None
         self.input_upper_bound = None
         self.output_constraint = None
 
     def extract(self, expression):
+        self.op_graph = None
         self.constraint_type = None
         self.input_lower_bound = None
         self.input_upper_bound = None
@@ -91,7 +94,15 @@ class PropertyExtractor(ExpressionVisitor):
         self.visit(expression)
         lb = self.input_lower_bound
         ub = self.input_upper_bound
-        return self.constraint_type, (lb, ub), self.output_constraint
+        return self.op_graph, self.constraint_type, (lb, ub), self.output_constraint
+
+    def assert_op_graph(self, op_graph):
+        if self.op_graph is None:
+            self.op_graph = op_graph
+        elif self.op_graph != op_graph:
+            raise VerifierTranslatorError(
+                "Unsupported property type. Multiple operation graphs detected."
+            )
 
     def assert_not_class(self, value, using="argmax"):
         if self.output_constraint is None:
@@ -184,19 +195,19 @@ class PropertyExtractor(ExpressionVisitor):
         elif (
             isinstance(expr1, FunctionCall)
             and isinstance(expr2, Constant)
-            and isinstance(expr1.function, Network)
+            and isinstance(expr1.function, (Network, SlicedNetwork))
         ):
-            function_call = expr1
             const = expr2.value
             self.assert_output_gte(const)
+            self.assert_op_graph(expr1.function.concrete_value)
         elif (
             isinstance(expr1, Constant)
             and isinstance(expr2, FunctionCall)
-            and isinstance(expr2.function, Network)
+            and isinstance(expr2.function, (Network, SlicedNetwork))
         ):
-            function_call = expr2
             const = expr1.value
             self.assert_output_lte(const)
+            self.assert_op_graph(expr2.function.concrete_value)
         else:
             raise VerifierTranslatorError("Unsupported property type")
 
@@ -220,19 +231,19 @@ class PropertyExtractor(ExpressionVisitor):
         elif (
             isinstance(expr1, FunctionCall)
             and isinstance(expr2, Constant)
-            and isinstance(expr1.function, Network)
+            and isinstance(expr1.function, (Network, SlicedNetwork))
         ):
-            function_call = expr1
             const = expr2.value
             self.assert_output_lte(const)
+            self.assert_op_graph(expr2.function.concrete_value)
         elif (
             isinstance(expr1, Constant)
             and isinstance(expr2, FunctionCall)
-            and isinstance(expr2.function, Network)
+            and isinstance(expr2.function, (Network, SlicedNetwork))
         ):
-            function_call = expr2
             const = expr1.value
             self.assert_output_gte(const)
+            self.assert_op_graph(expr2.function.concrete_value)
         else:
             raise VerifierTranslatorError("Unsupported property type")
 
@@ -254,10 +265,12 @@ class PropertyExtractor(ExpressionVisitor):
             and len(args) == 1
             and len(kwargs) == 0
             and isinstance(args[0], FunctionCall)
-            and isinstance(args[0].function, Network)
+            and isinstance(args[0].function, (Network, SlicedNetwork))
         ):
             self.assert_not_class(const, using="argmax")
+            self.assert_op_graph(args[0].function.concrete_value)
         else:
             raise VerifierTranslatorError(
                 "Unsupported function call: %s" % function_call
             )
+

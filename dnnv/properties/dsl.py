@@ -51,20 +51,24 @@ class Py2PropertyTransformer(ast.NodeTransformer):
             ):
                 return super().generic_visit(node)
             make_func = ast.Name("make_function", ast.Load(), **attributes)
-            args = [node.func]
-            func_expr = ast.Call(make_func, args, [], **attributes)
+            func = self.visit(node.func)
+            func_expr = ast.Call(make_func, [func], [], **attributes)
 
-            new_node = ast.Call(func_expr, node.args, node.keywords, **attributes)
+            args = [self.visit(arg) for arg in node.args]
+            keywords = [self.visit(kwarg) for kwarg in node.keywords]
+            new_node = ast.Call(func_expr, args, keywords, **attributes)
             return new_node
         elif isinstance(node.func, ast.Attribute):
             make_func = ast.Name("make_function", ast.Load(), **attributes)
-            args = [node.func]
-            func_expr = ast.Call(make_func, args, [], **attributes)
+            func = self.visit(node.func)
+            func_expr = ast.Call(make_func, [func], [], **attributes)
 
-            new_node = ast.Call(func_expr, node.args, node.keywords, **attributes)
+            args = [self.visit(arg) for arg in node.args]
+            keywords = [self.visit(kwarg) for kwarg in node.keywords]
+            new_node = ast.Call(func_expr, args, keywords, **attributes)
             return new_node
         elif isinstance(node.func, ast.Subscript):
-            # ignore for now
+            # ignore for now, currently handled correctly
             pass
         return super().generic_visit(node)
 

@@ -24,20 +24,18 @@ class ERANTranslator:
         network.concretize(dnn)
         self.phi = phi.propagate_constants().to_cnf()
         self.not_phi = ~self.phi
-        operation_graph = self.phi.networks[0].concrete_value
         self.layers = []
-        self.op_graph = operation_graph
         self.property_checks = {}
 
     def __iter__(self):
         property_extractor = PropertyExtractor()
         for conjunction in self.not_phi:
-            constraint_type, (
+            op_graph, constraint_type, (
                 lower_bound,
                 upper_bound,
             ), output_constraint = property_extractor.extract(conjunction)
             input_bounds = (tuple(lower_bound.flatten()), tuple(upper_bound.flatten()))
-            property_check = (constraint_type, input_bounds)
+            property_check = (constraint_type, input_bounds, op_graph)
             if property_check not in self.property_checks:
                 self.property_checks[property_check] = {
                     "input_bounds": (lower_bound, upper_bound),
@@ -46,9 +44,12 @@ class ERANTranslator:
             self.property_checks[property_check]["output_constraints"].append(
                 output_constraint
             )
-        for ((constraint_type, _), constraint) in self.property_checks.items():
+        for (
+            (constraint_type, _, op_graph),
+            constraint,
+        ) in self.property_checks.items():
             self.layers = as_layers(
-                self.op_graph,
+                op_graph,
                 layer_types=[InputLayer, FullyConnected, Convolutional]
                 + ERAN_LAYER_TYPES,
             )

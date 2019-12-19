@@ -3,8 +3,9 @@ import os
 import subprocess as sp
 import tempfile
 
-from ... import logging
-from ..common import (
+from dnnv import logging
+from dnnv.nn.layers import Convolutional, FullyConnected, InputLayer
+from dnnv.verifiers.common import (
     SAT,
     UNSAT,
     UNKNOWN,
@@ -13,7 +14,10 @@ from ..common import (
     VerifierTranslatorError,
     as_layers,
 )
-from ...nn.layers import Convolutional, FullyConnected, InputLayer
+
+
+class NeurifyError(VerifierError):
+    pass
 
 
 class NeurifyTranslatorError(VerifierTranslatorError):
@@ -32,21 +36,19 @@ class NeurifyTranslator:
         network.concretize(dnn)
         self.phi = phi.propagate_constants().to_cnf()
         self.not_phi = ~self.phi
-        operation_graph = self.phi.networks[0].concrete_value
         self.layers = []
-        self.op_graph = operation_graph
         self.property_checks = {}
         self.tempdir = tempfile.TemporaryDirectory()
 
     def __iter__(self):
         property_extractor = PropertyExtractor()
         for conjunction in self.not_phi:
-            constraint_type, (
+            op_graph, constraint_type, (
                 lower_bound,
                 upper_bound,
             ), output_constraint = property_extractor.extract(conjunction)
             input_bounds = (tuple(lower_bound.flatten()), tuple(upper_bound.flatten()))
-            property_check = (constraint_type, input_bounds)
+            property_check = (constraint_type, input_bounds, op_graph)
             if property_check not in self.property_checks:
                 self.property_checks[property_check] = {
                     "input_bounds": (lower_bound, upper_bound),
@@ -55,8 +57,11 @@ class NeurifyTranslator:
             self.property_checks[property_check]["output_constraints"].append(
                 output_constraint
             )
-        for ((constraint_type, _), constraint) in self.property_checks.items():
-            self.layers = as_layers(self.op_graph)
+        for (
+            (constraint_type, _, op_graph),
+            constraint,
+        ) in self.property_checks.items():
+            self.layers = as_layers(op_graph)
 
             input_bounds = constraint["input_bounds"]
             lb = np.asarray(input_bounds[0])
@@ -238,6 +243,14 @@ class NeurifyTranslator:
                     raise NeurifyTranslatorError(
                         "Neurify only supports square inputs for convolution"
                     )
+                if layer.kernel_shape[0] != layer.kernel_shape[1]:
+                    raise NeurifyTranslatorError(
+                        "Neurify only supports square kernels for convolution"
+                    )
+                if layer.strides[0] != layer.strides[1]:
+                    raise NeurifyTranslatorError(
+                        "Neurify only supports same strides for height and width"
+                    )
                 layer_sizes.append(np.product(shape))
                 conv_info.append(
                     (
@@ -314,8 +327,10 @@ class NeurifyCheck:
         output_lines = []
         while proc.poll() is None:
             line = proc.stdout.readline()
-            logger.info(line.strip())
+            logger.debug(line.strip())
             output_lines.append(line)
+        if proc.returncode < 0:
+            raise NeurifyError(f"Received signal: {-proc.returncode}")
         output_lines.extend(proc.stdout.readlines())
         output_lines = [line for line in output_lines if line]
 
@@ -332,8 +347,10 @@ class NeurifyCheck:
 def verify(dnn, phi):
     translator = NeurifyTranslator(dnn, phi)
 
-    result = UNSAT
-    for property_check in translator:
-        result |= property_check.check()
-    translator.tempdir.cleanup()
-    return result
+    try:
+        result = UNSAT
+        for property_check in translator:
+            result |= property_check.check()
+        return result
+    finally:
+        translator.tempdir.cleanup()

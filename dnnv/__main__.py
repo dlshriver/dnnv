@@ -10,6 +10,7 @@ from . import logging
 from . import nn
 from . import properties
 from . import utils
+from .verifiers.common import VerifierError, VerifierTranslatorError
 
 
 def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
@@ -18,8 +19,7 @@ def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
 
     logger.debug("Parsing network (%s)", args.network)
     dnn = nn.parse(args.network)
-
-    # TODO: the following is just being used for testing
+    print("Verifying Network:")
     dnn.pprint()
 
     phi = properties.parse(args.property, args=extra_args)
@@ -34,7 +34,9 @@ def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
             )(extra_args)
             kwargs = vars(verifier_args)
             result = verifier.verify(dnn, phi, **kwargs)
-        except Exception as e:
+        except VerifierTranslatorError as e:
+            result = f"{type(e).__name__}({e})"
+        except VerifierError as e:
             result = f"{type(e).__name__}({e})"
         end_t = time.time()
         print(f"{verifier.__name__}")

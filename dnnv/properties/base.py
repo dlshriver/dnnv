@@ -295,11 +295,19 @@ class Symbol(ArithmeticExpression, LogicalExpression):
     def __init__(self, name):
         super().__init__()
         self.name = self._ssa(name)
-        self.concrete_value = None
+        self._concrete_value = None
 
     @property
     def is_concrete(self):
         return self.concrete_value is not None
+
+    @property
+    def concrete_value(self):
+        return self._concrete_value
+
+    def concretize(self, value):
+        self._concrete_value = value
+        return self
 
     def _ssa(self, name):
         ssa_name = name
@@ -571,9 +579,8 @@ class FunctionCall(ArithmeticExpression):
 
 
 class Network(Function):
-    def __init__(self, name, slices_=None):
+    def __init__(self, name="N"):
         super().__init__(name)
-        self.slices = slices_ or ()
 
     def __call__(self, *x):
         for x_ in x:
@@ -583,13 +590,36 @@ class Network(Function):
         result.is_network_output = True
         return result
 
+    def __getitem__(self, index):
+        return SlicedNetwork.build(self, index)
+
+
+class SlicedNetwork(Function):
+    def __init__(self, name, network, slice_):
+        super().__init__(name)
+        self.network = network
+        self.slice_ = slice_
+
+    def __call__(self, *x):
+        for x_ in x:
+            if isinstance(x_, Expression):
+                x_.is_network_input = True
+        result = super().__call__(*x)
+        result.is_network_output = True
+        return result
+
+    @property
+    def concrete_value(self):
+        if self._concrete_value is None and self.network._concrete_value is not None:
+            self._concrete_value = self.network._concrete_value[self.slice_]
+        return self._concrete_value
+
     def concretize(self, value):
-        for slice_ in self.slices:
-            value = value[slice_]
-        self.concrete_value = value
+        self.network.concretize(value)
         return self
 
-    def __getitem__(self, index):
+    @classmethod
+    def build(cls, network, index):
         if isinstance(index, slice):
             index = (index,)
         elif isinstance(index, int):
@@ -627,10 +657,13 @@ class Network(Function):
             else:
                 raise TypeError("Unexpected type for dimension 1 of network slice.")
         slice_str = ",".join(slice_reprs)
-        sliced_name = f"{self.name}[{slice_str}]"
-        if sliced_name in self._Symbols:
-            return self._Symbols[sliced_name]
-        return Network(sliced_name, slices_=self.slices + (index,))
+        sliced_name = f"{network.name}[{slice_str}]"
+        if sliced_name in network._Symbols:
+            return network._Symbols[sliced_name]
+        return SlicedNetwork(sliced_name, network, index)
+
+    def __getitem__(self, index):
+        return SlicedNetwork.build(self, index)
 
 
 CONCRETE_FUNCS = {}  # type: Dict[int, Function]
@@ -654,7 +687,7 @@ def make_function(function):
     func_id = id(function)
     if func_id not in CONCRETE_FUNCS:
         function_expr = Function(name)
-        function_expr.concrete_value = function
+        function_expr.concretize(function)
         CONCRETE_FUNCS[func_id] = function_expr
     return CONCRETE_FUNCS[func_id]
 
