@@ -31,6 +31,12 @@ Install any of the supported verifiers ([Reluplex](https://github.com/guykatzz/R
 $ ./manage.sh install reluplex planet mipverify neurify eran
 ```
 
+**Make sure that the project environment is activated** when installing verifiers with the `manage.sh` script. Otherwise some tools may not install correctly.
+
+Additionally, several verifiers make use of the [Gruobi solver](https://www.gurobi.com/). This should be installed automatically, but requires a license to be manually activated and available on the host machine. Academic licenses can be obtained for free from the [Gurobi website](https://user.gurobi.com/download/licenses/free-academic).
+
+Finally, planet has several additional requirements that currently must be installed separately before installation with `./manage.sh`: libglpk-dev, qt5-qmake, valgrind, libltdl-dev, protobuf-compiler.
+
 ### Usage
 
 Properties are specified in our property DSL, extended from Python. A property specification can import python modules, and define variables. The only required component is the property expression, which must appear at the end of the file. An example of a local robustness property is shown below.
