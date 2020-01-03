@@ -78,8 +78,9 @@ class Py2PropertyTransformer(ast.NodeTransformer):
         if len(node.ops) == 1:
             return super().generic_visit(node)
         comparisons = []
-        left = node.left
+        left = self.visit(node.left)
         for op, right in zip(node.ops, node.comparators):
+            right = self.visit(right)
             if isinstance(op, ast.LtE):
                 func = ast.Name("LessThanOrEqual", ast.Load(), **attributes)
             elif isinstance(op, ast.Lt):
@@ -89,12 +90,113 @@ class Py2PropertyTransformer(ast.NodeTransformer):
             elif isinstance(op, ast.Gt):
                 func = ast.Name("GreaterThan", ast.Load(), **attributes)
             else:
-                raise ValueError("Unknown comparison function: %s" % op)
+                raise ValueError("Unsupported comparison function: %s" % op)
             comparisons.append(ast.Call(func, [left, right], [], **attributes))
             left = right
         and_func = ast.Name("And", ast.Load(), **attributes)
         new_node = ast.Call(and_func, comparisons, [], **attributes)
         return new_node
+
+    def visit_Ellipsis(self, node: ast.Ellipsis):
+        attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
+        const_func = ast.Name("Constant", ast.Load(), **attributes)
+        return ast.Call(const_func, [node], [], **attributes)
+
+    def visit_NameConstant(self, node: ast.NameConstant):
+        attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
+        const_func = ast.Name("Constant", ast.Load(), **attributes)
+        return ast.Call(const_func, [node], [], **attributes)
+
+    def visit_Num(self, node: ast.Num):
+        attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
+        const_func = ast.Name("Constant", ast.Load(), **attributes)
+        return ast.Call(const_func, [node], [], **attributes)
+
+    def visit_Str(self, node: ast.Str):
+        attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
+        const_func = ast.Name("Constant", ast.Load(), **attributes)
+        return ast.Call(const_func, [node], [], **attributes)
+
+    def visit_Dict(self, node: ast.Dict):
+        attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
+        keys = [
+            key
+            for key in node.keys
+            if not isinstance(key, (ast.NameConstant, ast.Num, ast.Str))
+        ]
+        if len(keys) > 0:
+            raise PropertyParserError(
+                "We do not currently support definition of dicts containing non-primitive keys."
+            )
+        values = [self.visit(value) for value in node.values]
+        new_node = ast.Dict(keys, values, **attributes)
+        return new_node
+
+    def visit_List(self, node: ast.Tuple):
+        attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
+        exprs = [
+            expr
+            for expr in node.elts
+            if not isinstance(expr, (ast.NameConstant, ast.Num, ast.Str))
+        ]
+        if len(exprs) > 0:
+            raise PropertyParserError(
+                "We do not currently support definition of lists containing non-primitive types."
+            )
+        return node
+
+    def visit_Set(self, node: ast.Tuple):
+        attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
+        exprs = [
+            expr
+            for expr in node.elts
+            if not isinstance(expr, (ast.NameConstant, ast.Num, ast.Str))
+        ]
+        if len(exprs) > 0:
+            raise PropertyParserError(
+                "We do not currently support definition of sets containing non-primitive types."
+            )
+        return node
+
+    def visit_Tuple(self, node: ast.Tuple):
+        attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
+        exprs = [
+            expr
+            for expr in node.elts
+            if not isinstance(expr, (ast.NameConstant, ast.Num, ast.Str))
+        ]
+        if len(exprs) > 0:
+            raise PropertyParserError(
+                "We do not currently support definition of tuples containing non-primitive types."
+            )
+        return node
+
+    def visit_Await(self, node: ast.Await):
+        raise PropertyParserError("We do not support await expressions.")
+
+    def visit_Constant(self, node: ast.Constant):
+        raise PropertyParserError("We do not support constant expressions.")
+
+    def visit_Yield(self, node: ast.Yield):
+        raise PropertyParserError("We do not support yield expressions.")
+
+    def visit_YieldFrom(self, node: ast.YieldFrom):
+        raise PropertyParserError("We do not support yield from expressions.")
+
+    def visit_IfExp(self, node: ast.IfExp):
+        raise PropertyParserError("We do not currently support ternary if expressions.")
+
+    def visit_GeneratorExp(self, node: ast.GeneratorExp):
+        raise PropertyParserError("We do not currently support generator expressions.")
+
+    def visit_DictComp(self, node: ast.DictComp):
+        raise PropertyParserError("We do not currently support dict comprehensions.")
+
+    def visit_ListComp(self, node: ast.ListComp):
+        raise PropertyParserError("We do not currently support list comprehensions.")
+
+    def visit_SetComp(self, node: ast.SetComp):
+        raise PropertyParserError("We do not currently support set comprehensions.")
 
 
 class LimitQuantifiers(ExpressionVisitor):

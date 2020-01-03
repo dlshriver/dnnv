@@ -110,7 +110,7 @@ class PropagateConstants(ExpressionTransformer):
         variable = self.visit(expression.variable)
         expr = self.visit(expression.expression)
         if isinstance(expr, Constant):
-            return Constant(bool(expr))
+            return Constant(bool(expr.value))
         return Forall(variable, expr)
 
     def visit_FunctionCall(self, expression: FunctionCall):

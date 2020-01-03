@@ -4,7 +4,7 @@ import unittest
 
 from dnnv.nn import parse, OperationGraph, operations
 from dnnv.nn.transformers import DropPrefix
-from ..utils import artifact_dir
+from ..utils import network_artifact_dir as artifact_dir
 
 THRESHOLD = 1e-6
 
@@ -90,16 +90,6 @@ class SimplifyTests(unittest.TestCase):
         op_graph = parse(artifact_dir / "sum_gt_one.onnx")
         simplified_op_graph = op_graph.simplify()
         self.assert_close(op_graph, simplified_op_graph, input_shape=(1, 10))
-
-    def test_dronet(self):
-        op_graph = parse(artifact_dir / "../../artifacts/dronet.iter.3.onnx")
-        simplified_op_graph = op_graph.simplify()
-        self.assert_close(
-            op_graph,
-            simplified_op_graph,
-            input_shape=(1, 1, 200, 200),
-            threshold=1.5 * THRESHOLD,
-        )
 
     def test_resnet34(self):
         op_graph = parse(artifact_dir / "resnet34.onnx")

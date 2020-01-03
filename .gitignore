@@ -114,4 +114,4 @@ ENV/
 /share/
 /data/
 /artifacts/
-/tests/artifacts/*.onnx
+/tests/artifacts/networks/*.onnx

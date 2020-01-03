@@ -4,7 +4,7 @@ import torch
 import torchvision.models as models
 import unittest
 
-from ...utils import artifact_dir
+from ...utils import network_artifact_dir as artifact_dir
 from dnnv.nn import parse
 
 THRESHOLD = 1e-6

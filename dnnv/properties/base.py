@@ -4,22 +4,6 @@ import types
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type, Union
 
 
-def find_symbols(phi: "Expression", symbol_class: Type["Symbol"] = "Symbol"):
-    symbols = set()
-    for value in phi.__dict__.values():
-        if isinstance(value, symbol_class):
-            symbols.add(value)
-        if isinstance(value, Expression):
-            symbols = symbols.union(find_symbols(value, symbol_class))
-        elif isinstance(value, (list, tuple, set)):
-            for sub_value in value:
-                if isinstance(sub_value, symbol_class):
-                    symbols.add(sub_value)
-                if isinstance(sub_value, Expression):
-                    symbols = symbols.union(find_symbols(sub_value, symbol_class))
-    return symbols
-
-
 class Expression:
     def concretize(self, **kwargs):
         symbols = {s.identifier: s for s in find_symbols(self)}
@@ -38,6 +22,10 @@ class Expression:
         from dnnv.properties.transformers import ToCNF
 
         return ToCNF().visit(self)
+
+    @property
+    def is_concrete(self):
+        return len(self.variables) == 0
 
     @property
     def networks(self):
@@ -130,20 +118,65 @@ class Expression:
         return FunctionCall(self, args, kwargs)
 
 
+class Constant(Expression):
+    def __init__(self, value: Any):
+        self._value = value
+
+    @property
+    def value(self):
+        if isinstance(self._value, list):
+            return [v.value if isinstance(v, Constant) else v for v in self._value]
+        elif isinstance(self._value, set):
+            return set(v.value if isinstance(v, Constant) else v for v in self._value)
+        elif isinstance(self._value, tuple):
+            return tuple(v.value if isinstance(v, Constant) else v for v in self._value)
+        return self._value
+
+    def __bool__(self):
+        return bool(self.value)
+
+    def __hash__(self):
+        return hash("constant") * hash(self.value)
+
+    def __str__(self):
+        if isinstance(self._value, slice):
+            start = self._value.start or ""
+            stop = self._value.stop or ""
+            step = self._value.step
+            if step is None:
+                return f"{start}:{stop}"
+            return f"{start}:{stop}:{step}"
+        elif isinstance(self._value, np.ndarray):
+            return "".join(
+                np.array2string(
+                    self._value,
+                    max_line_width=np.inf,
+                    precision=3,
+                    threshold=5,
+                    edgeitems=2,
+                ).split("\n")
+            ).replace("  ", " ")
+        return str(self._value)
+
+
 class Symbol(Expression):
     _instances = {}  # type: Dict[Type[Symbol], Dict[str, Symbol]]
 
-    def __new__(cls, identifier: str):
+    def __new__(cls, identifier: Union[Constant, str]):
+        if isinstance(identifier, Constant):
+            identifier = identifier.value
+        if not isinstance(identifier, str):
+            identifier = str(identifier)
         if cls not in Symbol._instances:
             Symbol._instances[cls] = {}
         if identifier not in Symbol._instances[cls]:
             Symbol._instances[cls][identifier] = super().__new__(cls)
         return Symbol._instances[cls][identifier]
 
-    def __init__(self, identifier: str):
+    def __init__(self, identifier: Union[Constant, str]):
         if not isinstance(getattr(self, "identifier"), Attribute):
             return
-        self.identifier = identifier
+        self.identifier = str(identifier)
         self._value = None
 
     @property
@@ -156,6 +189,11 @@ class Symbol(Expression):
 
     def concretize(self, value):
         self._value = value
+
+    def __bool__(self):
+        if self.is_concrete:
+            return bool(self.value)
+        return True
 
     def __hash__(self):
         return hash(self.identifier)
@@ -188,11 +226,29 @@ def _symbol_from_callable(symbol: Callable):
     return new_symbol
 
 
-class Parameter(Symbol):
-    def __new__(cls, identifier: str, *args, **kwargs):
-        return super().__new__(cls, identifier)
+def find_symbols(phi: Expression, symbol_class: Type[Symbol] = Symbol):
+    symbols = set()
+    for value in phi.__dict__.values():
+        if isinstance(value, symbol_class):
+            symbols.add(value)
+        if isinstance(value, Expression):
+            symbols = symbols.union(find_symbols(value, symbol_class))
+        elif isinstance(value, (list, tuple, set)):
+            for sub_value in value:
+                if isinstance(sub_value, symbol_class):
+                    symbols.add(sub_value)
+                if isinstance(sub_value, Expression):
+                    symbols = symbols.union(find_symbols(sub_value, symbol_class))
+    return symbols
 
-    def __init__(self, identifier: str, type: Type, default: Any = None):
+
+class Parameter(Symbol):
+    # def __new__(cls, identifier: Union[Constant, str], *args, **kwargs):
+    #     return super().__new__(cls, identifier)
+
+    def __init__(
+        self, identifier: Union[Constant, str], type: Type, default: Any = None
+    ):
         super().__init__(identifier)
         self.type = type
         self.default = default
@@ -204,37 +260,15 @@ class Parameter(Symbol):
 
 
 class Network(Symbol):
-    def __new__(cls, identifier: str = "N"):
+    def __new__(cls, identifier: Union[Constant, str] = "N"):
         return super().__new__(cls, identifier)
 
-    def __init__(self, identifier: str = "N"):
+    def __init__(self, identifier: Union[Constant, str] = "N"):
         super().__init__(identifier)
 
 
-class Constant(Expression):
-    def __init__(self, value: Any):
-        self._value = value
-
-    def __str__(self):
-        if isinstance(self._value, np.ndarray):
-            return "".join(
-                np.array2string(
-                    self._value,
-                    max_line_width=np.inf,
-                    precision=3,
-                    threshold=5,
-                    edgeitems=2,
-                ).split("\n")
-            ).replace("  ", " ")
-        return str(self._value)
-
-    @property
-    def value(self):
-        return self._value
-
-
 class Image(Expression):
-    def __init__(self, path: Expression):
+    def __init__(self, path: Union[Expression, str]):
         self.path = path
 
     @classmethod
@@ -270,7 +304,7 @@ class FunctionCall(Expression):
             return f"{function_name}({args_str}, {kwargs_str})"
         elif args_str:
             return f"{function_name}({args_str})"
-        elif kwargs:
+        elif kwargs_str:
             return f"{function_name}({kwargs_str})"
         return f"{function_name}()"
 
@@ -448,6 +482,9 @@ class Exists(Quantifier):
     def __invert__(self):
         return Forall(self.variable, lambda _: ~self.expression)
 
+
+argmax = np.argmax
+argmin = np.argmin
 
 # TODO : organize this list better
 __all__ = [
