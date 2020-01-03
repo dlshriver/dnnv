@@ -36,8 +36,10 @@ def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
             result = verifier.verify(dnn, phi, **kwargs)
         except VerifierTranslatorError as e:
             result = f"{type(e).__name__}({e})"
+            logger.debug("Translation Error traceback:", exc_info=True)
         except VerifierError as e:
             result = f"{type(e).__name__}({e})"
+            logger.debug("Verifier Error traceback:", exc_info=True)
         end_t = time.time()
         print(f"{verifier.__name__}")
         print(f"  result: {result}")

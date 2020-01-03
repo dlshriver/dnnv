@@ -10,7 +10,7 @@ from .. import OperationGraph
 from ..operations import *
 from ..visitors import OperationCounter
 from ..transformers import DropPrefix
-from ..utils import get_subclasses
+from ...utils import get_subclasses
 
 
 class _Layer(type):

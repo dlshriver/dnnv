@@ -6,8 +6,9 @@ import onnx
 from abc import ABC
 
 from .patterns import Or, Parallel, Sequential
-from ..utils import get_subclasses, ONNX_TO_NUMPY_DTYPE
+from ..utils import ONNX_TO_NUMPY_DTYPE
 from ... import logging
+from ...utils import get_subclasses
 
 
 class _Operation(type):
