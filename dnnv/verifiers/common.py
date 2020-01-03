@@ -4,14 +4,7 @@ from typing import List, Optional, Type
 
 from dnnv.nn import OperationGraph
 from dnnv.nn.layers import Layer, InputLayer, FullyConnected, Convolutional
-from dnnv.properties.base import (
-    Constant,
-    FunctionCall,
-    Network,
-    SlicedNetwork,
-    Symbol,
-    ExpressionVisitor,
-)
+from dnnv.properties import Constant, FunctionCall, Network, Symbol, ExpressionVisitor
 
 
 class VerifierError(Exception):
@@ -199,7 +192,7 @@ class PropertyExtractor(ExpressionVisitor):
         ):
             const = expr2.value
             self.assert_output_gte(const)
-            self.assert_op_graph(expr1.function.concrete_value)
+            self.assert_op_graph(expr1.function.value)
         elif (
             isinstance(expr1, Constant)
             and isinstance(expr2, FunctionCall)
@@ -207,7 +200,7 @@ class PropertyExtractor(ExpressionVisitor):
         ):
             const = expr1.value
             self.assert_output_lte(const)
-            self.assert_op_graph(expr2.function.concrete_value)
+            self.assert_op_graph(expr2.function.value)
         else:
             raise VerifierTranslatorError("Unsupported property type")
 
@@ -235,7 +228,7 @@ class PropertyExtractor(ExpressionVisitor):
         ):
             const = expr2.value
             self.assert_output_lte(const)
-            self.assert_op_graph(expr2.function.concrete_value)
+            self.assert_op_graph(expr2.function.value)
         elif (
             isinstance(expr1, Constant)
             and isinstance(expr2, FunctionCall)
@@ -243,7 +236,7 @@ class PropertyExtractor(ExpressionVisitor):
         ):
             const = expr1.value
             self.assert_output_gte(const)
-            self.assert_op_graph(expr2.function.concrete_value)
+            self.assert_op_graph(expr2.function.value)
         else:
             raise VerifierTranslatorError("Unsupported property type")
 
@@ -261,14 +254,14 @@ class PropertyExtractor(ExpressionVisitor):
         args = tuple(arg for arg in function_call.args)
         kwargs = {name: value for name, value in function_call.kwargs.items()}
         if (
-            function_call.function.name == "numpy.argmax"
+            function_call.function == np.argmax
             and len(args) == 1
             and len(kwargs) == 0
             and isinstance(args[0], FunctionCall)
-            and isinstance(args[0].function, (Network, SlicedNetwork))
+            and isinstance(args[0].function, Network)
         ):
             self.assert_not_class(const, using="argmax")
-            self.assert_op_graph(args[0].function.concrete_value)
+            self.assert_op_graph(args[0].function.value)
         else:
             raise VerifierTranslatorError(
                 "Unsupported function call: %s" % function_call
