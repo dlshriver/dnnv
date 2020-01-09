@@ -1,3 +1,5 @@
+from collections import namedtuple
+
 from .operations import Operation
 
 
@@ -19,21 +21,21 @@ class OperationVisitor:
 
 
 class GetInputDetails(OperationVisitor):
+    InputDetails = namedtuple("InputDetails", ["shape", "dtype"])
+
     def __init__(self):
         self.visited = set()
-        self.input_shapes = []
-        self.input_dtypes = []
+        self.input_details = []
 
     def visit(self, operation):
         op_id = id(operation)
         if op_id not in self.visited:
             super().visit(operation)
             self.visited.add(op_id)
-        return zip(self.input_shapes, self.input_dtypes)
+        return tuple(self.input_details)
 
     def visit_Input(self, operation):
-        self.input_shapes.append(operation.shape)
-        self.input_dtypes.append(operation.dtype)
+        self.input_details.append(self.InputDetails(operation.shape, operation.dtype))
 
 
 class OperationCounter(OperationVisitor):

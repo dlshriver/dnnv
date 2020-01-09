@@ -143,7 +143,8 @@ class Py2PropertyTransformer(ast.NodeTransformer):
             raise PropertyParserError(
                 "We do not currently support definition of lists containing non-primitive types."
             )
-        return node
+        const_func = ast.Name("Constant", ast.Load(), **attributes)
+        return ast.Call(const_func, [node], [], **attributes)
 
     def visit_Set(self, node: ast.Tuple):
         attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
@@ -156,7 +157,8 @@ class Py2PropertyTransformer(ast.NodeTransformer):
             raise PropertyParserError(
                 "We do not currently support definition of sets containing non-primitive types."
             )
-        return node
+        const_func = ast.Name("Constant", ast.Load(), **attributes)
+        return ast.Call(const_func, [node], [], **attributes)
 
     def visit_Tuple(self, node: ast.Tuple):
         attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
@@ -168,6 +170,43 @@ class Py2PropertyTransformer(ast.NodeTransformer):
         if len(exprs) > 0:
             raise PropertyParserError(
                 "We do not currently support definition of tuples containing non-primitive types."
+            )
+        const_func = ast.Name("Constant", ast.Load(), **attributes)
+        return ast.Call(const_func, [node], [], **attributes)
+
+    def visit_Slice(self, node: ast.Slice):
+        attributes = {"lineno": 0, "col_offset": 0}
+
+        start = (
+            self.visit(node.lower)
+            if node.lower is not None
+            else ast.NameConstant(None, **attributes)
+        )
+        stop = (
+            self.visit(node.upper)
+            if node.upper is not None
+            else ast.NameConstant(None, **attributes)
+        )
+        step = (
+            self.visit(node.step)
+            if node.step is not None
+            else ast.NameConstant(None, **attributes)
+        )
+
+        slice_func = ast.Name("Slice", ast.Load(), **attributes)
+        new_node = ast.Call(slice_func, [start, stop, step], [], **attributes)
+        index_node = ast.Index(new_node)
+        return index_node
+
+    def visit_ExtSlice(self, node: ast.ExtSlice):
+        dims = [
+            dim
+            for dim in node.dims
+            if not isinstance(dim, (ast.NameConstant, ast.Num, ast.Str))
+        ]
+        if len(dims) > 0:
+            raise PropertyParserError(
+                "We do not currently support definition of slices containing non-primitive types."
             )
         return node
 
@@ -239,7 +278,7 @@ class SymbolFactory(dict):
     def __getitem__(self, item):
         if item not in self:
             assert isinstance(item, str)
-            super().__setitem__(item, Symbol(item))
+            super().__setitem__(item, base.Symbol(item))
         return super().__getitem__(item)
 
 
@@ -251,20 +290,18 @@ def parse_cli(phi: base.Expression, args):
     parameters = phi.parameters
     for parameter in parameters:
         parser.add_argument(
-            f"--prop.{parameter.identifier}",
-            type=parameter.type,
-            default=parameter.default,
+            f"--prop.{parameter.name}", type=parameter.type, default=parameter.default
         )
     known_args, unknown_args = parser.parse_known_args(args)
     if args is not None:
         args.clear()
         args.extend(unknown_args)
     for parameter in parameters:
-        parameter_value = getattr(known_args, f"prop.{parameter.identifier}")
+        parameter_value = getattr(known_args, f"prop.{parameter.name}")
         if parameter_value is None:
             raise PropertyParserError(
-                f"No argument was provided for parameter '{parameter.identifier}'. "
-                f"Try adding a command line argument '--prop.{parameter.identifier}'."
+                f"No argument was provided for parameter '{parameter.name}'. "
+                f"Try adding a command line argument '--prop.{parameter.name}'."
             )
         parameter.concretize(parameter_value)
 

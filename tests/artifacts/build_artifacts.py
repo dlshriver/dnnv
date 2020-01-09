@@ -1,4 +1,4 @@
-def build_networks():    
+def build_networks():
     import torch
     import torch.nn as nn
     import torch.nn.functional as F
@@ -39,7 +39,13 @@ def build_networks():
         fc2.weight.data = torch.zeros(1, 5)
         fc2.bias.data = torch.zeros(1)
         const_zero = nn.Sequential(fc1, nn.ReLU(), fc2).eval()
-        torch.onnx.export(const_zero, dummy_input, const_zero_path)
+        torch.onnx.export(
+            const_zero,
+            dummy_input,
+            const_zero_path,
+            input_names=["input"],
+            dynamic_axes={"input": [0]},
+        )
 
     const_one_path = artifact_dir / "const_one.onnx"
     if not const_one_path.exists():
@@ -51,7 +57,13 @@ def build_networks():
         fc2.weight.data = torch.zeros(1, 5)
         fc2.bias.data = torch.ones(1)
         const_one = nn.Sequential(fc1, nn.ReLU(), fc2).eval()
-        torch.onnx.export(const_one, dummy_input, const_one_path)
+        torch.onnx.export(
+            const_one,
+            dummy_input,
+            const_one_path,
+            input_names=["input"],
+            dynamic_axes={"input": [0]},
+        )
 
     sum_gt_one_path = artifact_dir / "sum_gt_one.onnx"
     if not sum_gt_one_path.exists():
@@ -63,7 +75,13 @@ def build_networks():
         fc2.weight.data = torch.ones(1, 1)
         fc2.bias.data = torch.zeros(1)
         sum_gt_one = nn.Sequential(fc1, nn.ReLU(), fc2).eval()
-        torch.onnx.export(sum_gt_one, dummy_input, sum_gt_one_path)
+        torch.onnx.export(
+            sum_gt_one,
+            dummy_input,
+            sum_gt_one_path,
+            input_names=["input"],
+            dynamic_axes={"input": [0]},
+        )
 
     a_gt_b_path = artifact_dir / "a_gt_b.onnx"  # class 0: a > b, class 1: b > a
     if not a_gt_b_path.exists():
@@ -77,10 +95,17 @@ def build_networks():
         fc2.weight.data = torch.eye(2)
         fc2.bias.data = torch.zeros(2)
         a_gt_b = nn.Sequential(fc1, nn.ReLU(), fc2, nn.Softmax(dim=1)).eval()
-        torch.onnx.export(a_gt_b, dummy_input, a_gt_b_path)
+        torch.onnx.export(
+            a_gt_b,
+            dummy_input,
+            a_gt_b_path,
+            input_names=["input"],
+            dynamic_axes={"input": [0]},
+        )
 
     # create models with specific operations
     # TODO
+
 
 if __name__ == "__main__":
     build_networks()

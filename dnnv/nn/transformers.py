@@ -45,8 +45,12 @@ class DropPrefix(OperationTransformer):
                     ],
                     squeeze=False,
                 )
+                if len(y) > 1:
+                    raise ValueError(
+                        "Dropping prefixes with multiple output values is currently not supported"
+                    )
                 new_input_shape = np.asarray(y[0].shape)
-                if all(d[0] == -1 for d in input_details) and new_input_shape[0] == 1:
+                if all(d[0][0] < 0 for d in input_details) and new_input_shape[0] == 1:
                     new_input_shape[0] = -1
                 result = Input(new_input_shape, y[0].dtype)
             self._cache[op_id] = result

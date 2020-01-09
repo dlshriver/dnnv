@@ -7,7 +7,7 @@ from .operations import Input, Operation
 
 class OperationGraph:
     def __init__(self, output_operations: List[Operation]):
-        self.output_operations = output_operations
+        self.output_operations = tuple(output_operations)
 
     def walk(self, visitor):
         result = []
@@ -27,6 +27,21 @@ class OperationGraph:
         from .visitors import PrintVisitor
 
         return self.walk(PrintVisitor())
+
+    @property
+    def input_details(self):
+        from .visitors import GetInputDetails
+
+        return tuple(itertools.chain.from_iterable(self.walk(GetInputDetails())))
+
+    @property
+    def input_shape(self):
+        return tuple(details.shape for details in self.input_details)
+
+    @property
+    def output_shape(self):
+        # TODO
+        return tuple()
 
     @property
     def is_linear(self) -> bool:
