@@ -23,3 +23,4 @@ def as_layers(
     if len(op_graph.output_operations) > 0:
         raise translator_error("Unsupported computation graph detected")
     return layers
+

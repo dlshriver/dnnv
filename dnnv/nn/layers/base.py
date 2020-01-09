@@ -93,7 +93,7 @@ class InputLayer(Layer):
     OP_PATTERN = Input
 
     def __init__(self, shape, dtype):
-        self.shape = shape
+        self.shape = tuple(shape)
         self.dtype = dtype
 
     @classmethod

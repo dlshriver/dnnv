@@ -1,4 +1,5 @@
 import itertools
+import numpy as np
 
 from typing import List
 
@@ -40,8 +41,14 @@ class OperationGraph:
 
     @property
     def output_shape(self):
-        # TODO
-        return tuple()
+        output = self(
+            *[
+                np.ones([i if i >= 0 else 1 for i in d.shape], dtype=d.dtype)
+                for d in self.input_details
+            ],
+            squeeze=False
+        )
+        return tuple(o.shape for o in output)
 
     @property
     def is_linear(self) -> bool:

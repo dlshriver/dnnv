@@ -46,7 +46,13 @@ class CommandLineExecutor(VerifierExecutor):
         if proc.returncode < 0:
             raise self.verifier_error(f"Received signal: {-proc.returncode}")
 
-        self.output_lines.extend(proc.stdout.readlines())
-        self.error_lines.extend(proc.stderr.readlines())
+        for line in proc.stdout.readlines():
+            line = line.strip()
+            if line:
+                self.output_lines.append(line)
+        for line in proc.stderr.readlines():
+            line = line.strip()
+            if line:
+                self.error_lines.append(line)
 
         return self.output_lines, self.error_lines

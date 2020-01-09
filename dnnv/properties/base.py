@@ -13,15 +13,15 @@ class Expression:
             symbols[name].concretize(value)
         return self
 
+    def canonical(self) -> "Expression":
+        from dnnv.properties.transformers import Canonical
+
+        return Canonical().visit(self)
+
     def propagate_constants(self) -> "Expression":
         from dnnv.properties.transformers import PropagateConstants
 
         return PropagateConstants().visit(self)
-
-    def simplify(self) -> "Expression":
-        from dnnv.properties.transformers import Simplify
-
-        return Simplify().visit(self)
 
     def to_cnf(self) -> "Expression":
         from dnnv.properties.transformers import ToCNF
@@ -398,6 +398,12 @@ class Image(Expression):
             return Image(path)
         # TODO : handle other image formats
         return Constant(np.load(path.value)[None, :].astype(np.float32))
+
+    @property
+    def value(self):
+        if self.is_concrete:
+            return self.load(self.path).value
+        return super().value
 
     def __repr__(self):
         return f"Image({self.path!r})"
