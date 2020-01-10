@@ -78,8 +78,10 @@ class ConvexPolytope(Constraint):
         if new_layer_size > 1:
             W_out = np.zeros((new_layer_size, 1))
             for i in range(new_layer_size):
-                W_out[i, 0] = 1
-            b_out = np.zeros((1,))
+                W_out[i, 0] = -1
+            b_out = (
+                np.zeros((1,)) - 1e-12
+            )  # TODO : can we get rid of this magic number?
             layers.append(FullyConnected(W_out, b_out))
         return layers
 

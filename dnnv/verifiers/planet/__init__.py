@@ -46,7 +46,9 @@ def verify(dnn: OperationGraph, phi: Expression):
                 dirname=dirname,
                 translator_error=PlanetTranslatorError,
             )
-            executor = CommandLineExecutor("planet", f"{rlv_file_name}")
+            executor = CommandLineExecutor(
+                "planet", f"{rlv_file_name}", verifier_error=PlanetError
+            )
             out, err = executor.run()
             result |= parse_results(out, err)
             if result == SAT or result == UNKNOWN:

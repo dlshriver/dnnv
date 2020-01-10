@@ -1,9 +1,8 @@
 import numpy as np
 import tempfile
 
-from typing import List, Optional, Type
+from typing import Dict, Iterable, List, Optional, Type, Union
 
-from dnnv import logging
 from dnnv.nn.layers import Convolutional, FullyConnected, InputLayer, Layer
 from dnnv.verifiers.common import HyperRectangle, VerifierTranslatorError
 
@@ -11,7 +10,7 @@ from dnnv.verifiers.common import HyperRectangle, VerifierTranslatorError
 def as_neurify_nnet(
     layers: List[Layer],
     translator_error: Type[VerifierTranslatorError] = VerifierTranslatorError,
-):
+) -> Iterable[str]:
     layer_sizes = []
     conv_info = []
     shape = None  # type: Optional[List[int]]
@@ -140,7 +139,7 @@ def to_neurify_inputs(
     layers: List[Layer],
     dirname: Optional[str] = None,
     translator_error: Type[VerifierTranslatorError] = VerifierTranslatorError,
-):
+) -> Dict[str, Union[str, int]]:
     neurify_inputs = {}
     if dirname is None:
         dirname = tempfile.tempdir

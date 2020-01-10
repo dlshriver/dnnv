@@ -4,7 +4,6 @@ import tempfile
 from typing import Any, Dict, List
 
 from dnnv import logging
-
 from dnnv.nn import OperationGraph
 from dnnv.properties import Expression
 from dnnv.verifiers.common import (
@@ -19,6 +18,12 @@ from .errors import NeurifyError, NeurifyTranslatorError
 from .utils import to_neurify_inputs
 
 
+def parse_args(args):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--neurify.max_thread", default=0, type=int, dest="max_thread")
+    return parser.parse_known_args(args)
+
+
 def parse_results(stdout: List[str], stderr: List[str]):
     result = stdout[-2].strip()
     if result == "Falsified.":
@@ -28,12 +33,6 @@ def parse_results(stdout: List[str], stderr: List[str]):
     elif result == "Proved.":
         return UNSAT
     raise NeurifyError(f"Unexpected verification result: {stdout[-1]}")
-
-
-def parse_args(args):
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--neurify.max_thread", default=0, type=int, dest="max_thread")
-    return parser.parse_known_args(args)
 
 
 def verify(dnn: OperationGraph, phi: Expression, **kwargs: Dict[str, Any]):
@@ -63,9 +62,10 @@ def verify(dnn: OperationGraph, phi: Expression, **kwargs: Dict[str, Any]):
                 "-x",
                 neurify_inputs["input_path"],
                 "-sl",
-                "0.000000000001",
+                "0.0",
                 f"-i={epsilon}",
                 "-v",
+                verifier_error=NeurifyError,
             )
             out, err = executor.run()
             result |= parse_results(out, err)
