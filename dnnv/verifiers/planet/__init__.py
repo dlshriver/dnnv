@@ -51,6 +51,32 @@ def verify(dnn: OperationGraph, phi: Expression):
             )
             out, err = executor.run()
             result |= parse_results(out, err)
+            if result == SAT:
+                print("DEBUGGING (checking counter example)")
+                import numpy as np
+
+                shape, dtype = prop.network.value.input_details[0]
+                solution = np.zeros(shape, dtype)
+                found = False
+                for line in out:
+                    if line.startswith("SAT"):
+                        found = True
+                    if found and line.startswith("- input"):
+                        position = tuple(int(i) for i in line.split(":")[1:-1])
+                        value = float(line.split()[-1])
+                        solution[position] = value
+                output = prop.network.value(solution)
+                print("DEBUGGING (original network output)", output)
+                output_ = output @ layers[-2].weights + layers[-2].bias
+                print(
+                    "DEBUGGING (constraint outputs)",
+                    output_,
+                    np.clip(output_, 0.0, None),
+                )
+                print(
+                    "DEBUGGING (final result (negative means SAT))",
+                    np.clip(output_, 0.0, None) @ layers[-1].weights + layers[-1].bias,
+                )
             if result == SAT or result == UNKNOWN:
                 return result
 

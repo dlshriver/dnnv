@@ -48,7 +48,7 @@ def as_reluplex_nnet(
     yield ",".join(["%.12f" % m for m in input_interval.upper_bound.flatten()]) + ","
     yield ",".join(["0.0" for _ in range(input_size + 1)]) + ","  # input mean
     yield ",".join(["1.0" for _ in range(input_size + 1)]) + ","  # input std
-    for layer in fc_layers:
+    for layer_num, layer in enumerate(fc_layers, 1):
         for i in range(layer.weights.shape[1]):
             yield ",".join("%.12f" % w for w in layer.weights[:, i])
         for b in layer.bias:

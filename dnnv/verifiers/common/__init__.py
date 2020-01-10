@@ -13,6 +13,8 @@ from typing import Dict, Iterable, Tuple, Type, Union
 
 from dnnv.properties import *
 
+MAGIC_NUMBER = 1e-12
+
 
 class Constraint(ABC):
     @abstractmethod
@@ -66,23 +68,22 @@ class ConvexPolytope(Constraint):
         W = np.zeros((last_layer_size, new_layer_size))
         b = np.zeros(new_layer_size)
         for n, c in enumerate(self.constraints):
-            b[n] -= c.b
+            b[n] = c.b + MAGIC_NUMBER  # TODO: get rid of magic numbers
             for i, v in zip(c.indices, c.coefficients):
-                W[i, n] = v
+                W[i, n] = -v
         if last_layer.activation is None:
             last_layer.weights = last_layer.weights @ W
             last_layer.bias = last_layer.bias @ W + b
             last_layer.activation = "relu"
         else:
             layers.append(FullyConnected(W, b, activation="relu"))
-        if new_layer_size > 1:
-            W_out = np.zeros((new_layer_size, 1))
-            for i in range(new_layer_size):
-                W_out[i, 0] = -1
-            b_out = (
-                np.zeros((1,)) - 1e-12
-            )  # TODO : can we get rid of this magic number?
-            layers.append(FullyConnected(W_out, b_out))
+        W_out = np.zeros((new_layer_size, 1))
+        for i in range(new_layer_size):
+            W_out[i, 0] = -1
+        b_out = np.zeros((1)) + MAGIC_NUMBER * len(
+            self.constraints
+        )  # TODO: get rid of magic numbers
+        layers.append(FullyConnected(W_out, b_out))
         return layers
 
 
@@ -181,6 +182,7 @@ class ConvexPolytopeExtractor(PropertyExtractor):
     def extract_from(self, expression: Expression) -> Iterable[Property]:
         self.existential = False
         if isinstance(expression, Exists):
+            raise NotImplementedError()  # TODO
             expression = ~expression
             self.existential = True
         expression = expression.canonical()
@@ -313,8 +315,12 @@ class ConvexPolytopeExtractor(PropertyExtractor):
                     # TODO : needs a better error message
                     raise self.translator_error("Unsupported property: ?")
                 c = constraints[0]
-                c[0].append(idx["index"])
-                c[1].append(coef)
+                index = idx["index"]
+                if index in c[0]:
+                    c[1][c[0].index(index)] += coef
+                else:
+                    c[0].append(idx["index"])
+                    c[1].append(coef)
 
         if len(expr.networks) == 0:
             current_constraint = self.input_constraint
@@ -374,7 +380,7 @@ class ConvexPolytopeExtractor(PropertyExtractor):
                 "Unsupported property: Symbolic subscript index"
             )
         expr = expression.expr
-        if isinstance(expr, FunctionCall):
+        if isinstance(expr, (FunctionCall, Subscript)):
             expr_indices, expr_coefs = self.visit(expr)
             coefs = expr_coefs[index.value]
             indices = expr_indices[index.value]

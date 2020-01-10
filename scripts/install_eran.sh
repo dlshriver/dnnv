@@ -3,10 +3,12 @@
 PROJECT_DIR=$(cd $(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/..; pwd)
 cd lib
 
+pip install pycddlib
+
 git clone https://github.com/eth-sri/eran.git
 cd eran
 git pull
-git checkout 0c97e11
+git checkout a362d3a
 
 export LD_LIBRARY_PATH=$PROJECT_DIR/lib:$LD_LIBRARY_PATH
 

@@ -22,6 +22,12 @@ def as_neurify_nnet(
             and layer.activation != "relu"
         ):
             raise translator_error(f"Unsupported activation: {layer.activation}")
+        elif (
+            i == len(layers) - 1
+            and isinstance(layer, (Convolutional, FullyConnected))
+            and layer.activation is not None
+        ):
+            raise translator_error(f"Unsupported final activation: {layer.activation}")
         if isinstance(layer, InputLayer):
             if shape is not None:
                 raise translator_error("Only one InputLayer is supported per network")

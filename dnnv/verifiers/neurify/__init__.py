@@ -1,7 +1,7 @@
 import argparse
 import tempfile
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from dnnv import logging
 from dnnv.nn import OperationGraph
@@ -18,7 +18,7 @@ from .errors import NeurifyError, NeurifyTranslatorError
 from .utils import to_neurify_inputs
 
 
-def parse_args(args):
+def parse_args(args: Optional[List[str]] = None):
     parser = argparse.ArgumentParser()
     parser.add_argument("--neurify.max_thread", default=0, type=int, dest="max_thread")
     return parser.parse_known_args(args)
@@ -42,7 +42,6 @@ def verify(dnn: OperationGraph, phi: Expression, **kwargs: Dict[str, Any]):
     result = UNSAT
     property_extractor = ConvexPolytopeExtractor()
     with tempfile.TemporaryDirectory() as dirname:
-        dirname = "/home/dshriver/Projects/DNNV/tmp/testing"
         for prop in property_extractor.extract_from(phi):
             layers = prop.output_constraint.as_layers(
                 prop.network, translator_error=NeurifyTranslatorError
@@ -63,7 +62,7 @@ def verify(dnn: OperationGraph, phi: Expression, **kwargs: Dict[str, Any]):
                 neurify_inputs["input_path"],
                 "-sl",
                 "0.0",
-                f"-i={epsilon}",
+                f"--linf={epsilon}",
                 "-v",
                 *[f"--{k}={v}" for k, v in kwargs.items()],
                 verifier_error=NeurifyError,
