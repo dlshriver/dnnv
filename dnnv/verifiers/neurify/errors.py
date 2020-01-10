@@ -1,9 +1,9 @@
 from dnnv.verifiers.common import VerifierError, VerifierTranslatorError
 
 
-class PlanetError(VerifierError):
+class NeurifyError(VerifierError):
     pass
 
 
-class PlanetTranslatorError(VerifierTranslatorError):
+class NeurifyTranslatorError(VerifierTranslatorError):
     pass

@@ -20,6 +20,7 @@ class Constraint(ABC):
         self,
         network: Network,
         layer_types: Optional[List[Type[Layer]]] = None,
+        extra_layer_types: Optional[List[Type[Layer]]] = None,
         translator_error: Type[VerifierTranslatorError] = VerifierTranslatorError,
     ) -> List[Layer]:
         raise NotImplementedError()
@@ -45,9 +46,15 @@ class ConvexPolytope(Constraint):
         self,
         network: Network,
         layer_types: Optional[List[Type[Layer]]] = None,
+        extra_layer_types: Optional[List[Type[Layer]]] = None,
         translator_error: Type[VerifierTranslatorError] = VerifierTranslatorError,
     ) -> List[Layer]:
-        layers = as_layers(network.value, layer_types, translator_error)
+        layers = as_layers(
+            network.value,
+            layer_types=layer_types,
+            extra_layer_types=extra_layer_types,
+            translator_error=translator_error,
+        )
         last_layer = layers[-1]
         if not isinstance(last_layer, FullyConnected):
             # TODO
@@ -175,10 +182,8 @@ class ConvexPolytopeExtractor(PropertyExtractor):
             expression = ~expression
             self.existential = True
         expression = expression.canonical()
-        print("\nCNF:", expression, end="\n\n")
         not_expression = Or(~expression)
         for conjunction in not_expression:
-            print("CHECKSAT:", conjunction)
             if len(conjunction.networks) != 1:
                 raise self.translator_error(
                     "Exactly one network input and output are required"
@@ -186,7 +191,6 @@ class ConvexPolytopeExtractor(PropertyExtractor):
             if len(conjunction.variables) != 1:
                 raise self.translator_error("Exactly one network input is required")
             yield from super().extract_from(conjunction)
-            print()
 
     def visit(self, expression: Expression):
         self._stack.append(type(expression))

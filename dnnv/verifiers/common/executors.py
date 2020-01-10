@@ -24,6 +24,8 @@ class CommandLineExecutor(VerifierExecutor):
 
     def run(self):
         logger = logging.getLogger(__name__)
+        arg_string = " ".join(self.args)
+        logger.info(f"EXECUTING: {arg_string}")
         proc = sp.Popen(self.args, stdout=sp.PIPE, stderr=sp.PIPE, encoding="utf8")
 
         self.output_lines = []
@@ -46,13 +48,15 @@ class CommandLineExecutor(VerifierExecutor):
         if proc.returncode < 0:
             raise self.verifier_error(f"Received signal: {-proc.returncode}")
 
-        for line in proc.stdout.readlines():
-            line = line.strip()
-            if line:
-                self.output_lines.append(line)
         for line in proc.stderr.readlines():
             line = line.strip()
             if line:
+                logger.debug(f"[STDERR]:{line}")
                 self.error_lines.append(line)
+        for line in proc.stdout.readlines():
+            line = line.strip()
+            if line:
+                logger.debug(f"[STDOUT]:{line}")
+                self.output_lines.append(line)
 
         return self.output_lines, self.error_lines
