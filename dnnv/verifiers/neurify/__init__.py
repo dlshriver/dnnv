@@ -65,6 +65,7 @@ def verify(dnn: OperationGraph, phi: Expression, **kwargs: Dict[str, Any]):
                 "0.0",
                 f"-i={epsilon}",
                 "-v",
+                *[f"--{k}={v}" for k, v in kwargs.items()],
                 verifier_error=NeurifyError,
             )
             out, err = executor.run()
