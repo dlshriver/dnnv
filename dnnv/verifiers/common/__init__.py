@@ -13,8 +13,6 @@ from typing import Dict, Iterable, Tuple, Type, Union
 
 from dnnv.properties import *
 
-MAGIC_NUMBER = 1e-12
-
 
 class Constraint(ABC):
     @abstractmethod
@@ -68,9 +66,9 @@ class ConvexPolytope(Constraint):
         W = np.zeros((last_layer_size, new_layer_size))
         b = np.zeros(new_layer_size)
         for n, c in enumerate(self.constraints):
-            b[n] = c.b + MAGIC_NUMBER  # TODO: get rid of magic numbers
+            b[n] = -c.b
             for i, v in zip(c.indices, c.coefficients):
-                W[i, n] = -v
+                W[i, n] = v
         if last_layer.activation is None:
             last_layer.weights = last_layer.weights @ W
             last_layer.bias = last_layer.bias @ W + b
@@ -79,10 +77,8 @@ class ConvexPolytope(Constraint):
             layers.append(FullyConnected(W, b, activation="relu"))
         W_out = np.zeros((new_layer_size, 1))
         for i in range(new_layer_size):
-            W_out[i, 0] = -1
-        b_out = np.zeros((1)) + MAGIC_NUMBER * len(
-            self.constraints
-        )  # TODO: get rid of magic numbers
+            W_out[i, 0] = 1
+        b_out = np.zeros((1))
         layers.append(FullyConnected(W_out, b_out))
         return layers
 

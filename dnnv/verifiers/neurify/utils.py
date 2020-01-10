@@ -117,7 +117,6 @@ def as_neurify_nnet(
     seen_fully_connected = False
     for layer in layers[1:]:
         if isinstance(layer, FullyConnected):
-            weights = layer.weights
             weights = layer.weights[layer.w_permutation]
             if not seen_fully_connected:
                 seen_fully_connected = True

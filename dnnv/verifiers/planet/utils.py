@@ -32,6 +32,8 @@ def as_rlv(
     layer_id = 1
     prev_layer = tuple(curr_layer)
     input_shape = tuple(input_layer.shape)
+    print(input_shape)
+    seen_fully_connected = False
     for layer in layers[1:]:
         curr_layer = []
         output_shape = []  # type: List[int]
