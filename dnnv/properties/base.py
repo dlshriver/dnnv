@@ -172,7 +172,7 @@ class Expression:
 
 
 class Constant(Expression):
-    _instances = {}  # type: Dict[Any, Any]
+    _instances = {}  # type: Dict[Type, Dict[Any, Any]]
     _exists = False
     count = 0
 
@@ -180,9 +180,12 @@ class Constant(Expression):
         try:
             if isinstance(value, Constant):
                 value = value.value
-            if value not in Constant._instances:
-                Constant._instances[value] = super().__new__(cls)
-            return Constant._instances[value]
+            if type(value) not in Constant._instances:
+                Constant._instances[type(value)] = {}
+            instances = Constant._instances[type(value)]
+            if value not in instances:
+                instances[value] = super().__new__(cls)
+            return instances[value]
         except TypeError as e:
             if "unhashable type" not in e.args[0]:
                 raise e
