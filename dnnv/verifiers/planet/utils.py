@@ -32,20 +32,20 @@ def as_rlv(
     layer_id = 1
     prev_layer = tuple(curr_layer)
     input_shape = tuple(input_layer.shape)
-    print(input_shape)
     seen_fully_connected = False
     for layer in layers[1:]:
         curr_layer = []
         output_shape = []  # type: List[int]
         if isinstance(layer, FullyConnected):
             activation = "Linear" if layer.activation is None else "ReLU"
-            weights = layer.weights[layer.w_permutation].T
-            for i, (weights, bias) in enumerate(zip(weights, layer.bias)):
+            weights = layer.weights.T
+            prev_layer = np.asarray(prev_layer)[layer.x_permutation]
+            assert len(weights) == len(layer.bias)
+            for i, (W, bias) in enumerate(zip(weights, layer.bias)):
+                assert len(W) == len(prev_layer)
                 name = f"layer{layer_id}:fc:{i}"
                 curr_layer.append(name)
-                computation = " ".join(
-                    f"{w:.12f} {n}" for w, n in zip(weights, prev_layer)
-                )
+                computation = " ".join(f"{w:.12f} {n}" for w, n in zip(W, prev_layer))
                 yield f"{activation} {name} {bias:.12f} {computation}"
             output_shape = [input_shape[0], len(curr_layer)]
         elif isinstance(layer, Convolutional):

@@ -110,13 +110,20 @@ class FullyConnected(Layer):
         >> (Activation | None)
     )
 
-    def __init__(self, weights, bias, activation=None, w_permutation=None):
+    def __init__(
+        self, weights, bias, activation=None, w_permutation=None, x_permutation=None
+    ):
         self.weights = weights
         self.bias = bias
         self.activation = activation
         self.w_permutation = (
             w_permutation
             if w_permutation is not None
+            else np.arange(self.weights.shape[0])
+        )
+        self.x_permutation = (
+            x_permutation
+            if x_permutation is not None
             else np.arange(self.weights.shape[0])
         )
 
@@ -207,9 +214,15 @@ class FullyConnected(Layer):
             permutation = np.asarray(op.permutation)
             undo_permutation = permutation[permutation]
             weights_permutation = (
-                np.arange(np.product(input_shape[1:]))
+                np.arange(np.product(input_shape))
                 .reshape(input_shape)
                 .transpose(undo_permutation)
+                .flatten()
+            )
+            x_permutation = (
+                np.arange(np.product(input_shape))
+                .reshape(input_shape)
+                .transpose(permutation)
                 .flatten()
             )
         else:
@@ -217,7 +230,11 @@ class FullyConnected(Layer):
                 "Expected type Transpose, but got %s" % op.__class__.__name__
             )
         return cls(
-            weights, bias, activation=activation, w_permutation=weights_permutation
+            weights,
+            bias,
+            activation=activation,
+            w_permutation=weights_permutation,
+            x_permutation=x_permutation,
         )
 
 
