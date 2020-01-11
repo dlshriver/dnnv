@@ -74,12 +74,16 @@ class ConvexPolytope(Constraint):
             last_layer.bias = last_layer.bias @ W + b
             last_layer.activation = "relu"
         else:
-            layers.append(FullyConnected(W, b, activation="relu"))
-        W_out = np.zeros((new_layer_size, 1))
-        for i in range(new_layer_size):
-            W_out[i, 0] = 1
-        b_out = np.zeros((1))
-        layers.append(FullyConnected(W_out, b_out))
+            last_layer = FullyConnected(W, b, activation="relu")
+            layers.append(last_layer)
+        if new_layer_size > 1:
+            W_out = np.zeros((new_layer_size, 1))
+            for i in range(new_layer_size):
+                W_out[i, 0] = 1
+            b_out = np.zeros(1)
+            layers.append(FullyConnected(W_out, b_out))
+        else:
+            last_layer.activation = None
         return layers
 
 

@@ -128,7 +128,7 @@ def as_neurify_nnet(
             weights = layer.weights[layer.w_permutation]
             if not seen_fully_connected:
                 seen_fully_connected = True
-                if len(layers[0].shape) == 4:
+                if len(shape) == 4:
                     weights_permutation = (
                         np.arange(np.product(shape[1:]))
                         .reshape(shape)

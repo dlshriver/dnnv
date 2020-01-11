@@ -20,6 +20,7 @@ from .utils import to_neurify_inputs
 
 def parse_args(args: Optional[List[str]] = None):
     parser = argparse.ArgumentParser()
+    parser.add_argument("--neurify.max_depth", default=256, type=int, dest="max_depth")
     parser.add_argument("--neurify.max_thread", default=0, type=int, dest="max_thread")
     return parser.parse_known_args(args)
 
