@@ -528,7 +528,7 @@ class Attribute(BinaryExpression):
             return getattr(self.expr.value, self.index.value)
         return super().value
 
-    def __reor__(self):
+    def __repr__(self):
         return f"{self.expr!r}.{self.name!r}"
 
     def __str__(self):
