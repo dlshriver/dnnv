@@ -34,6 +34,10 @@ def as_tf(
             )
             if layer.activation == "relu":
                 x = tf.nn.relu(x)
+            elif layer.activation == "sigmoid":
+                x = tf.nn.sigmoid(x)
+            elif layer.activation == "tanh":
+                x = tf.nn.tanh(x)
             elif layer.activation is not None:
                 raise translator_error(
                     f"{layer.activation} activation is currently unsupported"

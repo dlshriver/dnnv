@@ -37,7 +37,14 @@ def as_rlv(
         curr_layer = []
         output_shape = []  # type: List[int]
         if isinstance(layer, FullyConnected):
-            activation = "Linear" if layer.activation is None else "ReLU"
+            if layer.activation is None:
+                activation = "Linear"
+            elif layer.activation == "relu":
+                activation = "ReLU"
+            else:
+                raise translator_error(
+                    f"Unsupported activation type: {layer.activation}"
+                )
             weights = layer.weights.T
             prev_layer = np.asarray(prev_layer)[layer.x_permutation]
             assert len(weights) == len(layer.bias)
