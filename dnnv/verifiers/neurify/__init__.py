@@ -61,7 +61,7 @@ def verify(dnn: OperationGraph, phi: Expression, **kwargs: Dict[str, Any]):
                 "-x",
                 neurify_inputs["input_path"],
                 "-sl",
-                "0.000000000000000001",  # TODO: remove magic number
+                "0.000000000001",  # TODO: remove magic number
                 f"--linf={epsilon}",
                 "-v",
                 *[f"--{k}={v}" for k, v in kwargs.items()],
