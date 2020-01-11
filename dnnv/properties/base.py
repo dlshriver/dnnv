@@ -306,6 +306,10 @@ def _get_function_name(function: Callable) -> str:
         return f"{function.__name__}"
     elif isinstance(function, types.FunctionType):
         return f"{function.__module__}.{function.__name__}"
+    elif isinstance(function, types.MethodType):
+        if function.__self__.__module__ == "__main__":
+            return f"{function.__self__.__class__.__name__}.{function.__name__}"
+        return f"{function.__self__.__module__}.{function.__self__.__class__.__name__}.{function.__name__}"
     elif isinstance(function, np.ufunc):
         return f"numpy.{function.__name__}"
     elif isinstance(function, type) and callable(function):
