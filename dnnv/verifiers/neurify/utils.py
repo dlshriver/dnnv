@@ -31,9 +31,15 @@ def as_neurify_nnet(
         if isinstance(layer, InputLayer):
             if shape is not None:
                 raise translator_error("Only one InputLayer is supported per network")
-            if len(layer.shape) != 4:
-                raise translator_error("Only square 4 dimensional inputs are supported")
-            shape = list(np.asarray(layer.shape)[[0, 2, 3, 1]])
+            if len(layer.shape) == 4:
+                shape = list(np.asarray(layer.shape)[[0, 2, 3, 1]])  # uses NHWC format
+            elif len(layer.shape) == 2:
+                shape = layer.shape
+            else:
+                raise translator_error(
+                    "Unsupported number of axes for network input."
+                    f" Expected 4 or 2, got {len(layer.shape)}"
+                )
             if shape[0] != 1:
                 raise translator_error("Batch sizes greater than 1 are not supported")
             layer_sizes.append(np.product(layer.shape))

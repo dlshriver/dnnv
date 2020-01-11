@@ -47,7 +47,7 @@ def as_tf(
         elif hasattr(layer, "as_tf"):
             x = layer.as_tf(x)
         else:
-            raise translator_error(f"Unsupported layer type: {type(layer).__name__}")
+            raise translator_error(f"Unsupported layer: {type(layer).__name__}")
     if include_input:
         return input_placeholder, x
     return x
