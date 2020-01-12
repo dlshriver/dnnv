@@ -58,5 +58,8 @@ class CommandLineExecutor(VerifierExecutor):
             if line:
                 logger.debug(f"[STDOUT]:{line}")
                 self.output_lines.append(line)
+        
+        proc.stderr.close()
+        proc.stdout.close()
 
         return self.output_lines, self.error_lines

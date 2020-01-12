@@ -35,7 +35,11 @@ class GetInputDetails(OperationVisitor):
         return tuple(self.input_details)
 
     def visit_Input(self, operation):
-        self.input_details.append(self.InputDetails(operation.shape, operation.dtype))
+        self.input_details.append(
+            self.InputDetails(
+                tuple((i if i > 0 else 1) for i in operation.shape), operation.dtype
+            )
+        )
 
 
 class OperationCounter(OperationVisitor):

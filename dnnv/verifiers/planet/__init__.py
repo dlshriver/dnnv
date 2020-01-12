@@ -51,6 +51,21 @@ def verify(dnn: OperationGraph, phi: Expression):
             )
             out, err = executor.run()
             result |= parse_results(out, err)
+            # TODO : double check whether counter example is valid
+            # if result == SAT:
+            #     import numpy as np
+
+            #     shape, dtype = prop.network.value.input_details[0]
+            #     solution = np.zeros(shape, dtype)
+            #     found = False
+            #     for line in out:
+            #         if line.startswith("SAT"):
+            #             found = True
+            #         if found and line.startswith("- input"):
+            #             position = tuple(int(i) for i in line.split(":")[1:-1])
+            #             value = float(line.split()[-1])
+            #             solution[position] = value
+            #     print(solution, prop.network.value(solution))
             if result == SAT or result == UNKNOWN:
                 return result
 

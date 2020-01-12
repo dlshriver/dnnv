@@ -21,7 +21,7 @@ def parse_results(stdout: List[str], stderr: List[str]):
     for line in stdout:
         if line.startswith("Solution found!"):
             return SAT
-        elif line.startswith("No Solution"):
+        elif line.startswith("Can't solve!"):
             return UNSAT
     raise ReluplexError(f"No verification result found")
 
@@ -49,6 +49,20 @@ def verify(dnn: OperationGraph, phi: Expression):
             )
             out, err = executor.run()
             result |= parse_results(out, err)
+            # TODO : double check whether counter example is valid
+            # if result == SAT:
+            #     import numpy as np
+
+            #     input_shape, input_type = prop.network.value.input_details[0]
+            #     solution = np.zeros(np.product(input_shape), input_type)
+            #     found = False
+            #     for line in out:
+            #         if found and line.startswith("input"):
+            #             index = int(line.split("]", maxsplit=1)[0].split("[")[-1])
+            #             solution[index] = float(line.split()[-1][:-1])
+            #         if line.startswith("Solution found!"):
+            #             found = True
+            #     print(prop.network.value(solution.reshape(input_shape))) # TODO : remove
             if result == SAT or result == UNKNOWN:
                 return result
 

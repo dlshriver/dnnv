@@ -119,18 +119,29 @@ class Py2PropertyTransformer(ast.NodeTransformer):
 
     def visit_Dict(self, node: ast.Dict):
         attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
-        keys = [
+        invalid_keys = [
             key
             for key in node.keys
             if not isinstance(key, (ast.NameConstant, ast.Num, ast.Str))
         ]
-        if len(keys) > 0:
+        invalid_values = [
+            value
+            for value in node.values
+            if not isinstance(value, (ast.NameConstant, ast.Num, ast.Str))
+        ]
+        if len(invalid_keys) > 0:
             raise PropertyParserError(
                 "We do not currently support definition of dicts containing non-primitive keys."
             )
-        values = [self.visit(value) for value in node.values]
-        new_node = ast.Dict(keys, values, **attributes)
-        return new_node
+        if len(invalid_values) > 0:
+            raise PropertyParserError(
+                "We do not currently support definition of dicts containing non-primitive values."
+            )
+        # keys = [self.visit(key) for key in node.keys]
+        # values = [self.visit(value) for value in node.values]
+        # new_node = ast.Dict(keys, values, **attributes)
+        const_func = ast.Name("Constant", ast.Load(), **attributes)
+        return ast.Call(const_func, [node], [], **attributes)
 
     def visit_List(self, node: ast.Tuple):
         attributes = {"lineno": node.lineno, "col_offset": node.col_offset}

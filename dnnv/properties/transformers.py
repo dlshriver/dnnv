@@ -10,12 +10,14 @@ class ExpressionTransformer(ExpressionVisitor):
         self.visited = {}
 
     def visit(self, expression: Expression) -> Expression:
+        if not isinstance(expression, Expression):
+            return self.generic_visit(expression)
         expression_id = hash(expression)
         if expression_id not in self.visited:
             method_name = "visit_%s" % expression.__class__.__name__
             visitor = getattr(self, method_name, self.generic_visit)
-            self.visited[expression_id] = (visitor(expression), expression)
-        return self.visited[expression_id][0]
+            self.visited[expression_id] = visitor(expression)
+        return self.visited[expression_id]
 
     def generic_visit(self, expression: Expression) -> Expression:
         if isinstance(expression, Expression):
@@ -407,6 +409,12 @@ class PropagateConstants(ExpressionTransformer):
 
     def visit_Network(self, expression: Network):
         return expression
+
+    def visit_Not(self, expression: Network):
+        expr = self.visit(expression.expr)
+        if isinstance(expr, Constant):
+            return Constant(~expr.value)
+        return Not(expr)
 
     def visit_NotEqual(self, expression: NotEqual):
         expr1 = self.visit(expression.expr1)

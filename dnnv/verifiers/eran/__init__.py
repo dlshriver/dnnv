@@ -49,7 +49,15 @@ def check(lb, ub):
     return UNKNOWN
 
 
-def verify(dnn: OperationGraph, phi: Expression, **kwargs: Dict[str, Any]):
+def verify(
+    dnn: OperationGraph,
+    phi: Expression,
+    domain="deeppoly",
+    timeout_lp=1.0,
+    timeout_milp=1.0,
+    use_area_heuristic=True,
+    **kwargs: Dict[str, Any]
+):
     logger = logging.getLogger(__name__)
     dnn = dnn.simplify()
     phi.networks[0].concretize(dnn)
@@ -70,7 +78,15 @@ def verify(dnn: OperationGraph, phi: Expression, **kwargs: Dict[str, Any]):
             eran_model = ERAN(
                 as_tf(layers, translator_error=ERANTranslatorError), session=tf_session
             )
-            _, nn, nlb, nub = eran_model.analyze_box(spec_lb, spec_ub, **kwargs)
+            _, nn, nlb, nub = eran_model.analyze_box(
+                spec_lb,
+                spec_ub,
+                domain,
+                timeout_lp,
+                timeout_milp,
+                use_area_heuristic,
+                **kwargs
+            )
             output_lower_bound = np.asarray(nlb[-1])
             output_upper_bound = np.asarray(nub[-1])
             logger.debug("output lower bound: %s", output_lower_bound)

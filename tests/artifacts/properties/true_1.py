@@ -3,4 +3,4 @@ import numpy as np
 
 N = Network()
 
-Forall(x, False)
+Forall(x, Implies(False, N(x) > 0))

@@ -45,8 +45,7 @@ def as_rlv(
                 raise translator_error(
                     f"Unsupported activation type: {layer.activation}"
                 )
-            weights = layer.weights.T
-            prev_layer = np.asarray(prev_layer)[layer.x_permutation]
+            weights = layer.weights[layer.w_permutation].T
             assert len(weights) == len(layer.bias)
             for i, (W, bias) in enumerate(zip(weights, layer.bias)):
                 assert len(W) == len(prev_layer)

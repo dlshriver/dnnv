@@ -132,7 +132,7 @@ def as_neurify_nnet(
                     weights_permutation = (
                         np.arange(np.product(shape[1:]))
                         .reshape(shape)
-                        .transpose((0, 3, 2, 1))
+                        .transpose((0, 2, 3, 1))
                         .flatten()
                     )
                     weights = layer.weights[weights_permutation]

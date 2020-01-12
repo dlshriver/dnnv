@@ -3,6 +3,8 @@ import types
 
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type, Union
 
+from dnnv import logging
+
 
 class Expression:
     def concretize(self, **kwargs) -> "Expression":
@@ -37,6 +39,9 @@ class Expression:
         if not self.is_concrete:
             raise ValueError("Cannot get value of non-concrete expression.")
         else:
+            value = self.propagate_constants()
+            if isinstance(value, Constant):
+                return value.value
             raise NotImplementedError(
                 f"Method 'value' is not implemented for type '{type(self).__name__}'"
             )
@@ -132,42 +137,57 @@ class Expression:
             return NotEqual(self, other)
         return NotEqual(self, Constant(other))
 
-    def __ge__(self, other):
+    def __ge__(self, other) -> "GreaterThanOrEqual":
         if isinstance(other, Expression):
             return GreaterThanOrEqual(self, other)
         return GreaterThanOrEqual(self, Constant(other))
 
-    def __gt__(self, other):
+    def __gt__(self, other) -> "GreaterThan":
         if isinstance(other, Expression):
             return GreaterThan(self, other)
         return GreaterThan(self, Constant(other))
 
-    def __le__(self, other):
+    def __le__(self, other) -> "LessThanOrEqual":
         if isinstance(other, Expression):
             return LessThanOrEqual(self, other)
         return LessThanOrEqual(self, Constant(other))
 
-    def __lt__(self, other):
+    def __lt__(self, other) -> "LessThan":
         if isinstance(other, Expression):
             return LessThan(self, other)
         return LessThan(self, Constant(other))
 
-    def __and__(self, other):
+    def __and__(self, other) -> "And":
         return And(self, other)
 
-    def __rand__(self, other):
+    def __rand__(self, other) -> "And":
         return And(other, self)
 
-    def __or__(self, other):
+    def __or__(self, other) -> "Or":
         return Or(self, other)
 
-    def __ror__(self, other):
+    def __ror__(self, other) -> "Or":
         return Or(other, self)
 
-    def __invert__(self):
+    def __invert__(self) -> "Not":
         return Not(self)
 
-    def __call__(self, *args: "Expression", **kwargs: "Expression"):
+    def __call__(
+        self, *args: "Expression", **kwargs: "Expression"
+    ) -> Union["Constant", "FunctionCall"]:
+        if (
+            self.is_concrete
+            and all(not isinstance(arg, Expression) or arg.is_concrete for arg in args)
+            and all(
+                not isinstance(v, Expression) or v.is_concrete for v in kwargs.values()
+            )
+        ):
+            args = [arg.value if isinstance(arg, Expression) else arg for arg in args]
+            kwargs = {
+                k: v.value if isinstance(v, Expression) else v
+                for k, v in kwargs.items()
+            }
+            return self.value(*args, **kwargs)
         return FunctionCall(self, args, kwargs)
 
 
@@ -404,7 +424,8 @@ class Image(Expression):
         if not isinstance(path, Constant):
             return Image(path)
         # TODO : handle other image formats
-        return Constant(np.load(path.value)[None, :].astype(np.float32))
+        img = np.load(path.value)[None, :].astype(np.float32)
+        return Constant(img)
 
     @property
     def value(self):

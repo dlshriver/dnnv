@@ -331,7 +331,7 @@ class TensorflowConverter(OperationVisitor):
             x = inputs[input_idx]
             if any(
                 d1 != d2 and -1 not in (d1, d2) and None not in (d1, d2)
-                for d1, d2 in zip(operation.shape, x.shape)
+                for d1, d2 in zip(operation.shape[1:], x.shape[1:])
             ):
                 raise ValueError(
                     "Incorrect input shape: %s != %s" % (operation.shape, x.shape)

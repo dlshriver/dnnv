@@ -72,6 +72,7 @@ def verify(dnn: OperationGraph, phi: Expression, **kwargs: Dict[str, Any]):
             )
             out, err = executor.run()
             result |= parse_results(out, err)
+            # TODO : double check whether counter example is valid
             if result == SAT or result == UNKNOWN:
                 return result
 

@@ -13,6 +13,8 @@ from typing import Dict, Iterable, Tuple, Type, Union
 
 from dnnv.properties import *
 
+MAGIC_NUMBER = 1e-12
+
 
 class Constraint(ABC):
     @abstractmethod
@@ -68,7 +70,8 @@ class ConvexPolytope(Constraint):
         for n, c in enumerate(self.constraints):
             b[n] = -c.b
             for i, v in zip(c.indices, c.coefficients):
-                W[i, n] = v
+                assert len(i) == 2 and i[0] == 0
+                W[i[1], n] = v
         if last_layer.activation is None:
             last_layer.weights = last_layer.weights @ W
             last_layer.bias = last_layer.bias @ W + b
@@ -307,7 +310,16 @@ class ConvexPolytopeExtractor(PropertyExtractor):
                     raise self.translator_error("Unsupported property: ?")
                 for i, c in zip(idx.flatten(), coef.flatten()):
                     index = i["index"]
-                    constraints.append(([index], [c], rhs.value[index]))
+                    if isinstance(rhs.value, np.ndarray):
+                        constraints.append(([index], [c], rhs.value[index]))
+                    elif isinstance(rhs.value, (int, float)):
+                        constraints.append(([index], [c], rhs.value))
+                    else:
+                        raise self.translator_error(
+                            "Unsupported property:"
+                            " Unexpected type for right hand side of comparison:"
+                            f" {type(rhs.value).__name__!r}"
+                        )
             elif isinstance(idx, dict):
                 if len(constraints) == 0:
                     constraints.append(([], [], rhs.value))
@@ -330,7 +342,10 @@ class ConvexPolytopeExtractor(PropertyExtractor):
             if isinstance(expr, LessThanOrEqual):
                 current_constraint.add_constraint(i, c, b)
             elif isinstance(expr, LessThan):
-                current_constraint.add_constraint(i, c, np.nextafter(b, -1))
+                # current_constraint.add_constraint(i, c, np.nextafter(b, -1))
+                current_constraint.add_constraint(
+                    i, c, b - 1e-6
+                )  # TODO : can we remove this magic number? maybe make it parameterizable?
             else:
                 raise self.translator_error(
                     "Unsupported property:"
