@@ -20,8 +20,10 @@ from .utils import to_neurify_inputs
 
 def parse_args(args: Optional[List[str]] = None):
     parser = argparse.ArgumentParser()
-    parser.add_argument("--neurify.max_depth", default=256, type=int, dest="max_depth")
-    parser.add_argument("--neurify.max_thread", default=0, type=int, dest="max_thread")
+    parser.add_argument("--neurify.max_depth", default=None, type=int, dest="max_depth")
+    parser.add_argument(
+        "--neurify.max_thread", default=None, type=int, dest="max_thread"
+    )
     return parser.parse_known_args(args)
 
 
@@ -65,7 +67,7 @@ def verify(dnn: OperationGraph, phi: Expression, **kwargs: Dict[str, Any]):
                 "0.000000000001",  # TODO: remove magic number
                 f"--linf={epsilon}",
                 "-v",
-                *[f"--{k}={v}" for k, v in kwargs.items()],
+                *[f"--{k}={v}" for k, v in kwargs.items() if v is not None],
                 verifier_error=NeurifyError,
             )
             out, err = executor.run()
