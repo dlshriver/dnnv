@@ -20,4 +20,3 @@ git pull
 cd generic
 make OPENBLAS_HOME=$PROJECT_DIR
 cp src/neurify ../../
-cp src/lp_dev/liblpsolve55.so ../../../lib/

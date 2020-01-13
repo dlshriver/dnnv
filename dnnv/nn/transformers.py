@@ -78,6 +78,20 @@ class Simplify(OperationTransformer):
             self._cache[op_id] = result
         return self._cache[op_id]
 
+    def visit_Add(self, operation):
+        operation = super().generic_visit(operation)
+        if isinstance(operation.a, Operation):
+            input_op = operation.a
+            c = operation.b
+        else:
+            input_op = operation.b
+            c = operation.a
+        if isinstance(input_op, operations.MatMul):
+            a = input_op.a
+            b = input_op.b
+            return self.visit(operations.Gemm(a, b, c))
+        return operation
+
     def visit_BatchNormalization(self, operation):
         operation = super().generic_visit(operation)
         input_op = operation.x
@@ -123,6 +137,32 @@ class Simplify(OperationTransformer):
         pad_bottom, pad_right = input_op.pads[6:8]
         operation.pads = pads + np.array([pad_top, pad_left, pad_bottom, pad_right])
         operation.x = input_op.x
+        return operation
+
+    def visit_Gemm(self, operation):
+        operation = super().generic_visit(operation)
+        if isinstance(operation.a, operations.Gemm) and not operation.transpose_a:
+            input_op = operation.a
+            if (
+                not isinstance(input_op.a, Operation)
+                or input_op.alpha != 1.0
+                or input_op.beta != 1.0
+            ):
+                return operation
+            a = input_op.a
+            b_0 = input_op.b.T if input_op.transpose_b else input_op.b
+            b_1 = operation.b.T if operation.transpose_b else operation.b
+            b = np.matmul(b_0, b_1)
+            c = np.matmul(input_op.c, b_1) + operation.c
+            return operations.Gemm(
+                a,
+                b,
+                c,
+                transpose_a=input_op.transpose_a,
+                alpha=operation.alpha,
+                beta=operation.beta,
+            )
+        # TODO : reduce when operation.b is Gemm
         return operation
 
     def visit_Identity(self, operation):

@@ -1,4 +1,5 @@
 import argparse
+import numpy as np
 import tempfile
 
 from typing import Any, Dict, List, Optional
@@ -12,6 +13,7 @@ from dnnv.verifiers.common import (
     UNKNOWN,
     CommandLineExecutor,
     ConvexPolytopeExtractor,
+    Property,
 )
 
 from .errors import NeurifyError, NeurifyTranslatorError
@@ -36,6 +38,35 @@ def parse_results(stdout: List[str], stderr: List[str]):
     elif result == "Proved.":
         return UNSAT
     raise NeurifyError(f"Unexpected verification result: {stdout[-1]}")
+
+
+def validate_counter_example(prop: Property, stdout: List[str], stderr: List[str]):
+    cex_found = False
+    input_shape, input_dtype = prop.network.value.input_details[0]
+    for line in stdout:
+        if cex_found:
+            values = line.split(":")[-1][1:-1].split()
+            cex = np.asarray([float(v) for v in values], dtype=input_dtype).reshape(
+                input_shape
+            )
+            for constraint in prop.input_constraint.constraints:
+                t = sum(
+                    c * cex[i]
+                    for c, i in zip(constraint.coefficients, constraint.indices)
+                )
+                if t > constraint.b:
+                    raise NeurifyError("Invalid counter example found.")
+            output = prop.network.value(cex)
+            for constraint in prop.output_constraint.constraints:
+                t = sum(
+                    c * output[i]
+                    for c, i in zip(constraint.coefficients, constraint.indices)
+                )
+                if t > constraint.b:
+                    raise NeurifyError("Invalid counter example found.")
+            return
+        if line.endswith("Solution:"):
+            cex_found = True
 
 
 def verify(dnn: OperationGraph, phi: Expression, **kwargs: Dict[str, Any]):
@@ -72,7 +103,7 @@ def verify(dnn: OperationGraph, phi: Expression, **kwargs: Dict[str, Any]):
             )
             out, err = executor.run()
             result |= parse_results(out, err)
-            # TODO : double check whether counter example is valid
+            validate_counter_example(prop, out, err)
             if result == SAT or result == UNKNOWN:
                 return result
 
