@@ -59,7 +59,7 @@ class PropagateConstantsTests(unittest.TestCase):
         expr = Divide(Constant(17), Constant(3))
         expr_ = expr.propagate_constants()
         self.assertIsInstance(expr_, Constant)
-        self.assertEqual(expr_.value, 17 / 3)
+        self.assertAlmostEqual(expr_.value, 17 / 3)
 
         expr = Divide(Constant(-10), Constant(2))
         expr_ = expr.propagate_constants()
@@ -166,7 +166,7 @@ class PropagateConstantsTests(unittest.TestCase):
         expr = Subtract(Constant(13), Constant(0.21))
         expr_ = expr.propagate_constants()
         self.assertIsInstance(expr_, Constant)
-        self.assertEqual(expr_.value, 12.79)
+        self.assertAlmostEqual(expr_.value, 12.79)
 
 
 if __name__ == "__main__":

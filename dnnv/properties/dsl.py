@@ -15,11 +15,17 @@ class PropertyParserError(Exception):
 class Py2PropertyTransformer(ast.NodeTransformer):
     def __init__(self):
         self._ssa_ids = defaultdict(int)
+        self._lambda_aliases = set()
 
     def _ssa(self, name):
         ssa_id = self._ssa_ids[name]
         self._ssa_ids[name] += 1
         return f"{name}{ssa_id}"
+
+    def visit_Assign(self, node: ast.Assign):
+        if isinstance(node.value, ast.Lambda) and isinstance(node.targets[0], ast.Name):
+            self._lambda_aliases.add(node.targets[0].id)
+        return super().generic_visit(node)
 
     def visit_Call(self, node: ast.Call):
         attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
@@ -67,6 +73,8 @@ class Py2PropertyTransformer(ast.NodeTransformer):
                     and isinstance(value, type)
                     and issubclass(value, base.Expression)
                 ):
+                    return ast.Call(func, args, kwargs, **attributes)
+                if func.id in self._lambda_aliases:
                     return ast.Call(func, args, kwargs, **attributes)
         make_func = ast.Name("_symbol_from_callable", ast.Load(), **attributes)
         func_expr = ast.Call(make_func, [func], [], **attributes)
@@ -234,7 +242,13 @@ class Py2PropertyTransformer(ast.NodeTransformer):
         raise PropertyParserError("We do not support yield from expressions.")
 
     def visit_IfExp(self, node: ast.IfExp):
-        raise PropertyParserError("We do not currently support ternary if expressions.")
+        attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
+        test = self.visit(node.test)
+        body = self.visit(node.body)
+        orelse = self.visit(node.orelse)
+        ite_func = ast.Name("IfThenElse", ast.Load(), **attributes)
+        new_node = ast.Call(ite_func, [test, body, orelse], [], **attributes)
+        return new_node
 
     def visit_GeneratorExp(self, node: ast.GeneratorExp):
         raise PropertyParserError("We do not currently support generator expressions.")

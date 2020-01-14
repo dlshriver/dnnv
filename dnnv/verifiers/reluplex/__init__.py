@@ -1,3 +1,4 @@
+import numpy as np
 import tempfile
 
 from typing import List
@@ -11,6 +12,7 @@ from dnnv.verifiers.common import (
     UNKNOWN,
     CommandLineExecutor,
     ConvexPolytopeExtractor,
+    Property,
 )
 
 from .errors import ReluplexError, ReluplexTranslatorError
@@ -26,7 +28,32 @@ def parse_results(stdout: List[str], stderr: List[str]):
     raise ReluplexError(f"No verification result found")
 
 
+def validate_counter_example(prop: Property, stdout: List[str], stderr: List[str]):
+    shape, dtype = prop.network.value.input_details[0]
+    cex = np.zeros(np.product(shape), dtype)
+    found = False
+    for line in stdout:
+        if found and line.startswith("input"):
+            index = int(line.split("]", maxsplit=1)[0].split("[")[-1])
+            cex[index] = float(line.split()[-1][:-1])
+        if line.startswith("Solution found!"):
+            found = True
+    cex = cex.reshape(shape)
+    for constraint in prop.input_constraint.constraints:
+        t = sum(c * cex[i] for c, i in zip(constraint.coefficients, constraint.indices))
+        if (t - constraint.b) > 1e-6:
+            raise ReluplexError("Invalid counter example found: input outside bounds.")
+    output = prop.network.value(cex)
+    for constraint in prop.output_constraint.constraints:
+        t = sum(
+            c * output[i] for c, i in zip(constraint.coefficients, constraint.indices)
+        )
+        if (t - constraint.b) > 1e-6:
+            raise ReluplexError("Invalid counter example found.")
+
+
 def verify(dnn: OperationGraph, phi: Expression):
+    logger = logging.getLogger(__name__)
     dnn = dnn.simplify()
     phi.networks[0].concretize(dnn)
 
@@ -44,25 +71,16 @@ def verify(dnn: OperationGraph, phi: Expression):
                 dirname=dirname,
                 translator_error=ReluplexTranslatorError,
             )
+            logger.debug("Running reluplex")
             executor = CommandLineExecutor(
                 "reluplex", f"{nnet_file_name}", verifier_error=ReluplexError
             )
             out, err = executor.run()
+            logger.debug("Parsing results")
             result |= parse_results(out, err)
-            # TODO : double check whether counter example is valid
-            # if result == SAT:
-            #     import numpy as np
-
-            #     input_shape, input_type = prop.network.value.input_details[0]
-            #     solution = np.zeros(np.product(input_shape), input_type)
-            #     found = False
-            #     for line in out:
-            #         if found and line.startswith("input"):
-            #             index = int(line.split("]", maxsplit=1)[0].split("[")[-1])
-            #             solution[index] = float(line.split()[-1][:-1])
-            #         if line.startswith("Solution found!"):
-            #             found = True
-            #     print(prop.network.value(solution.reshape(input_shape))) # TODO : remove
+            if result == SAT:
+                logger.debug("SAT! Validating counter example.")
+                validate_counter_example(prop, out, err)
             if result == SAT or result == UNKNOWN:
                 return result
 

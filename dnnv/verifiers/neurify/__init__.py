@@ -49,27 +49,29 @@ def validate_counter_example(prop: Property, stdout: List[str], stderr: List[str
             cex = np.asarray([float(v) for v in values], dtype=input_dtype).reshape(
                 input_shape
             )
-            for constraint in prop.input_constraint.constraints:
-                t = sum(
-                    c * cex[i]
-                    for c, i in zip(constraint.coefficients, constraint.indices)
-                )
-                if t > constraint.b:
-                    raise NeurifyError("Invalid counter example found.")
-            output = prop.network.value(cex)
-            for constraint in prop.output_constraint.constraints:
-                t = sum(
-                    c * output[i]
-                    for c, i in zip(constraint.coefficients, constraint.indices)
-                )
-                if t > constraint.b:
-                    raise NeurifyError("Invalid counter example found.")
-            return
+            break
         if line.endswith("Solution:"):
             cex_found = True
+    else:
+        input_interval = prop.input_constraint.as_hyperrectangle()
+        lb = input_interval.lower_bound
+        ub = input_interval.upper_bound
+        cex = ((lb + ub) / 2).astype(input_dtype)
+    for constraint in prop.input_constraint.constraints:
+        t = sum(c * cex[i] for c, i in zip(constraint.coefficients, constraint.indices))
+        if (t - constraint.b) > 1e-6:
+            raise NeurifyError("Invalid counter example found: input outside bounds.")
+    output = prop.network.value(cex)
+    for constraint in prop.output_constraint.constraints:
+        t = sum(
+            c * output[i] for c, i in zip(constraint.coefficients, constraint.indices)
+        )
+        if (t - constraint.b) > 1e-6:
+            raise NeurifyError("Invalid counter example found.")
 
 
 def verify(dnn: OperationGraph, phi: Expression, **kwargs: Dict[str, Any]):
+    logger = logging.getLogger(__name__)
     dnn = dnn.simplify()
     phi.networks[0].concretize(dnn)
 
@@ -88,6 +90,7 @@ def verify(dnn: OperationGraph, phi: Expression, **kwargs: Dict[str, Any]):
                 translator_error=NeurifyTranslatorError,
             )
             epsilon = neurify_inputs["epsilon"]
+            logger.debug("Running neurify")
             executor = CommandLineExecutor(
                 "neurify",
                 "-n",
@@ -102,8 +105,11 @@ def verify(dnn: OperationGraph, phi: Expression, **kwargs: Dict[str, Any]):
                 verifier_error=NeurifyError,
             )
             out, err = executor.run()
+            logger.debug("Parsing results")
             result |= parse_results(out, err)
-            validate_counter_example(prop, out, err)
+            if result == SAT:
+                logger.debug("SAT! Validating counter example.")
+                validate_counter_example(prop, out, err)
             if result == SAT or result == UNKNOWN:
                 return result
 

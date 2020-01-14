@@ -9,7 +9,7 @@ N = Network()[INPUT_LAYER:OUTPUT_LAYER]
 x = np.random.randn(1, N.input_shape[0][1]).astype(np.float32)
 x = x + eval(os.environ.get("SHIFT", "0"))
 y = np.argmax(N(x))
-epsilon = 2.0
+epsilon = 3.0
 
 Forall(
     x_,

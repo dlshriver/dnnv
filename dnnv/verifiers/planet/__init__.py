@@ -1,3 +1,4 @@
+import numpy as np
 import tempfile
 
 from typing import List, Optional, Type
@@ -11,6 +12,7 @@ from dnnv.verifiers.common import (
     UNKNOWN,
     CommandLineExecutor,
     ConvexPolytopeExtractor,
+    Property,
 )
 
 from .errors import PlanetError, PlanetTranslatorError
@@ -24,6 +26,30 @@ def parse_results(stdout: List[str], stderr: List[str]):
     elif stdout[-1] == "UNSAT":
         return UNSAT
     raise PlanetError(f"Unexpected verification result: {stdout[-1]}")
+
+
+def validate_counter_example(prop: Property, stdout: List[str], stderr: List[str]):
+    shape, dtype = prop.network.value.input_details[0]
+    cex = np.zeros(shape, dtype)
+    found = False
+    for line in stdout:
+        if line.startswith("SAT"):
+            found = True
+        if found and line.startswith("- input"):
+            position = tuple(int(i) for i in line.split(":")[1:-1])
+            value = float(line.split()[-1])
+            cex[position] = value
+    for constraint in prop.input_constraint.constraints:
+        t = sum(c * cex[i] for c, i in zip(constraint.coefficients, constraint.indices))
+        if (t - constraint.b) > 1e-6:
+            raise PlanetError("Invalid counter example found: input outside bounds.")
+    output = prop.network.value(cex)
+    for constraint in prop.output_constraint.constraints:
+        t = sum(
+            c * output[i] for c, i in zip(constraint.coefficients, constraint.indices)
+        )
+        if (t - constraint.b) > 1e-6:
+            raise PlanetError("Invalid counter example found.")
 
 
 def verify(dnn: OperationGraph, phi: Expression):
@@ -51,21 +77,8 @@ def verify(dnn: OperationGraph, phi: Expression):
             )
             out, err = executor.run()
             result |= parse_results(out, err)
-            # TODO : double check whether counter example is valid
-            # if result == SAT:
-            #     import numpy as np
-
-            #     shape, dtype = prop.network.value.input_details[0]
-            #     solution = np.zeros(shape, dtype)
-            #     found = False
-            #     for line in out:
-            #         if line.startswith("SAT"):
-            #             found = True
-            #         if found and line.startswith("- input"):
-            #             position = tuple(int(i) for i in line.split(":")[1:-1])
-            #             value = float(line.split()[-1])
-            #             solution[position] = value
-            #     print(solution, prop.network.value(solution))
+            if result == SAT:
+                validate_counter_example(prop, out, err)
             if result == SAT or result == UNKNOWN:
                 return result
 

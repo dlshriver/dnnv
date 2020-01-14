@@ -64,7 +64,7 @@ class Expression:
         return True
 
     def __hash__(self):
-        return hash(repr(self))
+        return hash(self.__class__) * hash(repr(self))
 
     def __getattr__(self, name) -> Union["Attribute", "Constant"]:
         if isinstance(name, str) and self.is_concrete:
@@ -248,7 +248,7 @@ class Constant(Expression):
             if value.step is not None:
                 return f"{start}:{stop}:{value.step}"
             return f"{start}:{stop}"
-        return f"{type(value).__name__}(id={hex(self._id)})"
+        return f"{type(value)}(id={hex(self._id)})"
 
     def __str__(self):
         value = self.value
@@ -309,18 +309,17 @@ class Symbol(Expression):
             return bool(self.value)
         return True
 
-    def __hash__(self):
-        return hash(self.identifier)
-
     def __repr__(self):
-        return str(self.identifier)
+        return f"Symbol({self.identifier!r})"
 
     def __str__(self):
         return self.identifier
 
 
 def _get_function_name(function: Callable) -> str:
-    if isinstance(function, types.LambdaType) and function.__name__ == "<lambda>":
+    if isinstance(function, types.LambdaType) and (
+        function.__name__ == "<lambda>" or function.__qualname__ == "<lambda>"
+    ):
         return f"{function.__module__}.{function.__name__}"
     elif isinstance(function, types.BuiltinFunctionType):
         return f"{function.__name__}"
@@ -414,6 +413,9 @@ class Network(Symbol):
             return new_network
         return super().__getitem__(item)
 
+    def __repr__(self):
+        return f"Network({self.identifier}!r)"
+
 
 class Image(Expression):
     def __init__(self, path: Union[Expression, str]):
@@ -503,8 +505,10 @@ class AssociativeExpression(Expression):
                 self.expressions.append(expression)
 
     def __repr__(self):
-        result_str = f" {self.OPERATOR} ".join(repr(expr) for expr in self.expressions)
-        return f"({result_str})"
+        result_str = f", ".join(
+            repr(expr) for expr in sorted(self.expressions, key=repr)
+        )
+        return f"{type(self).__name__}({result_str})"
 
     def __str__(self):
         result_str = f" {self.OPERATOR} ".join(str(expr) for expr in self.expressions)
@@ -515,13 +519,26 @@ class AssociativeExpression(Expression):
             yield expr
 
 
+class TernaryExpression(Expression):
+    def __init__(self, expr1: Expression, expr2: Expression, expr3: Expression):
+        self.expr1 = expr1
+        self.expr2 = expr2
+        self.expr3 = expr3
+
+    def __repr__(self):
+        return f"{type(self).__name__}({self.expr1!r}, {self.expr2!r}, {self.expr3!r})"
+
+    def __str__(self):
+        return f"{type(self).__name__}({self.expr1}, {self.expr2}, {self.expr3})"
+
+
 class BinaryExpression(Expression):
     def __init__(self, expr1: Expression, expr2: Expression):
         self.expr1 = expr1
         self.expr2 = expr2
 
     def __repr__(self):
-        return f"({self.expr1!r} {self.OPERATOR} {self.expr2!r})"
+        return f"{type(self).__name__}({self.expr1!r}, {self.expr2!r})"
 
     def __str__(self):
         return f"({self.expr1} {self.OPERATOR} {self.expr2})"
@@ -532,7 +549,7 @@ class UnaryExpression(Expression):
         self.expr = expr
 
     def __repr__(self):
-        return f"{self.OPERATOR}{self.expr!r}"
+        return f"{type(self).__name__}({self.expr!r})"
 
     def __str__(self):
         return f"{self.OPERATOR}{self.expr}"
@@ -559,20 +576,25 @@ class Attribute(BinaryExpression):
     def __str__(self):
         return f"{self.expr}.{self.name}"
 
-    def __neg__(self):
-        return Negation(self)
 
+class Slice(TernaryExpression):
+    def __init__(self, start: Any, stop: Any, step: Any):
+        start = start if isinstance(start, Expression) else Constant(start)
+        stop = stop if isinstance(stop, Expression) else Constant(stop)
+        step = step if isinstance(step, Expression) else Constant(step)
+        super().__init__(start, stop, step)
 
-class Slice(Expression):
-    def __init__(
-        self,
-        start: Optional[Expression],
-        stop: Optional[Expression],
-        step: Optional[Expression],
-    ):
-        self.start = start if start is not None else Constant(None)
-        self.stop = stop if stop is not None else Constant(None)
-        self.step = step if step is not None else Constant(None)
+    @property
+    def start(self):
+        return self.expr1
+
+    @property
+    def stop(self):
+        return self.expr2
+
+    @property
+    def step(self):
+        return self.expr3
 
     @property
     def value(self):
@@ -584,17 +606,17 @@ class Slice(Expression):
         return super().value
 
     def __repr__(self):
-        start = "" if self.start is None else self.start
-        stop = "" if self.stop is None else self.start
-        step = self.step
+        start = "" if self.start.value is None else self.start
+        stop = "" if self.stop.value is None else self.start
+        step = None if self.step.value is None else self.step
         if step is None:
             return f"{start!r}:{stop!r}"
         return f"{start!r}:{stop!r}:{step!r}"
 
     def __str__(self):
-        start = "" if self.start is None else self.start
-        stop = "" if self.stop is None else self.start
-        step = self.step
+        start = "" if self.start.value is None else self.start
+        stop = "" if self.stop.value is None else self.start
+        step = None if self.step.value is None else self.step
         if step is None:
             return f"{start}:{stop}"
         return f"{start}:{stop}:{step}"
@@ -621,8 +643,28 @@ class Subscript(BinaryExpression):
     def __str__(self):
         return f"{self.expr}[{self.index}]"
 
-    def __neg__(self):
-        return Negation(self)
+
+class IfThenElse(TernaryExpression):
+    @property
+    def condition(self):
+        return self.expr1
+
+    @property
+    def t_expr(self):
+        return self.expr2
+
+    @property
+    def f_expr(self):
+        return self.expr3
+
+    @property
+    def value(self):
+        if self.is_concrete:
+            if self.condition.value:
+                return self.t_expr.value
+            else:
+                return self.f_expr.value
+        return super().value
 
 
 class ArithmeticExpression(Expression):
@@ -674,12 +716,18 @@ class Equal(BinaryExpression, LogicalExpression):
     def __invert__(self):
         return NotEqual(self.expr1, self.expr2)
 
+    def __bool__(self):
+        return repr(self.expr1) == repr(self.expr2)
+
 
 class NotEqual(BinaryExpression, LogicalExpression):
     OPERATOR = "!="
 
     def __invert__(self):
         return Equal(self.expr1, self.expr2)
+
+    def __bool__(self):
+        return repr(self.expr1) != repr(self.expr2)
 
 
 class LessThan(BinaryExpression, LogicalExpression):
@@ -743,10 +791,10 @@ class Quantifier(LogicalExpression):
         self.expression = formula
 
     def __repr__(self):
-        return f"{self.__class__.__name__}({self.variable!r}, {self.expression!r})"
+        return f"{type(self).__name__}({self.variable!r}, {self.expression!r})"
 
     def __str__(self):
-        return f"{self.__class__.__name__}({self.variable}, {self.expression})"
+        return f"{type(self).__name__}({self.variable}, {self.expression})"
 
 
 class Forall(Quantifier):
@@ -762,6 +810,80 @@ class Exists(Quantifier):
 argmax = np.argmax
 argmin = np.argmin
 
+
+def __argcmp_helper(cmp_fn, A, Ai, i, j) -> Union[Constant, IfThenElse]:
+    if j == len(Ai):
+        return Constant(i)
+    return IfThenElse(
+        cmp_fn(A[Ai[i]], A[Ai[j]]),
+        __argcmp_helper(cmp_fn, A, Ai, i, j + 1),
+        __argcmp_helper(cmp_fn, A, Ai, j, j + 1),
+    )
+
+
+def __argcmp(cmp_fn, A) -> Union[Constant, IfThenElse]:
+    if not isinstance(A, Expression):
+        return Constant(np.argmax(A))
+    elif isinstance(A, FunctionCall) and isinstance(A.function, Network):
+        if not A.function.is_concrete:
+            raise RuntimeError(
+                "argcmp can not be applied to outputs of non-concrete networks"
+            )
+        output_shape = A.function.value.output_shape[0]
+        Ai = list(np.ndindex(output_shape))
+        argcmp = __argcmp_helper(cmp_fn, A, Ai, 0, 1)
+        return argcmp
+    else:
+        raise RuntimeError(f"Unsupported type for argcmp input: {type(A)}")
+
+
+def __argmax(A) -> Union[Constant, IfThenElse]:
+    return __argcmp(lambda a, b: a >= b, A)
+
+
+def __argmin(A) -> Union[Constant, IfThenElse]:
+    return __argcmp(lambda a, b: a <= b, A)
+
+
+def __argcmp_eq(cmp_fn, A: FunctionCall, c: Constant) -> Union[And, Constant]:
+    if not isinstance(A, Expression):
+        return Constant(np.argmax(A) == c)
+    elif isinstance(A, FunctionCall) and isinstance(A.function, Network):
+        if not A.function.is_concrete:
+            raise RuntimeError(
+                "argcmp can not be applied to outputs of non-concrete networks"
+            )
+        ci = c.value
+        output_shape = A.function.value.output_shape[0]
+        Ai = list(np.ndindex(output_shape))
+        return And(*[cmp_fn(A[Ai[ci]], A[Ai[i]]) for i in range(len(Ai)) if i != ci])
+    else:
+        raise RuntimeError(f"Unsupported type for argcmp input: {type(A)}")
+
+
+def __argmax_eq(A: FunctionCall, c: Constant) -> Union[And, Constant]:
+    if len(A.args) > 1 or len(A.kwargs) != 0:
+        raise RuntimeError("Too many arguments for argmax")
+    return __argcmp_eq(lambda a, b: a >= b, A.args[0], c)
+
+
+def __abs(x) -> Union[Constant, IfThenElse]:
+    if not isinstance(x, Expression):
+        return Constant(np.abs(x))
+    return IfThenElse(x >= 0, x, -x)
+
+
+_BUILTIN_FUNCTION_TRANSFORMS = {
+    (np.argmax, "=="): __argmax_eq
+}  # type: Dict[Any, Callable[[FunctionCall, Constant], Expression]]
+
+_BUILTIN_FUNCTIONS = {
+    abs: __abs,
+    np.abs: __abs,
+    np.argmax: __argmax,
+    np.argmin: __argmax,
+}  # type: Dict[Any, Callable[..., Expression]]
+
 # TODO : organize this list better
 __all__ = [
     "Expression",
@@ -774,6 +896,7 @@ __all__ = [
     "Attribute",
     "Subscript",
     "Slice",
+    "IfThenElse",
     "Negation",
     "Add",
     "Subtract",
@@ -793,6 +916,7 @@ __all__ = [
     "Forall",
     "Exists",
     "AssociativeExpression",
+    "TernaryExpression",
     "BinaryExpression",
     "UnaryExpression",
 ]

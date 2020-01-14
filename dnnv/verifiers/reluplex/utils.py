@@ -65,7 +65,7 @@ def to_nnet_file(
     if dirname is None:
         dirname = tempfile.tempdir
     with tempfile.NamedTemporaryFile(
-        mode="w+", dir=dirname, suffix=".rlv", delete=False
+        mode="w+", dir=dirname, suffix=".nnet", delete=False
     ) as nnet_file:
         for line in as_reluplex_nnet(
             input_interval, layers, translator_error=translator_error

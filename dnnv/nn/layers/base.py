@@ -205,12 +205,13 @@ class FullyConnected(Layer):
         elif isinstance(op, Transpose):
             if not isinstance(op.x, Input):
                 raise ValueError("Expected Transpose to be applied to Input.")
-            input_shape = op.x.shape
             permutation = np.asarray(op.permutation)
+            undo_permutation = permutation[permutation]
+            input_shape = np.asarray(op.x.shape)[permutation]
             weights_permutation = (
                 np.arange(np.product(input_shape))
                 .reshape(input_shape)
-                .transpose(permutation)
+                .transpose(undo_permutation)
                 .flatten()
             )
         else:

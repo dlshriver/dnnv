@@ -126,23 +126,13 @@ def as_neurify_nnet(
     for layer in layers[1:]:
         if isinstance(layer, FullyConnected):
             weights = layer.weights[layer.w_permutation]
-            if not seen_fully_connected:
-                seen_fully_connected = True
-                if len(shape) == 4:
-                    weights_permutation = (
-                        np.arange(np.product(shape[1:]))
-                        .reshape(shape)
-                        .transpose((0, 2, 3, 1))
-                        .flatten()
-                    )
-                    weights = layer.weights[weights_permutation]
             for i in range(weights.shape[1]):
                 yield ",".join("%.12f" % w for w in weights[:, i])
             for b in layer.bias:
                 yield "%.12f" % b
         elif isinstance(layer, Convolutional):
             for kernel_weights in layer.weights:
-                weights = kernel_weights.transpose(0, 2, 1).flatten()
+                weights = kernel_weights.flatten()
                 yield ",".join("%.12f" % w for w in weights)
             for b in layer.bias:
                 yield "%.12f" % b
@@ -169,8 +159,6 @@ def to_neurify_inputs(
     with tempfile.NamedTemporaryFile(
         mode="w+", dir=dirname, suffix=".input", delete=False
     ) as input_file:
-        if len(sample_input.shape) == 4:
-            sample_input = sample_input.transpose((0, 1, 3, 2))
         if sample_input.shape[0] != 1:
             raise translator_error("Batch sizes greater than 1 are not supported")
         input_file.write(",".join(f"{x:.12f}" for x in sample_input.flatten()))

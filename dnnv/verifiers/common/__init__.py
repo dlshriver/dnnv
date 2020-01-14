@@ -11,12 +11,17 @@ from collections import namedtuple
 from enum import Enum
 from typing import Dict, Iterable, Tuple, Type, Union
 
+from dnnv import logging
 from dnnv.properties import *
 
 MAGIC_NUMBER = 1e-12
 
 
 class Constraint(ABC):
+    @property
+    def is_consistent(self):
+        return None
+
     @abstractmethod
     def as_layers(
         self,
@@ -34,6 +39,32 @@ class ConvexPolytope(Constraint):
     def __init__(self, shape):
         self.shape = shape
         self.constraints = []  # type: List[LinearInequality]
+
+    @property
+    def is_consistent(self):
+        from scipy.optimize import linprog
+        from itertools import chain
+
+        k = len(self.constraints)
+        v = {}
+        for c in self.constraints:
+            for i in c.indices:
+                if i not in v:
+                    v[i] = len(v)
+        n = len(v)
+        A = np.zeros((k, n))
+        b = np.zeros(k)
+        for ci, c in enumerate(self.constraints):
+            for i, a in zip(c.indices, c.coefficients):
+                A[ci, v[i]] = a
+            b[ci] = c.b
+        obj = np.zeros(n)
+        result = linprog(obj, A, b, bounds=(None, None))
+        if result.status == 2:  # infeasible
+            return False
+        elif result.status == 0:  # feasible
+            return True
+        return None  # unknown
 
     def add_constraint(self, indices, coefficients, b):
         self.constraints.append(self.LinearInequality(indices, coefficients, b))
@@ -96,6 +127,12 @@ class HyperRectangle(ConvexPolytope):
         self._constraint_index = {}
         self.lower_bound = np.zeros(shape) - np.inf
         self.upper_bound = np.zeros(shape) + np.inf
+
+    @property
+    def is_consistent(self):
+        if (self.lower_bound > self.upper_bound).any():
+            return False
+        return True
 
     def add_constraint(self, indices, coefficients, b):
         if len(indices) > 1:
@@ -183,6 +220,7 @@ class ConvexPolytopeExtractor(PropertyExtractor):
         return Property(self.network, self.input_constraint, self.output_constraint)
 
     def extract_from(self, expression: Expression) -> Iterable[Property]:
+        logger = logging.getLogger(__name__)
         self.existential = False
         if isinstance(expression, Exists):
             raise NotImplementedError()  # TODO
@@ -191,13 +229,20 @@ class ConvexPolytopeExtractor(PropertyExtractor):
         expression = expression.canonical()
         not_expression = Or(~expression)
         for conjunction in not_expression:
+            logger.info("CONJUNCTION: %s", conjunction)
             if len(conjunction.networks) != 1:
+                continue
                 raise self.translator_error(
                     "Exactly one network input and output are required"
                 )
             if len(conjunction.variables) != 1:
                 raise self.translator_error("Exactly one network input is required")
-            yield from super().extract_from(conjunction)
+            for prop in super().extract_from(conjunction):
+                if prop.input_constraint.as_hyperrectangle().is_consistent == False:
+                    continue
+                if prop.output_constraint.is_consistent == False:
+                    continue
+                yield prop
 
     def visit(self, expression: Expression):
         self._stack.append(type(expression))
@@ -280,7 +325,7 @@ class ConvexPolytopeExtractor(PropertyExtractor):
             )
         raise self.translator_error(
             "Unsupported property:"
-            f" Calling {type(function).__name__!r} expressions is not currently supported"
+            f" Function {expression.function} is not currently supported"
         )
 
     def _add_constraint(self, expr: Union[LessThan, LessThanOrEqual]):

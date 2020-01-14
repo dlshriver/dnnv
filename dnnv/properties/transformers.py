@@ -1,23 +1,28 @@
+import numpy as np
+
 from collections import defaultdict
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 from .base import *
+from .base import _BUILTIN_FUNCTIONS, _BUILTIN_FUNCTION_TRANSFORMS
 from .visitors import ExpressionVisitor
 
 
 class ExpressionTransformer(ExpressionVisitor):
     def __init__(self):
         self.visited = {}
+        self._top_level = True
 
     def visit(self, expression: Expression) -> Expression:
+        if self._top_level:
+            self._top_level = False
         if not isinstance(expression, Expression):
             return self.generic_visit(expression)
-        expression_id = hash(expression)
-        if expression_id not in self.visited:
+        if expression not in self.visited:
             method_name = "visit_%s" % expression.__class__.__name__
             visitor = getattr(self, method_name, self.generic_visit)
-            self.visited[expression_id] = visitor(expression)
-        return self.visited[expression_id]
+            self.visited[expression] = visitor(expression)
+        return self.visited[expression]
 
     def generic_visit(self, expression: Expression) -> Expression:
         if isinstance(expression, Expression):
@@ -48,6 +53,11 @@ class GenericExpressionTransformer(ExpressionTransformer):
                 path = self.visit(expression.path)
                 return type(expression)(path)
             return expression
+        elif isinstance(expression, TernaryExpression):
+            expr1 = self.visit(expression.expr1)
+            expr2 = self.visit(expression.expr2)
+            expr3 = self.visit(expression.expr3)
+            return type(expression)(expr1, expr2, expr3)
         elif isinstance(expression, Quantifier):
             variable = self.visit(expression.variable)
             expr = self.visit(expression.expression)
@@ -72,16 +82,17 @@ class Canonical(ExpressionTransformer):
                 expr.expressions.append(e)
         return expr, Add(*constants).propagate_constants()
 
-    def __init__(self):
-        super().__init__()
-        self._top = True
-
     def visit(self, expression: Expression) -> Expression:
-        top = False
-        if self._top:
-            self._top = False
+        if self._top_level:
+            expression = expression.propagate_constants()
+            expression = SubstituteFunctionCalls(_BUILTIN_FUNCTIONS).visit(expression)
+            expression = expression.propagate_constants()
             expression = expression.to_cnf()
             expression = expression.propagate_constants()
+            # TODO : clean this up to not use internal implementation details
+            to_cnf = ToCNF()
+            to_cnf._top_level = False
+            return to_cnf.visit(super().visit(expression))
         expr = super().visit(expression)
         return expr
 
@@ -104,6 +115,11 @@ class Canonical(ExpressionTransformer):
             else:
                 expressions.append(expr)
         return Or(*expressions)
+
+    def visit_Equal(self, expression: Equal) -> And:
+        expr1 = expression.expr1
+        expr2 = expression.expr2
+        return self.visit(And(expr1 <= expr2, expr2 <= expr1))
 
     def visit_GreaterThan(self, expression: GreaterThan) -> GreaterThan:
         lhs = self.visit(expression.expr1 - expression.expr2)
@@ -232,6 +248,111 @@ class Canonical(ExpressionTransformer):
         return expression
 
 
+class SubstituteFunctionCalls(GenericExpressionTransformer):
+    def __init__(self, functions: Dict[Any, Callable[..., Expression]]):
+        super().__init__()
+        self.functions = functions
+        self.function_transforms = _BUILTIN_FUNCTION_TRANSFORMS
+
+    def visit_Equal(self, expression: Equal):
+        if (
+            isinstance(expression.expr1, FunctionCall)
+            and isinstance(expression.expr1.function, Constant)
+            and (expression.expr1.function.value, "==") in self.function_transforms
+            and expression.expr2.is_concrete
+        ):
+            return self.function_transforms[(expression.expr1.function.value, "==")](
+                expression.expr1, Constant(expression.expr2.value)
+            )
+        elif (
+            isinstance(expression.expr2, FunctionCall)
+            and isinstance(expression.expr2.function, Constant)
+            and (expression.expr2.function.value, "==") in self.function_transforms
+            and expression.expr1.is_concrete
+        ):
+            return self.function_transforms[(expression.expr2.function.value, "==")](
+                expression.expr2, Constant(expression.expr1.value)
+            )
+        return Equal(self.visit(expression.expr1), self.visit(expression.expr2))
+
+    def visit_FunctionCall(self, expression: FunctionCall):
+        function = self.visit(expression.function)
+        args = tuple([self.visit(arg) for arg in expression.args])
+        kwargs = {name: self.visit(value) for name, value in expression.kwargs.items()}
+        if isinstance(function, Constant) and function.value in self.functions:
+            return self.functions[function.value](*args, **kwargs)
+        expr = FunctionCall(function, args, kwargs)
+        return expr
+
+
+class RemoveIfThenElse(GenericExpressionTransformer):
+    def visit_IfThenElse(self, expression: IfThenElse):
+        condition = self.visit(expression.condition)
+        t_expr = self.visit(expression.t_expr)
+        f_expr = self.visit(expression.f_expr)
+        return And(Implies(condition, t_expr), Implies(~condition, f_expr))
+
+
+class LiftIfThenElse(GenericExpressionTransformer):
+    def generic_visit(self, expression: Expression) -> Expression:
+        if isinstance(expression, AssociativeExpression) and not isinstance(
+            expression, (And, Or)
+        ):
+            assoc_expr = type(expression)
+            exprs = [self.visit(expr) for expr in expression.expressions]
+            if all(not isinstance(expr, IfThenElse) for expr in exprs):
+                return assoc_expr(*exprs)
+            expressions = []
+            ite_expr = None  # type: Optional[IfThenElse]
+            for expr in exprs:
+                if ite_expr is None and isinstance(expr, IfThenElse):
+                    ite_expr = expr
+                    continue
+                expressions.append(expr)
+            assert ite_expr is not None
+            return self.visit(
+                IfThenElse(
+                    ite_expr.condition,
+                    assoc_expr(ite_expr.t_expr, *expressions),
+                    assoc_expr(ite_expr.f_expr, *expressions),
+                )
+            )
+        elif isinstance(expression, BinaryExpression) and not isinstance(
+            expression, Implies
+        ):
+            binary_expr = type(expression)
+            expr1 = self.visit(expression.expr1)
+            expr2 = self.visit(expression.expr2)
+            if not isinstance(expr1, IfThenElse) and not isinstance(expr2, IfThenElse):
+                return binary_expr(expr1, expr2)
+            if isinstance(expr1, IfThenElse):
+                return self.visit(
+                    IfThenElse(
+                        expr1.condition,
+                        binary_expr(expr1.t_expr, expr2),
+                        binary_expr(expr1.f_expr, expr2),
+                    )
+                )
+            return self.visit(
+                IfThenElse(
+                    expr2.condition,
+                    binary_expr(expr1, expr2.t_expr),
+                    binary_expr(expr1, expr2.f_expr),
+                )
+            )
+        elif isinstance(expression, UnaryExpression):
+            unary_expr = type(expression)
+            expr = self.visit(expression.expr)
+            if not isinstance(expression.expr, IfThenElse):
+                return unary_expr(expr)
+            return self.visit(
+                IfThenElse(
+                    expr.condition, unary_expr(expr.t_expr), unary_expr(expr.f_expr)
+                )
+            )
+        return super().generic_visit(expression)
+
+
 class PropagateConstants(ExpressionTransformer):
     def visit_Attribute(self, expression: Attribute) -> Union[Attribute, Constant]:
         expr = self.visit(expression.expr)
@@ -330,6 +451,8 @@ class PropagateConstants(ExpressionTransformer):
             args = tuple(arg.value for arg in args)
             kwargs = {name: value.value for name, value in kwargs.items()}
             result = function.value(*args, **kwargs)
+            if isinstance(result, Expression):
+                return result.propagate_constants()
             return Constant(result)
         return FunctionCall(function, args, kwargs)
 
@@ -347,6 +470,44 @@ class PropagateConstants(ExpressionTransformer):
             return Constant(expr1.value >= expr2.value)
         return GreaterThanOrEqual(expr1, expr2)
 
+    def visit_IfThenElse(self, expression: IfThenElse):
+        condition = self.visit(expression.condition)
+        t_expr = self.visit(expression.t_expr)
+        f_expr = self.visit(expression.f_expr)
+        if isinstance(condition, Constant):
+            if condition.value:
+                return t_expr
+            return f_expr
+        if (
+            isinstance(t_expr, Constant)
+            and isinstance(f_expr, Constant)
+            and isinstance(t_expr.value, (bool, np.bool, np.bool_))
+            and isinstance(f_expr.value, (bool, np.bool, np.bool_))
+        ):
+            if t_expr.value == True and f_expr.value == False:
+                return condition
+            elif t_expr.value == False and f_expr.value == True:
+                return ~condition
+            elif t_expr.value == True and f_expr.value == True:
+                return Constant(True)
+            elif t_expr.value == False and f_expr.value == False:
+                return Constant(False)
+        elif (
+            isinstance(t_expr, Constant)
+            and isinstance(t_expr.value, (bool, np.bool, np.bool_))
+            and t_expr.value == False
+        ):
+            return And(~condition, f_expr)
+        elif (
+            isinstance(f_expr, Constant)
+            and isinstance(f_expr.value, (bool, np.bool, np.bool_))
+            and f_expr.value == False
+        ):
+            return And(condition, t_expr)
+        if type(t_expr) == type(f_expr) and hash(t_expr) == hash(f_expr):
+            return t_expr
+        return IfThenElse(condition, t_expr, f_expr)
+
     def visit_Image(self, expression: Image):
         path = self.visit(expression.path)
         return Image.load(path)
@@ -354,10 +515,14 @@ class PropagateConstants(ExpressionTransformer):
     def visit_Implies(self, expression: Implies):
         antecedent = self.visit(expression.expr1)
         consequent = self.visit(expression.expr2)
-        if isinstance(antecedent, Constant) and antecedent.value == False:
+        if isinstance(antecedent, Constant) and not antecedent.value:
             return Constant(True)
-        elif isinstance(antecedent, Constant) and antecedent.value == True:
+        elif isinstance(antecedent, Constant) and antecedent.value:
             return consequent
+        elif isinstance(consequent, Constant) and consequent.value:
+            return Constant(True)
+        elif isinstance(consequent, Constant) and not consequent.value:
+            return ~antecedent
         elif isinstance(antecedent, Constant) and isinstance(consequent, Constant):
             return Constant(~(antecedent.value) | consequent.value)
         return Implies(antecedent, consequent)
@@ -499,6 +664,15 @@ class PropagateConstants(ExpressionTransformer):
 
 
 class ToCNF(GenericExpressionTransformer):
+    def visit(self, expression: Expression) -> Expression:
+        if self._top_level:
+            expression = LiftIfThenElse().visit(expression)
+            expression = expression.propagate_constants()
+            expression = RemoveIfThenElse().visit(expression)
+            expression = expression.propagate_constants()
+        expr = super().visit(expression)
+        return expr
+
     def visit_And(self, expression: And) -> And:
         expressions = []  # type: List[Expression]
         for expr in expression.expressions:
