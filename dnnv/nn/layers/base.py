@@ -105,7 +105,7 @@ class InputLayer(Layer):
 
 class FullyConnected(Layer):
     OP_PATTERN = (
-        ((Transpose >> (Flatten | Reshape)) | None)
+        (((Transpose | None) >> (Flatten | Reshape)) | None)
         >> (Gemm | (MatMul >> Add))
         >> (Activation | None)
     )
@@ -198,9 +198,13 @@ class FullyConnected(Layer):
                 % op.__class__.__name__
             )
         op = op.inputs
+        if len(op) > 1:
+            return cls(weights, bias, activation=activation)
         assert len(op) == 1
         op = op[0]
-        if isinstance(op, Transpose):
+        if isinstance(op, Input):
+            return cls(weights, bias, activation=activation)
+        elif isinstance(op, Transpose):
             if not isinstance(op.x, Input):
                 raise ValueError("Expected Transpose to be applied to Input.")
             input_shape = op.x.shape

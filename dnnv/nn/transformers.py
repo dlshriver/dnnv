@@ -105,6 +105,12 @@ class Simplify(OperationTransformer):
             return op
         return operation
 
+    def visit_Concat(self, operation: operations.Concat):
+        operation = super().generic_visit(operation)
+        if all(not isinstance(x, Operation) for x in operation.x):
+            return np.concatenate([x for x in operation.x])
+        return operation
+
     def visit_Conv(self, operation):
         operation = super().generic_visit(operation)
         input_op = operation.x
@@ -119,6 +125,14 @@ class Simplify(OperationTransformer):
         pad_bottom, pad_right = input_op.pads[6:8]
         operation.pads = pads + np.array([pad_top, pad_left, pad_bottom, pad_right])
         operation.x = input_op.x
+        return operation
+
+    def visit_Gather(self, operation: operations.Gather):
+        operation = super().generic_visit(operation)
+        if not isinstance(operation.x, Operation) and not isinstance(
+            operation.indices, Operation
+        ):
+            return np.take(operation.x, operation.indices, axis=operation.axis)
         return operation
 
     def visit_Identity(self, operation):
@@ -142,6 +156,22 @@ class Simplify(OperationTransformer):
         operation.x = input_op
         input_ops[-2].x = operation
         return output_op
+
+    def visit_Shape(self, operation: operations.Shape):
+        operation = super().generic_visit(operation)
+        input_op = operation.x
+        if isinstance(input_op, operations.Input):
+            return input_op.shape
+        return operation
+
+    def visit_Unsqueeze(self, operation: operations.Unsqueeze):
+        operation = super().generic_visit(operation)
+        if not isinstance(operation.x, Operation):
+            x = operation.x
+            for axis in operation.axes:
+                x = np.expand_dims(x, axis)
+            return x
+        return operation
 
 
 class Slicer(OperationTransformer):
