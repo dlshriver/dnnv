@@ -21,6 +21,12 @@ def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
     dnn = nn.parse(args.network)
     print("Verifying Network:")
     dnn.pprint()
+    print()
+
+    if args.debug:
+        print("Simplified Network:")
+        dnn.simplify().pprint()
+        print()
 
     phi = properties.parse(args.property, args=extra_args)
     print("Verifying property:")

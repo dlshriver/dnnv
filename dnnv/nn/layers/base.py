@@ -198,6 +198,8 @@ class FullyConnected(Layer):
                 % op.__class__.__name__
             )
         op = op.inputs
+        if len(op) > 1:
+            return cls(weights, bias, activation=activation)
         assert len(op) == 1
         op = op[0]
         if isinstance(op, Input):

@@ -1,3 +1,5 @@
+import numpy as np
+
 from collections import namedtuple
 
 from .operations import Operation
@@ -72,6 +74,10 @@ class PrintVisitor(OperationVisitor):
         super().generic_visit(operation)
 
     def get_op_id(self, operation):
+        if isinstance(operation, np.ndarray):
+            if np.product(operation.shape) < 5:
+                return str(operation)
+            return f"ndarray(shape={operation.shape})"
         op_type = operation.__class__.__name__
         if id(operation) not in self.identifiers["op"]:
             idx = self.identifiers["count"].get(op_type, 0)
