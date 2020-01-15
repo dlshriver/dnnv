@@ -8,7 +8,7 @@ from dnnv.verifiers.common import SAT, UNSAT, UNKNOWN
 
 from tests.utils import network_artifact_dir, property_artifact_dir
 
-RUNS_PER_PROP = int(os.environ.get("_DNNV_TEST_RUNS_PER_PROP", "10"))
+RUNS_PER_PROP = int(os.environ.get("_DNNV_TEST_RUNS_PER_PROP", "1"))
 
 
 class VerifierTests:
