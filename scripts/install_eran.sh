@@ -3,8 +3,6 @@
 PROJECT_DIR=$(cd $(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/..; pwd)
 cd lib
 
-pip install pycddlib
-
 git clone https://github.com/eth-sri/eran.git
 cd eran
 git pull
@@ -45,6 +43,11 @@ LDFLAGS="-L$PROJECT_DIR/lib" CXXFLAGS="-I$PROJECT_DIR/include" ./configure -pref
 make
 make install
 cd ..
+
+pip install \
+    --global-option=build_ext --global-option="-I$PROJECT_DIR/lib/eran/gmp-6.1.2" \
+    --global-option=build_ext --global-option="-L$PROJECT_DIR/lib/eran/gmp-6.1.2/.libs" \
+    pycddlib
 
 cd $PROJECT_DIR
 ./scripts/install_gurobi.sh
