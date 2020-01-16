@@ -262,6 +262,9 @@ class Py2PropertyTransformer(ast.NodeTransformer):
     def visit_SetComp(self, node: ast.SetComp):
         raise PropertyParserError("We do not currently support set comprehensions.")
 
+    def visit_Starred(self, node: ast.SetComp):
+        raise PropertyParserError("We do not currently support starred expressions.")
+
 
 class LimitQuantifiers(ExpressionVisitor):
     def __init__(self):

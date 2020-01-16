@@ -53,13 +53,25 @@ def as_neurify_nnet(
             shape[3] = int(layer.weights.shape[0])  # number of output channels
             shape[1] = int(
                 np.ceil(
-                    float(shape[1] - layer.kernel_shape[0] + 2 * layer.pads[0] + 1)
+                    float(
+                        shape[1]
+                        - layer.kernel_shape[0]
+                        + layer.pads[0]
+                        + layer.pads[2]
+                        + 1
+                    )
                     / float(layer.strides[0])
                 )
             )  # output height
             shape[2] = int(
                 np.ceil(
-                    float(shape[2] - layer.kernel_shape[1] + 2 * layer.pads[1] + 1)
+                    float(
+                        shape[2]
+                        - layer.kernel_shape[1]
+                        + layer.pads[1]
+                        + layer.pads[3]
+                        + 1
+                    )
                     / float(layer.strides[1])
                 )
             )  # output width

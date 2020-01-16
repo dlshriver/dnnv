@@ -1,9 +1,9 @@
 from dnnv.verifiers.common import VerifierError, VerifierTranslatorError
 
 
-class MIPVerifyError(VerifierError):
+class BabError(VerifierError):
     pass
 
 
-class MIPVerifyTranslatorError(VerifierTranslatorError):
+class BabTranslatorError(VerifierTranslatorError):
     pass

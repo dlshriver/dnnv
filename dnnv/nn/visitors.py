@@ -76,7 +76,7 @@ class PrintVisitor(OperationVisitor):
     def get_op_id(self, operation):
         if isinstance(operation, np.ndarray):
             if np.product(operation.shape) < 5:
-                return str(operation)
+                return "".join(str(operation).split("\n"))
             return f"ndarray(shape={operation.shape})"
         op_type = operation.__class__.__name__
         if id(operation) not in self.identifiers["op"]:
