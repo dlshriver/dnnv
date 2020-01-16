@@ -78,19 +78,19 @@ class Simplify(OperationTransformer):
             self._cache[op_id] = result
         return self._cache[op_id]
 
-    def visit_Add(self, operation: operations.Add):
-        operation = super().generic_visit(operation)
-        if isinstance(operation.a, Operation):
-            input_op = operation.a
-            c = operation.b
-        else:
-            input_op = operation.b
-            c = operation.a
-        if isinstance(input_op, operations.MatMul):
-            a = input_op.a
-            b = input_op.b
-            return self.visit(operations.Gemm(a, b, c))
-        return operation
+    # def visit_Add(self, operation: operations.Add):
+    #     operation = super().generic_visit(operation)
+    #     if isinstance(operation.a, Operation):
+    #         input_op = operation.a
+    #         c = operation.b
+    #     else:
+    #         input_op = operation.b
+    #         c = operation.a
+    #     if isinstance(input_op, operations.MatMul):
+    #         a = input_op.a
+    #         b = input_op.b
+    #         return self.visit(operations.Gemm(a, b, c))
+    #     return operation
 
     def visit_BatchNormalization(self, operation: operations.BatchNormalization):
         operation = super().generic_visit(operation)
