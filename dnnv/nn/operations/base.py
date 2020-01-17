@@ -38,6 +38,9 @@ class Operation(metaclass=_Operation):
     def __getitem__(self, index):
         return OutputSelect(self, index)
 
+    def __hash__(self):
+        return hash(type(self))
+
     @property
     def inputs(self):
         inputs = []

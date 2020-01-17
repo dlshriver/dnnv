@@ -32,8 +32,7 @@ class DropPrefix(OperationTransformer):
         self._cache = {}
 
     def visit(self, operation):
-        op_id = id(operation)
-        if op_id not in self._cache:
+        if operation not in self._cache:
             if operation not in self.prefix_graph.output_operations:
                 result = super().visit(operation)
             else:
@@ -53,8 +52,8 @@ class DropPrefix(OperationTransformer):
                 if all(d[0][0] < 0 for d in input_details) and new_input_shape[0] == 1:
                     new_input_shape[0] = -1
                 result = Input(new_input_shape, y[0].dtype)
-            self._cache[op_id] = result
-        return self._cache[op_id]
+            self._cache[operation] = result
+        return self._cache[operation]
 
     def generic_visit(self, operation):
         kwargs = {}
@@ -72,25 +71,25 @@ class Simplify(OperationTransformer):
         self._cache = {}
 
     def visit(self, operation):
-        op_id = id(operation)
-        if op_id not in self._cache:
+        if operation not in self._cache:
             result = super().visit(operation)
-            self._cache[op_id] = result
-        return self._cache[op_id]
+            self._cache[operation] = result
+        return self._cache[operation]
 
-    # def visit_Add(self, operation: operations.Add):
-    #     operation = super().generic_visit(operation)
-    #     if isinstance(operation.a, Operation):
-    #         input_op = operation.a
-    #         c = operation.b
-    #     else:
-    #         input_op = operation.b
-    #         c = operation.a
-    #     if isinstance(input_op, operations.MatMul):
-    #         a = input_op.a
-    #         b = input_op.b
-    #         return self.visit(operations.Gemm(a, b, c))
-    #     return operation
+    def visit_Add(self, operation: operations.Add):
+        operation = super().generic_visit(operation)
+        if isinstance(operation, operations.Add):
+            if isinstance(operation.a, Operation):
+                input_op = operation.a
+                c = operation.b
+            else:
+                input_op = operation.b
+                c = operation.a
+            if isinstance(input_op, operations.MatMul):
+                a = input_op.a
+                b = input_op.b
+                return self.visit(operations.Gemm(a, b, c))
+        return operation
 
     def visit_BatchNormalization(self, operation: operations.BatchNormalization):
         operation = super().generic_visit(operation)
@@ -204,8 +203,6 @@ class Simplify(OperationTransformer):
     def visit_Shape(self, operation: operations.Shape):
         operation = super().generic_visit(operation)
         input_op = operation.x
-        # if isinstance(input_op, operations.Input):
-        #     return input_op.shape
         return OperationGraph([input_op]).output_shape[0]
 
     def visit_Unsqueeze(self, operation: operations.Unsqueeze):
@@ -234,7 +231,6 @@ class Slicer(OperationTransformer):
         if self.current_pass is None:
             is_first = True
 
-        op_id = id(operation)
         if is_first:
             self._cache = {}
 
@@ -256,35 +252,34 @@ class Slicer(OperationTransformer):
             self.current_pass = None
             return outputs
         elif self.current_pass == "indexing":
-            if op_id in self._cache:
+            if operation in self._cache:
                 raise ValueError("Slicing cyclic graphs is not supported.")
-            self._cache[op_id] = None
+            self._cache[operation] = None
             super().visit(operation)
-            del self._cache[op_id]
+            del self._cache[operation]
             return operation
         elif self.current_pass == "selection":
-            if op_id not in self._cache:
-                self._cache[op_id] = super().visit(operation)
-            return self._cache[op_id]
+            if operation not in self._cache:
+                self._cache[operation] = super().visit(operation)
+            return self._cache[operation]
         else:
             raise ValueError()
 
     def generic_visit(self, operation):
-        op_id = id(operation)
         if self.current_pass == "indexing":
             self.index -= 1
             self.length = max(self.length, -self.index)
-            if op_id not in self._index_cache:
-                self._index_cache[op_id] = [float("inf"), float("-inf"), operation]
-            pos_index, neg_index, _ = self._index_cache[op_id]
-            self._index_cache[op_id][1] = max(neg_index, self.index)
+            if operation not in self._index_cache:
+                self._index_cache[operation] = [float("inf"), float("-inf"), operation]
+            pos_index, neg_index, _ = self._index_cache[operation]
+            self._index_cache[operation][1] = max(neg_index, self.index)
             result = super().generic_visit(operation)
-            pos_index, neg_index, _ = self._index_cache[op_id]
-            self._index_cache[op_id][0] = min(pos_index, self.length + self.index)
+            pos_index, neg_index, _ = self._index_cache[operation]
+            self._index_cache[operation][0] = min(pos_index, self.length + self.index)
             self.index += 1
             return result
         elif self.current_pass == "selection":
-            pos_index, neg_index, _ = self._index_cache[op_id]
+            pos_index, neg_index, _ = self._index_cache[operation]
             if (self.start > 0 and pos_index < self.start) or (
                 self.start < 0 and neg_index < self.start
             ):
@@ -316,86 +311,3 @@ class Slicer(OperationTransformer):
             return operation.__class__(**kwargs)
         else:
             raise ValueError(f"Unknown slicing pass: {self.current_pass}")
-
-
-class Slicer_(OperationTransformer):
-    def __init__(self, start, stop):
-        self.start = start
-        self.stop = stop
-        self._cache = {}
-        self.index = 0
-        self.length = None
-        self.stop_layer = None
-
-    def visit(self, operation):
-        op_id = id(operation)
-        if op_id not in self._cache:
-            self.index -= 1
-            result = super().visit(operation)
-            if self.stop is not None and (
-                (self.stop > 0 and (self.length + self.index) >= self.stop)
-                or (self.stop < 0 and self.index >= self.stop)
-            ):
-                self._cache[op_id] = self.stop_layer
-            else:
-                self._cache[op_id] = result
-            self.index += 1
-        result = self._cache[op_id]
-        if self.index == 0 and isinstance(result, Operation):
-            return [result]
-        return result
-
-    def generic_visit(self, operation):
-        kwargs = {}
-        found_operations = []
-        for name, value in operation.__dict__.items():
-            if isinstance(value, Operation):
-                new_value = self.visit(value)
-                kwargs[name] = new_value
-                found_operations.append((name, new_value))
-            elif isinstance(value, (tuple, list, set)):
-                new_value = []
-                for value_ in value:
-                    if isinstance(value_, Operation):
-                        new_value_ = self.visit(value_)
-                        new_value.append(new_value_)
-                        found_operations.append((name, new_value_))
-                    else:
-                        new_value.append(deepcopy(value_))
-                kwargs[name] = type(value)(new_value)
-            else:
-                kwargs[name] = deepcopy(value)
-        current_index = (self.length + self.index, self.index)
-        if self.start in current_index and not isinstance(operation, Input):
-            if len(found_operations) > 1:
-                raise ValueError("Slicing does not support multiple inputs.")
-            elif len(found_operations) == 1:
-                found_operation = found_operations[0]
-                if not isinstance(found_operation[1], Input):
-                    input_details = GetInputDetails().visit(found_operation[1])
-                    y = OperationGraph([found_operation[1]])(
-                        *[
-                            np.ones([i if i >= 0 else 1 for i in d[0]], dtype=d[1])
-                            for d in input_details
-                        ],
-                        squeeze=False,
-                    )
-                    new_input = Input(y[0].shape, y[0].dtype)
-                    kwargs[found_operation[0]] = new_input
-            else:
-                raise ValueError("No input operations for %s" % operation)
-        elif self.stop in current_index:
-            if self.stop_layer is None:
-                self.stop_layer = []
-            self.stop_layer.extend([op for name, op in found_operations])
-        return operation.__class__(**kwargs)
-
-    def visit_Input(self, operation):
-        if self.length is not None:
-            raise ValueError("Slicing does not support multiple inputs.")
-        self.length = -self.index
-        if self.start is not None and self.start > self.length:
-            raise ValueError("Slice start is too large.")
-        if self.stop is not None and self.stop > self.length:
-            raise ValueError("Slice stop is too large.")
-        return self.generic_visit(operation)

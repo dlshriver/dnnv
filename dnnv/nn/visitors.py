@@ -30,10 +30,9 @@ class GetInputDetails(OperationVisitor):
         self.input_details = []
 
     def visit(self, operation):
-        op_id = id(operation)
-        if op_id not in self.visited:
+        if operation not in self.visited:
             super().visit(operation)
-            self.visited.add(op_id)
+            self.visited.add(operation)
         return tuple(self.input_details)
 
     def visit_Input(self, operation):
@@ -49,9 +48,8 @@ class OperationCounter(OperationVisitor):
         self.visited = set()
 
     def visit(self, operation):
-        op_id = operation
-        if op_id not in self.visited:
-            self.visited.add(op_id)
+        if operation not in self.visited:
+            self.visited.add(operation)
             super().generic_visit(operation)
         return len(self.visited)
 
@@ -63,9 +61,9 @@ class PrintVisitor(OperationVisitor):
         self.identifiers = {"count": {}, "op": {}}
 
     def visit(self, operation):
-        if id(operation) in self.visited:
+        if operation in self.visited:
             return
-        self.visited.add(id(operation))
+        self.visited.add(operation)
         return super().visit(operation)
 
     def generic_visit(self, operation):
@@ -79,11 +77,11 @@ class PrintVisitor(OperationVisitor):
                 return "".join(str(operation).split("\n"))
             return f"ndarray(shape={operation.shape})"
         op_type = operation.__class__.__name__
-        if id(operation) not in self.identifiers["op"]:
+        if operation not in self.identifiers["op"]:
             idx = self.identifiers["count"].get(op_type, 0)
             self.identifiers["count"][op_type] = idx + 1
-            self.identifiers["op"][id(operation)] = idx
-        idx = self.identifiers["op"][id(operation)]
+            self.identifiers["op"][operation] = idx
+        idx = self.identifiers["op"][operation]
         return "%s_%s" % (op_type, idx)
 
     def print_op_id(self, operation):
