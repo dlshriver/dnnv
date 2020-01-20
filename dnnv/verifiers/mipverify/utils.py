@@ -35,6 +35,7 @@ def as_mipverify(
             [-last_layer.weights[:, 0], last_layer.weights[:, 0]], 1
         )
     shape = np.asarray(input_layer.shape)[[0, 2, 3, 1]]
+    seen_fullyconnected = False
     for layer_id, layer in enumerate(layers[1:], 1):
         layer_name = f"layer{layer_id}"
         if isinstance(layer, FullyConnected):
@@ -42,7 +43,20 @@ def as_mipverify(
                 layer_names.append(f"Flatten({sample_input.ndim})")
             elif isinstance(layers[layer_id - 1], Convolutional):
                 layer_names.append(f"Flatten(4)")
-            layer_parameters[f"{layer_name}_weight"] = layer.weights
+            weights = layer.weights.astype(np.float32)
+            weights = weights[layer.w_permutation]
+            if not seen_fullyconnected:
+                seen_fullyconnected = True
+                if len(shape) == 4:
+                    weights = weights[
+                        (
+                            np.arange(np.product(shape))
+                            .reshape(shape[[0, 3, 1, 2]])
+                            .transpose((0, 2, 3, 1))
+                            .flatten()
+                        )
+                    ]
+            layer_parameters[f"{layer_name}_weight"] = weights
             yield f'{layer_name}_W = parameters["{layer_name}_weight"]'
             if len(layer.bias) > 1:
                 layer_parameters[f"{layer_name}_bias"] = layer.bias
@@ -143,8 +157,8 @@ def to_mipverify_inputs(
     if dirname is None:
         dirname = tempfile.tempdir
 
-    lb = np.asarray(input_interval.lower_bound)
-    ub = np.asarray(input_interval.upper_bound)
+    lb = np.asarray(input_interval.lower_bound).transpose((0, 2, 3, 1))
+    ub = np.asarray(input_interval.upper_bound).transpose((0, 2, 3, 1))
     if np.any(lb < 0) or np.any(ub > 1):
         raise translator_error(
             "Inputs intervals that extend outside of [0, 1] are not supported"

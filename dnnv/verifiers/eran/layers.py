@@ -182,6 +182,10 @@ def conv_as_tf(conv_layer, x):
     )
     if conv_layer.activation == "relu":
         x = tf.nn.relu(x)
+    elif layer.activation == "sigmoid":
+        x = tf.nn.sigmoid(x)
+    elif layer.activation == "tanh":
+        x = tf.nn.tanh(x)
     elif conv_layer.activation is not None:
         raise ERANTranslatorError(
             f"{conv_layer.activation} activation is currently unsupported"

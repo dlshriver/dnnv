@@ -73,14 +73,17 @@ def verify(
             )
             input_interval = prop.input_constraint.as_hyperrectangle()
 
-            spec_lb = input_interval.lower_bound.flatten().copy()
-            spec_ub = input_interval.upper_bound.flatten().copy()
+            spec_lb = input_interval.lower_bound
+            spec_ub = input_interval.upper_bound
+            if len(spec_lb.shape) == 4:
+                spec_lb = spec_lb.transpose((0, 2, 3, 1))
+                spec_ub = spec_ub.transpose((0, 2, 3, 1))
             eran_model = ERAN(
                 as_tf(layers, translator_error=ERANTranslatorError), session=tf_session
             )
             _, nn, nlb, nub = eran_model.analyze_box(
-                spec_lb,
-                spec_ub,
+                spec_lb.flatten().copy(),
+                spec_ub.flatten().copy(),
                 domain,
                 timeout_lp,
                 timeout_milp,
