@@ -15,8 +15,8 @@ cd $PROJECT_DIR/lib
 wget https://downloads.sourceforge.net/project/lpsolve/lpsolve/5.5.2.5/lp_solve_5.5.2.5_dev_ux64.tar.gz
 tar -xzf lp_solve_5.5.2.5_dev_ux64.tar.gz
 rm lp_solve_5.5.2.5_dev_ux64.tar.gz
-mkdir $PROJECT_DIR/include/lp_solve/
-cp lp_*.h $PROJECT_DIR/include/lp_solve/
+mkdir $PROJECT_DIR/include/lpsolve/
+cp lp_*.h $PROJECT_DIR/include/lpsolve/
 
 cd $PROJECT_DIR/lib
 wget https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v5.6.0.tar.gz
