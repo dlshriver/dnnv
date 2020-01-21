@@ -33,7 +33,16 @@ def conv_as_rlv(
 
     k_h, k_w = layer.kernel_shape
     p_top, p_left, p_bottom, p_right = layer.pads
-    s_h, s_w = layer.strides
+    if isinstance(layer.strides, (int, float)):
+        s_h = s_w = float(layer.strides)
+    elif len(layer.strides) == 2:
+        s_h, s_w = layer.strides
+    elif len(layer.strides) == 4:
+        s_h, s_w = layer.strides[2:]
+    else:
+        assert (
+            False
+        ), f"Unexpected stride configuration: {layer.strides}"  # TODO: clean this up
 
     n, in_c, in_h, in_w = input_shape
     out_c = layer.weights.shape[0]
@@ -205,9 +214,13 @@ class MaxPoolLayer(_PlanetLayerBase):
 
 
 class Residual(_PlanetLayerBase):
-    OP_PATTERN = (Conv & (BatchNormalization >> Relu >> Conv >> Relu >> Conv)) | (
-        (BatchNormalization >> Relu >> Conv >> Relu >> Conv) & Conv
-    ) >> Add >> (Relu | None)
+    OP_PATTERN = (
+        Conv & ((BatchNormalization | Conv) >> Relu >> Conv >> Relu >> Conv)
+    ) | (
+        ((BatchNormalization | Conv) >> Relu >> Conv >> Relu >> Conv) & Conv
+    ) >> Add >> (
+        Relu | None
+    )
 
     def __init__(self, conv1, conv2, conv3, downsample, final_activation=None):
         self.conv1 = conv1

@@ -214,6 +214,8 @@ class Constant(Expression):
     def __init__(self, value: Any):
         if isinstance(value, Constant):
             assert self._exists
+        if isinstance(value, Expression):
+            assert False
         if self._exists:
             return
         self._value = value
@@ -355,6 +357,16 @@ def find_symbols(phi: Expression, symbol_class: Type[Symbol] = Symbol):
             symbols = symbols.union(find_symbols(value, symbol_class))
         elif isinstance(value, (list, tuple, set)):
             for sub_value in value:
+                if isinstance(sub_value, symbol_class):
+                    symbols.add(sub_value)
+                if isinstance(sub_value, Expression):
+                    symbols = symbols.union(find_symbols(sub_value, symbol_class))
+        elif isinstance(value, dict):
+            for key, sub_value in value.items():
+                if isinstance(key, symbol_class):
+                    symbols.add(key)
+                if isinstance(key, Expression):
+                    symbols = symbols.union(find_symbols(key, symbol_class))
                 if isinstance(sub_value, symbol_class):
                     symbols.add(sub_value)
                 if isinstance(sub_value, Expression):
