@@ -7,9 +7,14 @@ from dnnv import logging
 
 
 class Expression:
+    def __new__(cls, *args, **kwargs):
+        if cls is Expression:
+            raise TypeError("Expression may not be instantiated")
+        return object.__new__(cls)
+
     def concretize(self, **kwargs) -> "Expression":
         symbols = {s.identifier: s for s in find_symbols(self)}
-        for name, value in kwargs:
+        for name, value in kwargs.items():
             if name not in symbols:
                 raise ValueError(f"Unknown identifier: {name!r}")
             symbols[name].concretize(value)
@@ -76,11 +81,13 @@ class Expression:
         return Attribute(self, Constant(name))
 
     def __getitem__(self, index) -> Union["Constant", "Subscript"]:
-        if isinstance(index, (int, slice)) and self.is_concrete:
+        if not isinstance(index, Expression) and self.is_concrete:
             return Constant(self.value[index])
-        elif isinstance(index, Constant) and self.is_concrete:
-            return Constant(self.value[index.value])
-        elif isinstance(index, Expression):
+        if isinstance(index, slice):
+            index = Slice(index.start, index.stop, index.step)
+        if isinstance(index, Expression):
+            if index.is_concrete and self.is_concrete:
+                return Constant(self.value[index.value])
             return Subscript(self, index)
         return Subscript(self, Constant(index))
 
@@ -187,7 +194,7 @@ class Expression:
                 k: v.value if isinstance(v, Expression) else v
                 for k, v in kwargs.items()
             }
-            return self.value(*args, **kwargs)
+            return Constant(self.value(*args, **kwargs))
         return FunctionCall(self, args, kwargs)
 
 
@@ -214,8 +221,6 @@ class Constant(Expression):
     def __init__(self, value: Any):
         if isinstance(value, Constant):
             assert self._exists
-        if isinstance(value, Expression):
-            assert False
         if self._exists:
             return
         self._value = value
@@ -245,8 +250,8 @@ class Constant(Expression):
         if isinstance(value, (str, int, float, tuple, list, set, dict)):
             return repr(value)
         elif isinstance(value, slice):
-            start = value.start or ""
-            stop = value.stop or ""
+            start = value.start if value.start is not None else ""
+            stop = value.stop if value.stop is not None else ""
             if value.step is not None:
                 return f"{start}:{stop}:{value.step}"
             return f"{start}:{stop}"
@@ -261,8 +266,8 @@ class Constant(Expression):
                 ).split("\n")
             ).replace("  ", " ")
         elif isinstance(value, slice):
-            start = value.start or ""
-            stop = value.stop or ""
+            start = value.start if value.start is not None else ""
+            stop = value.stop if value.stop is not None else ""
             if value.step is not None:
                 return f"{start}:{stop}:{value.step}"
             return f"{start}:{stop}"
@@ -297,6 +302,8 @@ class Symbol(Expression):
 
     @property
     def value(self):
+        if not self.is_concrete:
+            raise ValueError("Cannot get value of non-concrete symbol.")
         return self._value
 
     @property
@@ -619,7 +626,7 @@ class Slice(TernaryExpression):
 
     def __repr__(self):
         start = "" if self.start.value is None else self.start
-        stop = "" if self.stop.value is None else self.start
+        stop = "" if self.stop.value is None else self.stop
         step = None if self.step.value is None else self.step
         if step is None:
             return f"{start!r}:{stop!r}"
@@ -627,7 +634,7 @@ class Slice(TernaryExpression):
 
     def __str__(self):
         start = "" if self.start.value is None else self.start
-        stop = "" if self.stop.value is None else self.start
+        stop = "" if self.stop.value is None else self.stop
         step = None if self.step.value is None else self.step
         if step is None:
             return f"{start}:{stop}"

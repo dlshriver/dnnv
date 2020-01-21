@@ -4,6 +4,16 @@ from dnnv.properties import *
 
 
 class PropagateConstantsTests(unittest.TestCase):
+    def reset_property_context(self):
+        # TODO : refactor property implementation so this can be removed
+        # required to ensure concretized symbols don't carry over
+        Constant._instances = {}
+        Constant.count = 0
+        Symbol._instances = {}
+
+    def setUp(self):
+        self.reset_property_context()
+
     def test_add_constants(self):
         expr = Add(Constant(3), Constant(4))
         expr_ = expr.propagate_constants()

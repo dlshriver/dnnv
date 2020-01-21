@@ -4,6 +4,16 @@ from dnnv.properties import *
 
 
 class ToCNFTests(unittest.TestCase):
+    def reset_property_context(self):
+        # TODO : refactor property implementation so this can be removed
+        # required to ensure concretized symbols don't carry over
+        Constant._instances = {}
+        Constant.count = 0
+        Symbol._instances = {}
+
+    def setUp(self):
+        self.reset_property_context()
+
     def test_and(self):
         a = Symbol("a")
         b = Symbol("b")
