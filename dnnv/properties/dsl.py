@@ -151,45 +151,53 @@ class Py2PropertyTransformer(ast.NodeTransformer):
         const_func = ast.Name("Constant", ast.Load(), **attributes)
         return ast.Call(const_func, [node], [], **attributes)
 
+    def _ensure_primitive(self, expr):
+        if isinstance(
+            expr,
+            (
+                ast.Dict,
+                ast.List,
+                ast.NameConstant,
+                ast.Num,
+                ast.Set,
+                ast.Str,
+                ast.Tuple,
+            ),
+        ):
+            return True
+        elif isinstance(expr, ast.UnaryOp) and isinstance(
+            expr.operand, (ast.NameConstant, ast.Num, ast.Str)
+        ):
+            return True
+        return False
+
     def visit_List(self, node: ast.Tuple):
         attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
-        exprs = [
-            expr
-            for expr in node.elts
-            if not isinstance(expr, (ast.NameConstant, ast.Num, ast.Str))
-        ]
-        if len(exprs) > 0:
-            raise PropertyParserError(
-                "We do not currently support definition of lists containing non-primitive types."
-            )
+        for expr in node.elts:
+            if not self._ensure_primitive(expr):
+                raise PropertyParserError(
+                    "We do not currently support definition of lists containing non-primitive types."
+                )
         const_func = ast.Name("Constant", ast.Load(), **attributes)
         return ast.Call(const_func, [node], [], **attributes)
 
     def visit_Set(self, node: ast.Tuple):
         attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
-        exprs = [
-            expr
-            for expr in node.elts
-            if not isinstance(expr, (ast.NameConstant, ast.Num, ast.Str))
-        ]
-        if len(exprs) > 0:
-            raise PropertyParserError(
-                "We do not currently support definition of sets containing non-primitive types."
-            )
+        for expr in node.elts:
+            if not self._ensure_primitive(expr):
+                raise PropertyParserError(
+                    "We do not currently support definition of sets containing non-primitive types."
+                )
         const_func = ast.Name("Constant", ast.Load(), **attributes)
         return ast.Call(const_func, [node], [], **attributes)
 
     def visit_Tuple(self, node: ast.Tuple):
         attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
-        exprs = [
-            expr
-            for expr in node.elts
-            if not isinstance(expr, (ast.NameConstant, ast.Num, ast.Str))
-        ]
-        if len(exprs) > 0:
-            raise PropertyParserError(
-                "We do not currently support definition of tuples containing non-primitive types."
-            )
+        for expr in node.elts:
+            if not self._ensure_primitive(expr):
+                raise PropertyParserError(
+                    "We do not currently support definition of tuples containing non-primitive types."
+                )
         const_func = ast.Name("Constant", ast.Load(), **attributes)
         return ast.Call(const_func, [node], [], **attributes)
 
