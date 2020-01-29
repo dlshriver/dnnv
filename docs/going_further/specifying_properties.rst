@@ -59,23 +59,23 @@ subset of first-order-logic. It can make use of arbitrary Python
 code, as well as any of the expressions aliased before it.
 
 
-Property Structures
--------------------
+.. Property Structures
+.. -------------------
 
-**TODO** This section needs a better title (and content).
-The plan is to discuss our extensions that make specifying
-properties easier (e.g., symbols, first order logic
-implementation, etc.), and how to use them.
+.. **TODO** This section needs a better title (and content).
+.. The plan is to discuss our extensions that make specifying
+.. properties easier (e.g., symbols, first order logic
+.. implementation, etc.), and how to use them.
 
-**TODO** Should mention that network inputs should be one of
-our builtin types or a numpy array. For instance, if loading
-data from a PyTorch DataLoader, the resulting Tensor must be
-converted to a numpy array before being passed into the network.
+.. **TODO** Should mention that network inputs should be one of
+.. our builtin types or a numpy array. For instance, if loading
+.. data from a PyTorch DataLoader, the resulting Tensor must be
+.. converted to a numpy array before being passed into the network.
 
-**TODO** Explain symbols. Variables don't need to be declared before
-use. Any variable that is used without being defined will be considered
-symbolic. Currently, there is no way to provide a concrete value to
-symbolic variables from the command line interface. In general, the
-current version of the tool supports at most 1 symbolic variable per
-property, and it must be the input to a network, and have a defined
-lower and upper bound.
+.. **TODO** Explain symbols. Variables don't need to be declared before
+.. use. Any variable that is used without being defined will be considered
+.. symbolic. Currently, there is no way to provide a concrete value to
+.. symbolic variables from the command line interface. In general, the
+.. current version of the tool supports at most 1 symbolic variable per
+.. property, and it must be the input to a network, and have a defined
+.. lower and upper bound.
