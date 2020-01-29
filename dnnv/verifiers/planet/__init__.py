@@ -21,6 +21,8 @@ from .utils import to_rlv_file
 
 
 def parse_results(stdout: List[str], stderr: List[str]):
+    if len(stdout) == 0:
+        raise PlanetError(f"Running planet produced no output.")
     if stdout[-1] == "SAT":
         return SAT
     elif stdout[-1] == "UNSAT":

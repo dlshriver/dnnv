@@ -30,6 +30,8 @@ def parse_args(args: Optional[List[str]] = None):
 
 
 def parse_results(stdout: List[str], stderr: List[str]):
+    if len(stdout) < 2:
+        raise NeurifyError(f"Neurify terminated before producing expected output.")
     result = stdout[-2].strip()
     if result == "Falsified.":
         return SAT

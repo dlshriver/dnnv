@@ -46,7 +46,7 @@ class CommandLineExecutor(VerifierExecutor):
                         self.error_lines.append(line)
                         prefix = "[STDERR]:"
                     logger.debug(f"{prefix}{line}")
-            if proc.returncode < 0:
+            if proc.returncode != 0:
                 raise self.verifier_error(f"Received signal: {-proc.returncode}")
 
             for line in proc.stderr.readlines():
