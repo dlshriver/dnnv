@@ -5,6 +5,8 @@ Watch our [demo video](https://youtu.be/M5G_OWfCF2o) for a quick description!
 
 ## Getting Started
 
+For more detailed instructions, see our [documentation](https://dnnv.readthedocs.io/en/latest/).
+
 ### Installation
 
 Clone this network:
