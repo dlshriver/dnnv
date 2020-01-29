@@ -48,12 +48,14 @@ DNNV supports the following verifiers:
 
 * `Reluplex`_
 * `planet`_
+* `BaB`_
 * `MIPVerify.jl`_
 * `Neurify`_
 * `ERAN`_
 
 .. _Reluplex: https://github.com/guykatzz/ReluplexCav2017
 .. _planet: https://github.com/progirep/planet
+.. _BaB: https://github.com/oval-group/PLNN-verification
 .. _MIPVerify.jl: https://github.com/vtjeng/MIPVerify.jl
 .. _Neurify: https://github.com/tcwangshiqi-columbia/Neurify
 .. _ERAN: https://github.com/eth-sri/eran
