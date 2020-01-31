@@ -46,7 +46,7 @@ class OperationGraph:
                 np.ones([i if i >= 0 else 1 for i in d.shape], dtype=d.dtype)
                 for d in self.input_details
             ],
-            squeeze=False
+            squeeze=False,
         )
         return tuple(o.shape for o in output)
 
@@ -96,18 +96,24 @@ class OperationGraph:
             index = (slice(None), index)
         elif not isinstance(index, tuple):
             raise TypeError(
-                "Unsupported type for indexing operation graph: %s" % type(index)
+                f"Unsupported type for indexing operation graph: {type(index).__name__!r}"
             )
-        if isinstance(index[0], slice):
-            if index[0].step is not None:
-                raise ValueError("Slicing does not support non-unit steps.")
-            start = index[0].start or 0
-            stop = index[0].stop
-        elif isinstance(index[0], int):
-            start = index[0]
-            stop = index[0] + 1
-        else:
-            raise TypeError("Unsupported type for slicing indices: %s" % type(index[0]))
+        elif len(index) != 2:
+            raise TypeError(f"Unsupported indexing expression {index!r}")
+        elif not isinstance(index[0], slice):
+            raise TypeError(
+                f"Unsupported type for slicing indices: {type(index[0]).__name__!r}"
+            )
+        elif not isinstance(index[1], int):
+            raise TypeError(
+                f"Unsupported type for selecting operations: {type(index[1]).__name__!r}"
+            )
+
+        if index[0].step is not None:
+            raise ValueError("Slicing does not support non-unit steps.")
+        start = index[0].start or 0
+        stop = index[0].stop
+
         from .transformers import Slicer
 
         result = list(itertools.chain.from_iterable(self.walk(Slicer(start, stop))))

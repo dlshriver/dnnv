@@ -23,7 +23,12 @@ class Py2PropertyTransformer(ast.NodeTransformer):
         return f"{name}{ssa_id}"
 
     def visit_Assign(self, node: ast.Assign):
-        if isinstance(node.value, ast.Lambda) and isinstance(node.targets[0], ast.Name):
+        if any(not isinstance(target, ast.Name) for target in node.targets):
+            raise PropertyParserError(
+                "Assigning to non-identifiers is not currently supported"
+            )
+        if isinstance(node.value, ast.Lambda):
+            assert isinstance(node.targets[0], ast.Name)
             self._lambda_aliases.add(node.targets[0].id)
         return super().generic_visit(node)
 
