@@ -59,19 +59,17 @@ class TensorflowConverter(OperationVisitor):
 
     def _cached(self, func):
         def wrapped_func(*args, **kwargs):
-            func_id = id(func)
-            if func_id not in self._cache:
-                self._cache[func_id] = func(*args, **kwargs)
-            return self._cache[func_id]
+            if func not in self._cache:
+                self._cache[func] = func(*args, **kwargs)
+            return self._cache[func]
 
         return wrapped_func
 
     def visit(self, operation):
-        op_id = id(operation)
-        if op_id not in self.results:
+        if operation not in self.results:
             result = super().visit(operation)
-            self.results[op_id] = result
-        return self.results[op_id]
+            self.results[operation] = result
+        return self.results[operation]
 
     def generic_visit(self, operation):
         if not hasattr(self, "visit_%s" % operation.__class__.__name__):
@@ -331,7 +329,7 @@ class TensorflowConverter(OperationVisitor):
             x = inputs[input_idx]
             if any(
                 d1 != d2 and -1 not in (d1, d2) and None not in (d1, d2)
-                for d1, d2 in zip(operation.shape, x.shape)
+                for d1, d2 in zip(operation.shape[1:], x.shape[1:])
             ):
                 raise ValueError(
                     "Incorrect input shape: %s != %s" % (operation.shape, x.shape)

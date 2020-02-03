@@ -39,7 +39,11 @@ then
     shift
     for pkg in "$@"
     do
-        if [ "$pkg" == "eran" ]
+        if [ "$pkg" == "bab" ]
+        then
+            echo "Installing PLNN/BAB..."
+            ./scripts/install_plnn.sh
+        elif [ "$pkg" == "eran" ]
         then
             echo "Installing ERAN..."
             ./scripts/install_eran.sh
@@ -59,6 +63,10 @@ then
         then
             echo "Installing Planet..."
             ./scripts/install_planet.sh
+        elif [ "$pkg" == "plnn" ]
+        then
+            echo "Installing PLNN..."
+            ./scripts/install_plnn.sh
         elif [ "$pkg" == "reluplex" ]
         then
             echo "Installing Reluplex..."

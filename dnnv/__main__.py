@@ -21,6 +21,12 @@ def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
     dnn = nn.parse(args.network)
     print("Verifying Network:")
     dnn.pprint()
+    print()
+
+    if args.debug:
+        print("Simplified Network:")
+        dnn.simplify().pprint()
+        print()
 
     phi = properties.parse(args.property, args=extra_args)
     print("Verifying property:")
@@ -36,8 +42,10 @@ def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
             result = verifier.verify(dnn, phi, **kwargs)
         except VerifierTranslatorError as e:
             result = f"{type(e).__name__}({e})"
+            logger.debug("Translation Error traceback:", exc_info=True)
         except VerifierError as e:
             result = f"{type(e).__name__}({e})"
+            logger.debug("Verifier Error traceback:", exc_info=True)
         end_t = time.time()
         print(f"{verifier.__name__}")
         print(f"  result: {result}")

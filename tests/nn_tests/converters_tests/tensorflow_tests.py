@@ -4,7 +4,7 @@ import torch
 import torchvision.models as models
 import unittest
 
-from ...utils import artifact_dir
+from ...utils import network_artifact_dir as artifact_dir
 from dnnv.nn import parse
 
 THRESHOLD = 1e-6
@@ -172,6 +172,35 @@ class Vgg16Tests(ImageNetTests):
         model = parse(artifact_dir / "vgg16.onnx")
         tf_model = model.as_tf()
         self.compare_model_output(pytorch_model, tf_model, THRESHOLD * 10)
+
+
+class DaveTests(unittest.TestCase):
+    def test_dave(self):
+        op_graph = parse(artifact_dir / "dave.onnx")
+        tf_model_1 = op_graph.as_tf()
+        tf_model_2 = op_graph[2:].simplify().as_tf()
+        for i in range(5):
+            x1 = np.random.randn(1, 100, 100, 3).astype(np.float32)
+            y1 = tf_model_1(x1).item()
+            x2 = x1.transpose((0, 3, 1, 2))
+            y2 = tf_model_2(x2).item()
+            self.assertAlmostEqual(y1, y2)
+
+
+class DronetTests(unittest.TestCase):
+    def test_dronet(self):
+        op_graph = parse(artifact_dir / "dronet.onnx")
+        tf_model_1 = op_graph.as_tf()
+        tf_model_2 = op_graph[2:].simplify().as_tf()
+        for i in range(5):
+            x1 = np.random.randn(1, 200, 200, 1).astype(np.float32)
+            y1 = tf_model_1(x1)
+            x2 = x1.transpose((0, 3, 1, 2))
+            y2 = tf_model_2(x2)
+            self.assertEqual(y1.shape, y2.shape)
+            self.assertEqual(y1.shape[0], 1)
+            self.assertAlmostEqual(y1[0, 0], y2[0, 0], places=6)
+            self.assertAlmostEqual(y1[0, 1], y2[0, 1], places=6)
 
 
 if __name__ == "__main__":

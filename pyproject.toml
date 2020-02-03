@@ -6,9 +6,9 @@ build-backend = "flit.buildapi"
 module = "dnnv"
 author = "David Shriver"
 author-email = "dls2fc@virginia.edu"
-home-page="https://github.com/dlshriver/DNNV"
-description-file="README.md"
-requires=[
+home-page = "https://github.com/dlshriver/DNNV"
+description-file = "README.md"
+requires = [
     "numpy==1.16.4",
     "onnx==1.6",
     "psutil==5.6.5",
@@ -16,13 +16,16 @@ requires=[
     "tensorflow==1.15",
     "keras==2.3",
 ]
-requires-python=">=3.6"
+requires-python = ">=3.6"
 
 [tool.flit.metadata.requires-extra]
-test = [
-    "torchvision==0.2",
-]
+test = ["coverage==5.0", "torch==1.3", "torchvision==0.4"]
 doc = ["sphinx"]
 
 [tool.flit.scripts]
 dnnv = "dnnv.__main__:_main"
+
+[tool.coverage.run]
+branch = true
+command_line = "-m unittest discover -v -p *_tests.py"
+source = ["dnnv"]

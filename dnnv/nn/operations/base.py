@@ -6,8 +6,9 @@ import onnx
 from abc import ABC
 
 from .patterns import Or, Parallel, Sequential
-from ..utils import get_subclasses, ONNX_TO_NUMPY_DTYPE
+from ..utils import ONNX_TO_NUMPY_DTYPE
 from ... import logging
+from ...utils import get_subclasses
 
 
 class _Operation(type):
@@ -36,6 +37,9 @@ class _Operation(type):
 class Operation(metaclass=_Operation):
     def __getitem__(self, index):
         return OutputSelect(self, index)
+
+    def __hash__(self):
+        return hash(type(self))
 
     @property
     def inputs(self):
@@ -88,7 +92,7 @@ class Input(Operation):
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):
         dims = [
-            -1 if dim.dim_param else dim.dim_value
+            1 if dim.dim_param else dim.dim_value
             for dim in onnx_node.type.tensor_type.shape.dim
         ]
         shape = np.array(dims)

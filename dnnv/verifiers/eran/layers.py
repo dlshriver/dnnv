@@ -1,5 +1,5 @@
 import numpy as np
-import tensorflow as tf
+import tensorflow.compat.v1 as tf
 
 from typing import Optional, Type, Union
 
@@ -145,24 +145,31 @@ def build_conv_layer(op):
 
 def conv_as_tf(conv_layer, x):
     padding = "SAME"
+    if isinstance(conv_layer.strides, (int, float)):
+        s_h = s_w = float(conv_layer.strides)
+    elif len(conv_layer.strides) == 2:
+        s_h, s_w = conv_layer.strides
+    elif len(conv_layer.strides) == 4:
+        s_h, s_w = conv_layer.strides[2:]
+    else:
+        assert (
+            False
+        ), (
+            f"Unexpected stride configuration: {conv_layer.strides}"
+        )  # TODO: clean this up
     if all(p == 0 for p in conv_layer.pads):
         padding = "VALID"
     else:
         _, in_height, in_width, _ = [int(d) for d in x.shape]
-        out_height = np.ceil(float(in_height) / float(conv_layer.strides[0]))
-        out_width = np.ceil(float(in_width) / float(conv_layer.strides[1]))
+
+        out_height = np.ceil(float(in_height) / float(s_h))
+        out_width = np.ceil(float(in_width) / float(s_w))
 
         pad_along_height = max(
-            (out_height - 1) * conv_layer.strides[0]
-            + conv_layer.kernel_shape[0]
-            - in_height,
-            0,
+            (out_height - 1) * s_h + conv_layer.kernel_shape[0] - in_height, 0
         )
         pad_along_width = max(
-            (out_width - 1) * conv_layer.strides[1]
-            + conv_layer.kernel_shape[1]
-            - in_width,
-            0,
+            (out_width - 1) * s_w + conv_layer.kernel_shape[1] - in_width, 0
         )
         pad_top = pad_along_height // 2
         pad_bottom = pad_along_height - pad_top
@@ -170,18 +177,19 @@ def conv_as_tf(conv_layer, x):
         pad_right = pad_along_width - pad_left
         same_pads = [pad_top, pad_left, pad_bottom, pad_right]
         if any(p1 != p2 for p1, p2 in zip(conv_layer.pads, same_pads)):
-            raise ERANTranslatorError("Only SAME or VALID padding is not supported")
+            raise ERANTranslatorError("Only SAME or VALID padding is supported")
     x = tf.nn.bias_add(
         tf.nn.conv2d(
-            x,
-            conv_layer.weights.transpose((2, 3, 1, 0)),
-            conv_layer.strides,
-            padding=padding,
+            x, conv_layer.weights.transpose((2, 3, 1, 0)), (s_h, s_w), padding=padding
         ),
         conv_layer.bias,
     )
     if conv_layer.activation == "relu":
         x = tf.nn.relu(x)
+    elif conv_layer.activation == "sigmoid":
+        x = tf.nn.sigmoid(x)
+    elif conv_layer.activation == "tanh":
+        x = tf.nn.tanh(x)
     elif conv_layer.activation is not None:
         raise ERANTranslatorError(
             f"{conv_layer.activation} activation is currently unsupported"
@@ -190,9 +198,13 @@ def conv_as_tf(conv_layer, x):
 
 
 class Residual(_ERANLayerBase):
-    OP_PATTERN = (Conv & (BatchNormalization >> Relu >> Conv >> Relu >> Conv)) | (
-        (BatchNormalization >> Relu >> Conv >> Relu >> Conv) & Conv
-    ) >> Add >> (Relu | None)
+    OP_PATTERN = (
+        Conv & ((BatchNormalization | Conv) >> Relu >> Conv >> Relu >> Conv)
+    ) | (
+        ((BatchNormalization | Conv) >> Relu >> Conv >> Relu >> Conv) & Conv
+    ) >> Add >> (
+        Relu | None
+    )
 
     def __init__(self, conv1, conv2, conv3, downsample, final_activation=None):
         self.conv1 = conv1
@@ -250,7 +262,7 @@ class Residual(_ERANLayerBase):
         conv2_layer = conv_as_tf(self.conv2, conv1_layer)
         conv3_layer = conv_as_tf(self.conv3, conv2_layer)
 
-        add_layer = downsample_layer + conv3_layer
+        add_layer = tf.add(downsample_layer, conv3_layer)
         if self.activation == "relu":
             add_layer = tf.nn.relu(add_layer)
         elif self.activation is not None:

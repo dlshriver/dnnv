@@ -30,10 +30,3 @@ def as_numpy(node):
         raise ValueError("Unknown attribute type: %s" % (node,))
     else:
         raise ValueError("Unknown node type: %s" % type(node))
-
-
-def get_subclasses(cls):
-    c = list(cls.__subclasses__())
-    for sub in c:
-        c.extend(get_subclasses(sub))
-    return set(c)

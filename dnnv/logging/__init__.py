@@ -4,6 +4,7 @@ import argparse
 import logging
 import os
 import sys
+import tensorflow.compat.v1 as tf
 
 from contextlib import contextmanager
 from functools import partial
@@ -49,18 +50,27 @@ def initialize(name: str, args: argparse.Namespace):
     logger = logging.getLogger(name)
     logger.propagate = False
 
+    TF_CPP_MIN_LOG_LEVEL = os.environ.get("TF_CPP_MIN_LOG_LEVEL", None)
+
     if args.debug:
         logger.setLevel(logging.DEBUG)
+        os.environ["TF_CPP_MIN_LOG_LEVEL"] = TF_CPP_MIN_LOG_LEVEL or "1"
         suppress = partial(suppress, filter_level=logging.DEBUG)
     elif args.verbose:
+        tf.logging.set_verbosity(tf.logging.ERROR)
+        os.environ["TF_CPP_MIN_LOG_LEVEL"] = TF_CPP_MIN_LOG_LEVEL or "2"
         logger.setLevel(logging.INFO)
         suppress = partial(suppress, filter_level=logging.INFO)
     elif args.quiet:
+        tf.logging.set_verbosity(tf.logging.ERROR)
+        os.environ["TF_CPP_MIN_LOG_LEVEL"] = TF_CPP_MIN_LOG_LEVEL or "2"
         logger.setLevel(logging.ERROR)
         suppress = partial(suppress, filter_level=logging.ERROR)
     else:
-        logger.setLevel(logging.INFO)
-        suppress = partial(suppress, filter_level=logging.INFO)
+        tf.logging.set_verbosity(tf.logging.ERROR)
+        os.environ["TF_CPP_MIN_LOG_LEVEL"] = TF_CPP_MIN_LOG_LEVEL or "2"
+        logger.setLevel(logging.WARNING)
+        suppress = partial(suppress, filter_level=logging.WARNING)
 
     formatter = logging.Formatter(f"%(levelname)-8s %(asctime)s (%(name)s) %(message)s")
 
