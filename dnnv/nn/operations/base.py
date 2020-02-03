@@ -3,7 +3,7 @@
 import numpy as np
 import onnx
 
-from abc import ABC
+from typing import Optional, Sequence, Union
 
 from .patterns import Or, Parallel, Sequential
 from ..utils import ONNX_TO_NUMPY_DTYPE
@@ -11,35 +11,38 @@ from ... import logging
 from ...utils import get_subclasses
 
 
-class _Operation(type):
+class Op(type):
     def __str__(self):
         return self.__name__
 
-    def __and__(self, other):
+    def __and__(self, other) -> Parallel:
         return Parallel(self, other)
 
-    def __rand__(self, other):
+    def __rand__(self, other) -> Parallel:
         return Parallel(other, self)
 
-    def __or__(self, other):
+    def __or__(self, other) -> Or:
         return Or(self, other)
 
-    def __ror__(self, other):
+    def __ror__(self, other) -> Or:
         return Or(other, self)
 
-    def __rshift__(self, other):
+    def __rshift__(self, other) -> Sequential:
         return Sequential(self, other)
 
-    def __rrshift__(self, other):
+    def __rrshift__(self, other) -> Sequential:
         return Sequential(other, self)
 
 
-class Operation(metaclass=_Operation):
+class Operation(metaclass=Op):
     def __getitem__(self, index):
         return OutputSelect(self, index)
 
     def __hash__(self):
         return hash(type(self))
+
+    def __str__(self):
+        return type(self).__name__
 
     @property
     def inputs(self):
@@ -72,7 +75,7 @@ class Operation(metaclass=_Operation):
         raise ValueError("Unimplemented operation type: %s" % op_type)
 
     @classmethod
-    def match(cls, operations):
+    def match(cls, operations: Sequence["Operation"]):
         if len(operations) < 1:
             return None
         operation = operations[0]

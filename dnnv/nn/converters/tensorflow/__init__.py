@@ -536,3 +536,16 @@ class TensorflowConverter(OperationVisitor):
             return x
 
         return unsqueeze_func
+
+    def visit_Tanh(self, operation):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+
+        @self._cached
+        def tanh_func(*inputs):
+            x = _concretize([x_], inputs)
+            result = tf.nn.tanh(x)
+            return result
+
+        return tanh_func
