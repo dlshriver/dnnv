@@ -57,6 +57,11 @@ def _parse_args():
         help="do not include any input normalization in the converted model",
     )
     parser.add_argument(
+        "--check_cifar_accuracy",
+        action="store_true",
+        help="evaluate the converted model on the CIFAR10 test set",
+    )
+    parser.add_argument(
         "--check_mnist_accuracy",
         action="store_true",
         help="evaluate the converted model on the MNIST test set",
@@ -89,8 +94,15 @@ def build_normalize(
     bias = -parameters["mean"] / parameters["std"]
     flat_input_size = np.product(input_shape)
     output_shape.extend(input_shape)
-    W = np.eye(flat_input_size) * weights
-    b = np.zeros(flat_input_size) + bias
+    W = np.eye(flat_input_size) * np.array(
+        [
+            weights[i // (flat_input_size // len(weights))]
+            for i in range(flat_input_size)
+        ]
+    )
+    b = np.zeros(flat_input_size) + np.array(
+        [bias[i // (flat_input_size // len(weights))] for i in range(flat_input_size)]
+    )
 
     flatten_layer = PytorchReshape([flat_input_size])
 
@@ -285,6 +297,23 @@ def main(args: argparse.Namespace):
     if args.check_mnist_accuracy:
         data_loader = data.DataLoader(
             datasets.MNIST(
+                "./tmp/data",
+                train=False,
+                download=True,
+                transform=transforms.Compose([transforms.ToTensor()]),
+            ),
+            batch_size=1000,
+        )
+        pytorch_model.eval().cuda()
+        num_correct = 0.0
+        for i, (x, y) in enumerate(data_loader):
+            y_ = pytorch_model(x.cuda()).argmax(dim=-1).cpu()
+            num_correct += (y == y_).sum().item()
+        accuracy = num_correct / len(data_loader.dataset)
+        print("Accuracy:", accuracy)
+    if args.check_cifar_accuracy:
+        data_loader = data.DataLoader(
+            datasets.CIFAR10(
                 "./tmp/data",
                 train=False,
                 download=True,
