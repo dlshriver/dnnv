@@ -28,4 +28,6 @@ dnnv = "dnnv.__main__:_main"
 [tool.coverage.run]
 branch = true
 command_line = "-m unittest discover -v -p *_tests.py"
+concurrency = ["multiprocessing", "thread"]
+parallel = true
 source = ["dnnv"]

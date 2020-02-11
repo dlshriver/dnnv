@@ -3,7 +3,7 @@ from typing import List, Optional, Type
 from dnnv.nn import OperationGraph
 from dnnv.nn.layers import Layer, InputLayer, FullyConnected, Convolutional
 
-from .errors import VerifierTranslatorError
+from .errors import VerifierError, VerifierTranslatorError
 
 
 def as_layers(
@@ -27,3 +27,47 @@ def as_layers(
         raise translator_error("Unsupported computation graph detected")
     return layers
 
+
+def sandbox(target, q, *args, **kwargs):
+    result = target(*args, **kwargs)
+    q.put(result)
+    q.close()
+
+
+def sandboxed(target=None, verifier_error=VerifierError):
+    import functools
+    import multiprocessing as mp
+    import sys
+
+    if mp.current_process().name == "MainProcess":
+
+        def sandboxer(target):
+            @functools.wraps(target)
+            def sandboxed_target(*args, **kwargs):
+                ctx = mp.get_context("spawn")
+                q = ctx.Queue()
+                new_target = sys.modules[target.__module__].__dict__[target.__name__]
+                p = ctx.Process(
+                    target=sandbox,
+                    args=(new_target, q) + args,
+                    kwargs=kwargs,
+                    daemon=True,
+                )
+                p.start()
+                while p.is_alive() and p.exitcode is None and q.empty():
+                    pass
+                if q.empty():
+                    raise verifier_error(f"Verifier exited with status {p.exitcode}")
+                result = q.get_nowait()
+                p.join()
+                p.close()
+                return result
+
+            return sandboxed_target
+
+        if target is not None:
+            return sandboxer(target)
+        return sandboxer
+    if target is not None:
+        return target
+    return lambda x: x

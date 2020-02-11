@@ -32,13 +32,13 @@ class RandomTests(unittest.TestCase):
         Symbol._instances = {}
 
     def check_results(self, result, results):
-        if len(results) == 0:
-            return
         if result == UNKNOWN:
             return
-        previous_result = results[-1]
-        self.assertEqual(result, previous_result)
         results.append(result)
+        if len(results) == 1:
+            return
+        previous_result = results[-2]
+        self.assertEqual(result, previous_result)
 
     def test_random_fc_0(self):
         os.environ["OUTPUT_LAYER"] = "-1"

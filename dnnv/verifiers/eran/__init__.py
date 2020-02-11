@@ -14,6 +14,7 @@ from dnnv.verifiers.common import (
     UNKNOWN,
     ConvexPolytope,
     ConvexPolytopeExtractor,
+    sandboxed,
 )
 
 from .errors import ERANError, ERANTranslatorError
@@ -49,6 +50,7 @@ def check(lb, ub):
     return UNKNOWN
 
 
+@sandboxed(verifier_error=ERANError)
 def verify(
     dnn: OperationGraph,
     phi: Expression,
@@ -78,9 +80,8 @@ def verify(
             if len(spec_lb.shape) == 4:
                 spec_lb = spec_lb.transpose((0, 2, 3, 1))
                 spec_ub = spec_ub.transpose((0, 2, 3, 1))
-            eran_model = ERAN(
-                as_tf(layers, translator_error=ERANTranslatorError), session=tf_session
-            )
+            tf_graph = as_tf(layers, translator_error=ERANTranslatorError)
+            eran_model = ERAN(tf_graph, session=tf_session)
             _, nn, nlb, nub = eran_model.analyze_box(
                 spec_lb.flatten().copy(),
                 spec_ub.flatten().copy(),

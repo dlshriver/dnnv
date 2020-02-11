@@ -72,6 +72,8 @@ class Expression:
         return hash(self.__class__) * hash(repr(self))
 
     def __getattr__(self, name) -> Union["Attribute", "Constant"]:
+        if isinstance(name, str) and name.startswith("__"):
+            return super().__getattribute__(name)
         if isinstance(name, str) and self.is_concrete:
             return Constant(getattr(self.value, name))
         elif isinstance(name, Constant) and self.is_concrete:
@@ -200,7 +202,6 @@ class Expression:
 
 class Constant(Expression):
     _instances = {}  # type: Dict[Type, Dict[Any, Any]]
-    _exists = False
     count = 0
 
     def __new__(cls, value: Any):
@@ -216,13 +217,19 @@ class Constant(Expression):
         except TypeError as e:
             if "unhashable type" not in e.args[0]:
                 raise e
-        return super().__new__(cls)
+        if id(value) not in Constant._instances[type(value)]:
+            Constant._instances[type(value)][id(value)] = super().__new__(cls)
+        return Constant._instances[type(value)][id(value)]
+
+    def __getnewargs__(self):
+        return (self._value,)
 
     def __init__(self, value: Any):
-        if isinstance(value, Constant):
-            assert self._exists
-        if self._exists:
-            return
+        try:
+            if object.__getattribute__(self, "_exists"):
+                return
+        except:
+            pass
         self._value = value
         self._exists = True
         self._id = Constant.count
@@ -288,6 +295,9 @@ class Symbol(Expression):
         if identifier not in Symbol._instances[cls]:
             Symbol._instances[cls][identifier] = super().__new__(cls)
         return Symbol._instances[cls][identifier]
+
+    def __getnewargs__(self):
+        return (self.identifier,)
 
     def __init__(self, identifier: Union[Constant, str]):
         if self._exists:
@@ -385,6 +395,9 @@ class Parameter(Symbol):
     def __new__(cls, identifier: Union[Constant, str], type: Type, default: Any = None):
         return super().__new__(cls, f"P({identifier})")
 
+    def __getnewargs__(self):
+        return (self.identifier, self.type, self.default)
+
     def __init__(
         self, identifier: Union[Constant, str], type: Type, default: Any = None
     ):
@@ -408,6 +421,9 @@ class Parameter(Symbol):
 class Network(Symbol):
     def __new__(cls, identifier: Union[Constant, str] = "N"):
         return super().__new__(cls, identifier)
+
+    def __getnewargs__(self):
+        return (self.identifier,)
 
     def __init__(self, identifier: Union[Constant, str] = "N"):
         super().__init__(identifier)
