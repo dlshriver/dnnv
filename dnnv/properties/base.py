@@ -449,7 +449,7 @@ class Network(Symbol):
         return super().__getitem__(item)
 
     def __repr__(self):
-        return f"Network({self.identifier}!r)"
+        return f"Network({self.identifier!r})"
 
 
 class Image(Expression):
