@@ -142,9 +142,13 @@ class HyperRectangle(ConvexPolytope):
 
         coef = np.sign(coefficients[0])
         if coef < 0:
-            self.lower_bound[indices[0]] = b / coefficients[0]
+            self.lower_bound[indices[0]] = max(
+                b / coefficients[0], self.lower_bound[indices[0]]
+            )
         elif coef > 0:
-            self.upper_bound[indices[0]] = b / coefficients[0]
+            self.upper_bound[indices[0]] = min(
+                b / coefficients[0], self.upper_bound[indices[0]]
+            )
 
         c_index = (indices[0], coef)
         if c_index in self._constraint_index:
