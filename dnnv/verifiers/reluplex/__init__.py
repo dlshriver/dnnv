@@ -48,7 +48,6 @@ def validate_counter_example(prop: Property, stdout: List[str], stderr: List[str
         t = sum(
             c * output[i] for c, i in zip(constraint.coefficients, constraint.indices)
         )
-        print(constraint.coefficients, output, constraint.b, t, t - constraint.b)
         if (t - constraint.b) > 1e-6:
             raise ReluplexError("Invalid counter example found.")
 
