@@ -902,6 +902,12 @@ def __argmax_eq(A: FunctionCall, c: Constant) -> Union[And, Constant]:
     return __argcmp_eq(lambda a, b: a >= b, A.args[0], c)
 
 
+def __argmin_eq(A: FunctionCall, c: Constant) -> Union[And, Constant]:
+    if len(A.args) > 1 or len(A.kwargs) != 0:
+        raise RuntimeError("Too many arguments for argmin")
+    return __argcmp_eq(lambda a, b: a <= b, A.args[0], c)
+
+
 def __abs(x) -> Union[Constant, IfThenElse]:
     if not isinstance(x, Expression):
         return Constant(np.abs(x))
@@ -909,14 +915,15 @@ def __abs(x) -> Union[Constant, IfThenElse]:
 
 
 _BUILTIN_FUNCTION_TRANSFORMS = {
-    (np.argmax, "=="): __argmax_eq
+    (np.argmax, "=="): __argmax_eq,
+    (np.argmin, "=="): __argmin_eq,
 }  # type: Dict[Any, Callable[[FunctionCall, Constant], Expression]]
 
 _BUILTIN_FUNCTIONS = {
     abs: __abs,
     np.abs: __abs,
     np.argmax: __argmax,
-    np.argmin: __argmax,
+    np.argmin: __argmin,
 }  # type: Dict[Any, Callable[..., Expression]]
 
 # TODO : organize this list better
