@@ -330,8 +330,11 @@ def parse_cli(phi: base.Expression, args):
 
     parameters = phi.parameters
     for parameter in parameters:
+        default = parameter.default
+        if isinstance(default, base.Expression) and default.is_concrete:
+            default = default.value
         parser.add_argument(
-            f"--prop.{parameter.name}", type=parameter.type, default=parameter.default
+            f"--prop.{parameter.name}", type=parameter.type, default=default
         )
     known_args, unknown_args = parser.parse_known_args(args)
     if args is not None:
