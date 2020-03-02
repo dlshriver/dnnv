@@ -72,6 +72,8 @@ class Expression:
         return hash(self.__class__) * hash(repr(self))
 
     def __getattr__(self, name) -> Union["Attribute", "Constant"]:
+        if isinstance(name, str) and name.startswith("__"):
+            return super().__getattribute__(name)
         if isinstance(name, str) and self.is_concrete:
             return Constant(getattr(self.value, name))
         elif isinstance(name, Constant) and self.is_concrete:
@@ -200,7 +202,6 @@ class Expression:
 
 class Constant(Expression):
     _instances = {}  # type: Dict[Type, Dict[Any, Any]]
-    _exists = False
     count = 0
 
     def __new__(cls, value: Any):
@@ -216,13 +217,19 @@ class Constant(Expression):
         except TypeError as e:
             if "unhashable type" not in e.args[0]:
                 raise e
-        return super().__new__(cls)
+        if id(value) not in Constant._instances[type(value)]:
+            Constant._instances[type(value)][id(value)] = super().__new__(cls)
+        return Constant._instances[type(value)][id(value)]
+
+    def __getnewargs__(self):
+        return (self._value,)
 
     def __init__(self, value: Any):
-        if isinstance(value, Constant):
-            assert self._exists
-        if self._exists:
-            return
+        try:
+            if object.__getattribute__(self, "_exists"):
+                return
+        except:
+            pass
         self._value = value
         self._exists = True
         self._id = Constant.count
@@ -235,11 +242,20 @@ class Constant(Expression):
     @property
     def value(self):
         if isinstance(self._value, list):
-            return [v.value if isinstance(v, Constant) else v for v in self._value]
+            return [
+                v.value if isinstance(v, Expression) and v.is_concrete else v
+                for v in self._value
+            ]
         elif isinstance(self._value, set):
-            return set(v.value if isinstance(v, Constant) else v for v in self._value)
+            return set(
+                v.value if isinstance(v, Expression) and v.is_concrete else v
+                for v in self._value
+            )
         elif isinstance(self._value, tuple):
-            return tuple(v.value if isinstance(v, Constant) else v for v in self._value)
+            return tuple(
+                v.value if isinstance(v, Expression) and v.is_concrete else v
+                for v in self._value
+            )
         return self._value
 
     def __bool__(self):
@@ -288,6 +304,9 @@ class Symbol(Expression):
         if identifier not in Symbol._instances[cls]:
             Symbol._instances[cls][identifier] = super().__new__(cls)
         return Symbol._instances[cls][identifier]
+
+    def __getnewargs__(self):
+        return (self.identifier,)
 
     def __init__(self, identifier: Union[Constant, str]):
         if self._exists:
@@ -385,6 +404,9 @@ class Parameter(Symbol):
     def __new__(cls, identifier: Union[Constant, str], type: Type, default: Any = None):
         return super().__new__(cls, f"P({identifier})")
 
+    def __getnewargs__(self):
+        return (self.identifier, self.type, self.default)
+
     def __init__(
         self, identifier: Union[Constant, str], type: Type, default: Any = None
     ):
@@ -408,6 +430,9 @@ class Parameter(Symbol):
 class Network(Symbol):
     def __new__(cls, identifier: Union[Constant, str] = "N"):
         return super().__new__(cls, identifier)
+
+    def __getnewargs__(self):
+        return (self.identifier,)
 
     def __init__(self, identifier: Union[Constant, str] = "N"):
         super().__init__(identifier)
@@ -433,7 +458,7 @@ class Network(Symbol):
         return super().__getitem__(item)
 
     def __repr__(self):
-        return f"Network({self.identifier}!r)"
+        return f"Network({self.identifier!r})"
 
 
 class Image(Expression):
@@ -840,7 +865,7 @@ def __argcmp_helper(cmp_fn, A, Ai, i, j) -> Union[Constant, IfThenElse]:
     )
 
 
-def __argcmp(cmp_fn, A) -> Union[Constant, IfThenElse]:
+def __argcmp(cmp_fn, A: Expression) -> Union[Constant, IfThenElse]:
     if not isinstance(A, Expression):
         return Constant(np.argmax(A))
     elif isinstance(A, FunctionCall) and isinstance(A.function, Network):
@@ -856,15 +881,15 @@ def __argcmp(cmp_fn, A) -> Union[Constant, IfThenElse]:
         raise RuntimeError(f"Unsupported type for argcmp input: {type(A)}")
 
 
-def __argmax(A) -> Union[Constant, IfThenElse]:
+def __argmax(A: Expression) -> Union[Constant, IfThenElse]:
     return __argcmp(lambda a, b: a >= b, A)
 
 
-def __argmin(A) -> Union[Constant, IfThenElse]:
+def __argmin(A: Expression) -> Union[Constant, IfThenElse]:
     return __argcmp(lambda a, b: a <= b, A)
 
 
-def __argcmp_eq(cmp_fn, A: FunctionCall, c: Constant) -> Union[And, Constant]:
+def __argcmp_eq(cmp_fn, A: Expression, c: Constant) -> Union[And, Constant]:
     if not isinstance(A, Expression):
         return Constant(np.argmax(A) == c)
     elif isinstance(A, FunctionCall) and isinstance(A.function, Network):
@@ -880,10 +905,44 @@ def __argcmp_eq(cmp_fn, A: FunctionCall, c: Constant) -> Union[And, Constant]:
         raise RuntimeError(f"Unsupported type for argcmp input: {type(A)}")
 
 
+def __argcmp_neq(cmp_fn, A: Expression, c: Constant) -> Union[Or, Constant]:
+    if not isinstance(A, Expression):
+        return Constant(np.argmax(A) != c)
+    elif isinstance(A, FunctionCall) and isinstance(A.function, Network):
+        if not A.function.is_concrete:
+            raise RuntimeError(
+                "argcmp can not be applied to outputs of non-concrete networks"
+            )
+        ci = c.value
+        output_shape = A.function.value.output_shape[0]
+        Ai = list(np.ndindex(output_shape))
+        return Or(*[~cmp_fn(A[Ai[ci]], A[Ai[i]]) for i in range(len(Ai)) if i != ci])
+    else:
+        raise RuntimeError(f"Unsupported type for argcmp input: {type(A)}")
+
+
 def __argmax_eq(A: FunctionCall, c: Constant) -> Union[And, Constant]:
     if len(A.args) > 1 or len(A.kwargs) != 0:
         raise RuntimeError("Too many arguments for argmax")
     return __argcmp_eq(lambda a, b: a >= b, A.args[0], c)
+
+
+def __argmax_neq(A: FunctionCall, c: Constant) -> Union[Or, Constant]:
+    if len(A.args) > 1 or len(A.kwargs) != 0:
+        raise RuntimeError("Too many arguments for argmax")
+    return __argcmp_neq(lambda a, b: a >= b, A.args[0], c)
+
+
+def __argmin_eq(A: FunctionCall, c: Constant) -> Union[And, Constant]:
+    if len(A.args) > 1 or len(A.kwargs) != 0:
+        raise RuntimeError("Too many arguments for argmin")
+    return __argcmp_eq(lambda a, b: a <= b, A.args[0], c)
+
+
+def __argmin_neq(A: FunctionCall, c: Constant) -> Union[Or, Constant]:
+    if len(A.args) > 1 or len(A.kwargs) != 0:
+        raise RuntimeError("Too many arguments for argmin")
+    return __argcmp_neq(lambda a, b: a <= b, A.args[0], c)
 
 
 def __abs(x) -> Union[Constant, IfThenElse]:
@@ -893,14 +952,17 @@ def __abs(x) -> Union[Constant, IfThenElse]:
 
 
 _BUILTIN_FUNCTION_TRANSFORMS = {
-    (np.argmax, "=="): __argmax_eq
+    (np.argmax, Equal): __argmax_eq,
+    (np.argmin, Equal): __argmin_eq,
+    (np.argmax, NotEqual): __argmax_neq,
+    (np.argmin, NotEqual): __argmin_neq,
 }  # type: Dict[Any, Callable[[FunctionCall, Constant], Expression]]
 
 _BUILTIN_FUNCTIONS = {
     abs: __abs,
     np.abs: __abs,
     np.argmax: __argmax,
-    np.argmin: __argmax,
+    np.argmin: __argmin,
 }  # type: Dict[Any, Callable[..., Expression]]
 
 # TODO : organize this list better

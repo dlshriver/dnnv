@@ -5,7 +5,6 @@ from typing import Generator, List, Optional, Tuple, Type, Union
 from dnnv import logging
 from dnnv.nn.layers import Layer, Convolutional
 from dnnv.nn.operations import (
-    Activation,
     Add,
     BatchNormalization,
     Conv,

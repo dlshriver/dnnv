@@ -1,6 +1,7 @@
 import itertools
 import numpy as np
 
+from collections import namedtuple
 from typing import List
 
 from .operations import Input, Operation
@@ -20,9 +21,9 @@ class OperationGraph:
         return self[:]
 
     def simplify(self):
-        from .transformers import Simplify
+        from .transformers import simplify
 
-        return OperationGraph(self.copy().walk(Simplify()))
+        return simplify(self)
 
     def pprint(self):
         from .visitors import PrintVisitor
@@ -40,7 +41,8 @@ class OperationGraph:
         return tuple(details.shape for details in self.input_details)
 
     @property
-    def output_shape(self):
+    def output_details(self):
+        OutputDetails = namedtuple("OutputDetails", ["shape", "dtype"])
         output = self(
             *[
                 np.ones([i if i >= 0 else 1 for i in d.shape], dtype=d.dtype)
@@ -48,7 +50,11 @@ class OperationGraph:
             ],
             squeeze=False,
         )
-        return tuple(o.shape for o in output)
+        return tuple(OutputDetails(o.shape, o.dtype) for o in output)
+
+    @property
+    def output_shape(self):
+        return tuple(details.shape for details in self.output_details)
 
     @property
     def is_linear(self) -> bool:

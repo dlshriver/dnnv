@@ -55,7 +55,7 @@ class Layer(metaclass=_Layer):
         layer_types: Optional[List[Type["Layer"]]] = None,
     ) -> Optional[LayerMatch]:
         if cls is Layer and layer_types is None:
-            layer_types = get_subclasses(cls)
+            layer_types = list(get_subclasses(cls))
         elif cls is not Layer:
             if layer_types is not None:
                 raise TypeError(

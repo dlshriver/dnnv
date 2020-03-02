@@ -30,6 +30,11 @@ class PropertyCheckResult:
             return UNKNOWN
         return UNSAT
 
+    def __eq__(self, other):
+        if not isinstance(other, PropertyCheckResult):
+            return False
+        return self.name == other.name
+
 
 SAT = PropertyCheckResult("sat")
 UNKNOWN = PropertyCheckResult("unknown")

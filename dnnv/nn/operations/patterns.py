@@ -1,40 +1,37 @@
 from abc import ABC, abstractmethod
+from typing import Optional, Sequence, Union, TYPE_CHECKING
 
-
-class OpPatternMatch:
-    def __init__(self, matching_operation_graph, input_operations):
-        pass
+if TYPE_CHECKING:
+    from .base import Op, Operation
+OpPatternType = Union["Op", "OperationPattern"]
 
 
 class OperationPattern(ABC):
-    def __init__(self, pattern=None):
-        self.pattern = pattern
-
     @abstractmethod
-    def match(self, operations):
-        pass
+    def match(self, operations: Sequence["Operation"]):
+        raise NotImplementedError()
 
-    def __and__(self, other):
+    def __and__(self, other: Optional[OpPatternType]) -> "Parallel":
         return Parallel(self, other)
 
-    def __rand__(self, other):
+    def __rand__(self, other: Optional[OpPatternType]) -> "Parallel":
         return Parallel(other, self)
 
-    def __or__(self, other):
+    def __or__(self, other: Optional[OpPatternType]) -> "Or":
         return Or(self, other)
 
-    def __ror__(self, other):
+    def __ror__(self, other: Optional[OpPatternType]) -> "Or":
         return Or(other, self)
 
-    def __rshift__(self, other):
+    def __rshift__(self, other: OpPatternType) -> "Sequential":
         return Sequential(self, other)
 
-    def __rrshift__(self, other):
+    def __rrshift__(self, other: OpPatternType) -> "Sequential":
         return Sequential(other, self)
 
 
 class Or(OperationPattern):
-    def __init__(self, *patterns):
+    def __init__(self, *patterns: Optional[OpPatternType]):
         self.patterns = set(patterns)
 
     def __str__(self):
@@ -42,11 +39,15 @@ class Or(OperationPattern):
         return f"({result_str})"
 
     def __or__(self, other):
+        if other is not None and not isinstance(other, OperationPattern):
+            return NotImplemented
         if isinstance(other, Or):
             return Or(*self.patterns.union(other.patterns))
         return Or(*self.patterns.union([other]))
 
     def __ror__(self, other):
+        if other is not None and not isinstance(other, OperationPattern):
+            return NotImplemented
         return Or(*self.patterns.union([other]))
 
     def match(self, operations):
@@ -62,7 +63,7 @@ class Or(OperationPattern):
 
 
 class Parallel(OperationPattern):
-    def __init__(self, *patterns):
+    def __init__(self, *patterns: Optional[OpPatternType]):
         self.patterns = patterns
 
     def __str__(self):
@@ -70,11 +71,15 @@ class Parallel(OperationPattern):
         return f"({result_str})"
 
     def __and__(self, other):
+        if other is not None and not isinstance(other, OperationPattern):
+            return NotImplemented
         if isinstance(other, Parallel):
             return Parallel(*(self.patterns + other.patterns))
         return Parallel(*(self.patterns + (other,)))
 
     def __rand__(self, other):
+        if other is not None and not isinstance(other, OperationPattern):
+            return NotImplemented
         return Parallel(*((other,) + self.patterns))
 
     def match(self, operations):
@@ -104,7 +109,7 @@ class Parallel(OperationPattern):
 
 
 class Sequential(OperationPattern):
-    def __init__(self, *patterns):
+    def __init__(self, *patterns: OpPatternType):
         self.patterns = patterns
 
     def __str__(self):
@@ -112,11 +117,15 @@ class Sequential(OperationPattern):
         return f"({result_str})"
 
     def __rshift__(self, other):
+        if not isinstance(other, OperationPattern):
+            return NotImplemented
         if isinstance(other, Sequential):
             return Sequential(*(self.patterns + other.patterns))
         return Sequential(*(self.patterns + (other,)))
 
     def __rrshift__(self, other):
+        if not isinstance(other, OperationPattern):
+            return NotImplemented
         return Sequential(*((other,) + self.patterns))
 
     def match(self, operations):
@@ -129,4 +138,3 @@ class Sequential(OperationPattern):
             next_operations = matches
         for match in next_operations:
             yield match
-

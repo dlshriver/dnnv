@@ -41,13 +41,13 @@ def as_reluplex_nnet(
     output_size = fc_layers[-1].bias.shape[0]
     layer_sizes = [input_size] + list(l.bias.shape[0] for l in fc_layers)
     max_layer_size = max(layer_sizes)
-    yield "%s,%s,%s,%s," % (num_layers, input_size, output_size, max_layer_size)
+    yield "%d,%d,%d,%d," % (num_layers, input_size, output_size, max_layer_size)
     yield ",".join([str(size) for size in layer_sizes]) + ","
     yield "0,"
     yield ",".join(["%.12f" % m for m in input_interval.lower_bound.flatten()]) + ","
     yield ",".join(["%.12f" % m for m in input_interval.upper_bound.flatten()]) + ","
     yield ",".join(["0.0" for _ in range(input_size + 1)]) + ","  # input mean
-    yield ",".join(["1.0" for _ in range(input_size + 1)]) + ","  # input std
+    yield ",".join(["1.0" for _ in range(input_size + 1)]) + ","  # input range
     for layer_num, layer in enumerate(fc_layers, 1):
         weights = layer.weights[layer.w_permutation]
         for i in range(weights.shape[1]):

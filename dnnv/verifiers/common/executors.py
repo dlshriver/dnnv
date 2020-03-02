@@ -1,8 +1,9 @@
+import multiprocessing as mp
 import select
 import subprocess as sp
 
 from abc import ABC, abstractmethod
-from typing import List, Type
+from typing import Any, Dict, List, Type
 
 from dnnv import logging
 
@@ -16,6 +17,9 @@ class VerifierExecutor(ABC):
 
 
 class CommandLineExecutor(VerifierExecutor):
+    """Executes verifiers using their command line interface.
+    """
+
     def __init__(self, *args: str, verifier_error: Type[VerifierError] = VerifierError):
         self.args = args
         self.verifier_error = verifier_error

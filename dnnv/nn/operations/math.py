@@ -93,3 +93,12 @@ class Softmax(Operation):
         attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
         axis = attributes.get("axis", 1)
         return cls(*inputs, axis=axis)
+
+
+class Tanh(Operation):
+    def __init__(self, x):
+        self.x = x
+
+    @classmethod
+    def from_onnx(cls, onnx_node, *inputs):
+        return cls(*inputs)

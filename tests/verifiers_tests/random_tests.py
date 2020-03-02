@@ -32,13 +32,13 @@ class RandomTests(unittest.TestCase):
         Symbol._instances = {}
 
     def check_results(self, result, results):
-        if len(results) == 0:
-            return
         if result == UNKNOWN:
             return
-        previous_result = results[-1]
-        self.assertEqual(result, previous_result)
         results.append(result)
+        if len(results) == 1:
+            return
+        previous_result = results[-2]
+        self.assertEqual(result, previous_result)
 
     def test_random_fc_0(self):
         os.environ["OUTPUT_LAYER"] = "-1"
@@ -150,7 +150,7 @@ class RandomTests(unittest.TestCase):
 
     def test_random_residual_0(self):
         os.environ["OUTPUT_LAYER"] = "-1"
-        verifiers = {"planet": planet}  # TODO: add ERAN after investigating segfault
+        verifiers = {"eran": eran, "planet": planet}
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
             for i in range(RUNS_PER_PROP):
@@ -160,7 +160,10 @@ class RandomTests(unittest.TestCase):
                     self.reset_property_context()
                     dnn = nn.parse(network_artifact_dir / "random_residual_0.onnx")
                     phi = properties.parse(property_artifact_dir / "localrobustness.py")
-                    result = verifier.verify(dnn, phi)
+                    if name == "eran":
+                        result = verifier.verify(dnn, phi, domain="refinezono")
+                    else:
+                        result = verifier.verify(dnn, phi)
                     self.check_results(result, results)
 
 
