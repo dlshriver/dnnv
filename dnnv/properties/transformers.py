@@ -249,31 +249,44 @@ class Canonical(ExpressionTransformer):
 
 
 class SubstituteFunctionCalls(GenericExpressionTransformer):
-    def __init__(self, functions: Dict[Any, Callable[..., Expression]]):
+    def __init__(
+        self, functions: Optional[Dict[Any, Callable[..., Expression]]] = None
+    ):
         super().__init__()
         self.functions = functions
+        if self.functions is None:
+            self.functions = _BUILTIN_FUNCTIONS
         self.function_transforms = _BUILTIN_FUNCTION_TRANSFORMS
 
-    def visit_Equal(self, expression: Equal):
-        if (
-            isinstance(expression.expr1, FunctionCall)
-            and isinstance(expression.expr1.function, Constant)
-            and (expression.expr1.function.value, "==") in self.function_transforms
-            and expression.expr2.is_concrete
-        ):
-            return self.function_transforms[(expression.expr1.function.value, "==")](
-                expression.expr1, Constant(expression.expr2.value)
-            )
-        elif (
-            isinstance(expression.expr2, FunctionCall)
-            and isinstance(expression.expr2.function, Constant)
-            and (expression.expr2.function.value, "==") in self.function_transforms
-            and expression.expr1.is_concrete
-        ):
-            return self.function_transforms[(expression.expr2.function.value, "==")](
-                expression.expr2, Constant(expression.expr1.value)
-            )
-        return Equal(self.visit(expression.expr1), self.visit(expression.expr2))
+    def generic_visit(self, expression: Expression):
+        if isinstance(expression, BinaryExpression):
+            expr_type = type(expression)
+            expr1 = expression.expr1
+            expr2 = expression.expr2
+            if (
+                isinstance(expr1, FunctionCall)
+                and expr1.function.is_concrete
+                and expr2.is_concrete
+                and (expr1.function.value, expr_type) in self.function_transforms
+            ):
+                return self.visit(
+                    self.function_transforms[(expr1.function.value, expr_type)](
+                        expr1, Constant(expr2.value)
+                    )
+                )
+            elif (
+                isinstance(expr2, FunctionCall)
+                and expr2.function.is_concrete
+                and expr1.is_concrete
+                and (expr2.function.value, expr_type) in self.function_transforms
+            ):
+                return self.visit(
+                    self.function_transforms[(expr2.function.value, expr_type)](
+                        expr2, Constant(expr1.value)
+                    )
+                )
+            return expr_type(self.visit(expr1), self.visit(expr2))
+        return super().generic_visit(expression)
 
     def visit_FunctionCall(self, expression: FunctionCall):
         function = self.visit(expression.function)

@@ -234,13 +234,18 @@ class Py2PropertyTransformer(ast.NodeTransformer):
         dims = [
             dim
             for dim in node.dims
-            if not isinstance(dim, (ast.NameConstant, ast.Num, ast.Str))
+            if not isinstance(
+                dim, (ast.NameConstant, ast.Num, ast.Str, ast.Slice, ast.Index)
+            )
         ]
         if len(dims) > 0:
             raise PropertyParserError(
                 "We do not currently support definition of slices containing non-primitive types."
             )
-        return node
+        return self.generic_visit(node)
+
+    def visit_Index(self, node: ast.Index):
+        return self.generic_visit(node)
 
     def visit_Await(self, node: ast.Await):
         raise PropertyParserError("We do not support await expressions.")

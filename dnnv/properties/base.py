@@ -242,11 +242,20 @@ class Constant(Expression):
     @property
     def value(self):
         if isinstance(self._value, list):
-            return [v.value if isinstance(v, Constant) else v for v in self._value]
+            return [
+                v.value if isinstance(v, Expression) and v.is_concrete else v
+                for v in self._value
+            ]
         elif isinstance(self._value, set):
-            return set(v.value if isinstance(v, Constant) else v for v in self._value)
+            return set(
+                v.value if isinstance(v, Expression) and v.is_concrete else v
+                for v in self._value
+            )
         elif isinstance(self._value, tuple):
-            return tuple(v.value if isinstance(v, Constant) else v for v in self._value)
+            return tuple(
+                v.value if isinstance(v, Expression) and v.is_concrete else v
+                for v in self._value
+            )
         return self._value
 
     def __bool__(self):
@@ -856,7 +865,7 @@ def __argcmp_helper(cmp_fn, A, Ai, i, j) -> Union[Constant, IfThenElse]:
     )
 
 
-def __argcmp(cmp_fn, A) -> Union[Constant, IfThenElse]:
+def __argcmp(cmp_fn, A: Expression) -> Union[Constant, IfThenElse]:
     if not isinstance(A, Expression):
         return Constant(np.argmax(A))
     elif isinstance(A, FunctionCall) and isinstance(A.function, Network):
@@ -872,15 +881,15 @@ def __argcmp(cmp_fn, A) -> Union[Constant, IfThenElse]:
         raise RuntimeError(f"Unsupported type for argcmp input: {type(A)}")
 
 
-def __argmax(A) -> Union[Constant, IfThenElse]:
+def __argmax(A: Expression) -> Union[Constant, IfThenElse]:
     return __argcmp(lambda a, b: a >= b, A)
 
 
-def __argmin(A) -> Union[Constant, IfThenElse]:
+def __argmin(A: Expression) -> Union[Constant, IfThenElse]:
     return __argcmp(lambda a, b: a <= b, A)
 
 
-def __argcmp_eq(cmp_fn, A: FunctionCall, c: Constant) -> Union[And, Constant]:
+def __argcmp_eq(cmp_fn, A: Expression, c: Constant) -> Union[And, Constant]:
     if not isinstance(A, Expression):
         return Constant(np.argmax(A) == c)
     elif isinstance(A, FunctionCall) and isinstance(A.function, Network):
@@ -896,16 +905,44 @@ def __argcmp_eq(cmp_fn, A: FunctionCall, c: Constant) -> Union[And, Constant]:
         raise RuntimeError(f"Unsupported type for argcmp input: {type(A)}")
 
 
+def __argcmp_neq(cmp_fn, A: Expression, c: Constant) -> Union[Or, Constant]:
+    if not isinstance(A, Expression):
+        return Constant(np.argmax(A) != c)
+    elif isinstance(A, FunctionCall) and isinstance(A.function, Network):
+        if not A.function.is_concrete:
+            raise RuntimeError(
+                "argcmp can not be applied to outputs of non-concrete networks"
+            )
+        ci = c.value
+        output_shape = A.function.value.output_shape[0]
+        Ai = list(np.ndindex(output_shape))
+        return Or(*[~cmp_fn(A[Ai[ci]], A[Ai[i]]) for i in range(len(Ai)) if i != ci])
+    else:
+        raise RuntimeError(f"Unsupported type for argcmp input: {type(A)}")
+
+
 def __argmax_eq(A: FunctionCall, c: Constant) -> Union[And, Constant]:
     if len(A.args) > 1 or len(A.kwargs) != 0:
         raise RuntimeError("Too many arguments for argmax")
     return __argcmp_eq(lambda a, b: a >= b, A.args[0], c)
 
 
+def __argmax_neq(A: FunctionCall, c: Constant) -> Union[Or, Constant]:
+    if len(A.args) > 1 or len(A.kwargs) != 0:
+        raise RuntimeError("Too many arguments for argmax")
+    return __argcmp_neq(lambda a, b: a >= b, A.args[0], c)
+
+
 def __argmin_eq(A: FunctionCall, c: Constant) -> Union[And, Constant]:
     if len(A.args) > 1 or len(A.kwargs) != 0:
         raise RuntimeError("Too many arguments for argmin")
     return __argcmp_eq(lambda a, b: a <= b, A.args[0], c)
+
+
+def __argmin_neq(A: FunctionCall, c: Constant) -> Union[Or, Constant]:
+    if len(A.args) > 1 or len(A.kwargs) != 0:
+        raise RuntimeError("Too many arguments for argmin")
+    return __argcmp_neq(lambda a, b: a <= b, A.args[0], c)
 
 
 def __abs(x) -> Union[Constant, IfThenElse]:
@@ -915,8 +952,10 @@ def __abs(x) -> Union[Constant, IfThenElse]:
 
 
 _BUILTIN_FUNCTION_TRANSFORMS = {
-    (np.argmax, "=="): __argmax_eq,
-    (np.argmin, "=="): __argmin_eq,
+    (np.argmax, Equal): __argmax_eq,
+    (np.argmin, Equal): __argmin_eq,
+    (np.argmax, NotEqual): __argmax_neq,
+    (np.argmin, NotEqual): __argmin_neq,
 }  # type: Dict[Any, Callable[[FunctionCall, Constant], Expression]]
 
 _BUILTIN_FUNCTIONS = {
