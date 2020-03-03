@@ -90,29 +90,16 @@ def parse_layer_params(param_str: str) -> ParamDict:
 def build_normalize(
     parameters: ParamDict, input_shape: List[int], output_shape: List[int]
 ) -> nn.Module:
-    weights = 1.0 / parameters["std"]
-    bias = -parameters["mean"] / parameters["std"]
-    flat_input_size = np.product(input_shape)
     output_shape.extend(input_shape)
-    W = np.eye(flat_input_size) * np.array(
-        [
-            weights[i // (flat_input_size // len(weights))]
-            for i in range(flat_input_size)
-        ]
-    )
-    b = np.zeros(flat_input_size) + np.array(
-        [bias[i // (flat_input_size // len(weights))] for i in range(flat_input_size)]
-    )
-
-    flatten_layer = PytorchReshape([flat_input_size])
-
-    norm_layer = nn.Linear(flat_input_size, flat_input_size)
-    norm_layer.weight.data = torch.from_numpy(W).float()
-    norm_layer.bias.data = torch.from_numpy(b).float()
-
-    reshape_layer = PytorchReshape(output_shape)
-
-    return nn.Sequential(flatten_layer, norm_layer, reshape_layer)
+    num_c = input_shape[0]
+    weights = np.diag(1.0 / parameters["std"])
+    bias = -parameters["mean"] / parameters["std"]
+    norm_layer = nn.Conv2d(num_c, num_c, 1, 1)
+    norm_layer.weight.data = torch.from_numpy(
+        weights.reshape(num_c, num_c, 1, 1)
+    ).float()
+    norm_layer.bias.data = torch.from_numpy(bias).float()
+    return norm_layer
 
 
 def build_linear(
@@ -297,7 +284,7 @@ def main(args: argparse.Namespace):
     if args.check_mnist_accuracy:
         data_loader = data.DataLoader(
             datasets.MNIST(
-                "./tmp/data",
+                "/tmp/data",
                 train=False,
                 download=True,
                 transform=transforms.Compose([transforms.ToTensor()]),
@@ -314,7 +301,7 @@ def main(args: argparse.Namespace):
     if args.check_cifar_accuracy:
         data_loader = data.DataLoader(
             datasets.CIFAR10(
-                "./tmp/data",
+                "/tmp/data",
                 train=False,
                 download=True,
                 transform=transforms.Compose([transforms.ToTensor()]),
