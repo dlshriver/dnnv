@@ -91,7 +91,6 @@ def verify(dnn: OperationGraph, phi: Expression, **kwargs: Dict[str, Any]):
                 dirname=dirname,
                 translator_error=NeurifyTranslatorError,
             )
-            epsilon = neurify_inputs["epsilon"]
             logger.debug("Running neurify")
             executor = CommandLineExecutor(
                 "neurify",
@@ -101,7 +100,8 @@ def verify(dnn: OperationGraph, phi: Expression, **kwargs: Dict[str, Any]):
                 neurify_inputs["input_path"],
                 "-sl",
                 "0.000000000001",  # TODO: remove magic number
-                f"--linf={epsilon}",
+                "-I",
+                neurify_inputs["input_interval_path"],
                 "-v",
                 *[f"--{k}={v}" for k, v in kwargs.items() if v is not None],
                 verifier_error=NeurifyError,

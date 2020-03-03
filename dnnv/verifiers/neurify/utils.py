@@ -155,7 +155,7 @@ def to_neurify_inputs(
     layers: List[Layer],
     dirname: Optional[str] = None,
     translator_error: Type[VerifierTranslatorError] = VerifierTranslatorError,
-) -> Dict[str, Union[str, int]]:
+) -> Dict[str, str]:
     neurify_inputs = {}
     if dirname is None:
         dirname = tempfile.tempdir
@@ -163,10 +163,12 @@ def to_neurify_inputs(
     lb = input_interval.lower_bound
     ub = input_interval.upper_bound
     sample_input = (lb + ub) / 2
-    linf = (ub.flatten() - lb.flatten()) / 2
-    if not np.allclose(linf, linf[0], atol=1e-5):
-        raise translator_error("Multiple epsilon values are not supported")
-    neurify_inputs["epsilon"] = linf[0]
+    with tempfile.NamedTemporaryFile(
+        mode="w+", dir=dirname, suffix=".interval", delete=False
+    ) as input_file:
+        input_file.write(",".join(f"{x:.12f}" for x in lb.flatten()) + "\n")
+        input_file.write(",".join(f"{x:.12f}" for x in ub.flatten()) + "\n")
+        neurify_inputs["input_interval_path"] = input_file.name
 
     with tempfile.NamedTemporaryFile(
         mode="w+", dir=dirname, suffix=".input", delete=False
