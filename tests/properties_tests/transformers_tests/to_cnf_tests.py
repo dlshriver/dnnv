@@ -1,15 +1,12 @@
 import unittest
 
 from dnnv.properties import *
+from dnnv.properties.context import get_context
 
 
 class ToCNFTests(unittest.TestCase):
     def reset_property_context(self):
-        # TODO : refactor property implementation so this can be removed
-        # required to ensure concretized symbols don't carry over
-        Constant._instances = {}
-        Constant.count = 0
-        Symbol._instances = {}
+        get_context().reset()
 
     def setUp(self):
         self.reset_property_context()

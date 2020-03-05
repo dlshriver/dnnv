@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from . import base
+from .context import Context
 from .visitors import ExpressionVisitor
 
 
@@ -379,12 +380,13 @@ def parse(path: Path, args: Optional[List[str]] = None):
     global_dict.update(globals()["__builtins__"])
     global_dict.update(base.__dict__)
 
-    code = compile(module, filename=path.name, mode="exec")
-    exec(code, global_dict)
-    phi = global_dict["phi"]
-    LimitQuantifiers()(phi)
+    with Context():
+        code = compile(module, filename=path.name, mode="exec")
+        exec(code, global_dict)
+        phi = global_dict["phi"]
+        LimitQuantifiers()(phi)
 
-    phi = phi.propagate_constants()
-    parse_cli(phi, args)
+        phi = phi.propagate_constants()
+        parse_cli(phi, args)
 
     return phi

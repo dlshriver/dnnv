@@ -1,9 +1,13 @@
+import inspect
 import numpy as np
 import types
 
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type, Union
+from abc import abstractmethod
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
-from dnnv import logging
+from .context import Context, get_context
+
+T = TypeVar("T")
 
 
 class Expression:
@@ -11,6 +15,9 @@ class Expression:
         if cls is Expression:
             raise TypeError("Expression may not be instantiated")
         return object.__new__(cls)
+
+    def __init__(self, ctx: Optional[Context] = None):
+        self.ctx = ctx or get_context()
 
     def concretize(self, **kwargs) -> "Expression":
         symbols = {s.identifier: s for s in find_symbols(self)}
@@ -21,19 +28,22 @@ class Expression:
         return self
 
     def canonical(self) -> "Expression":
-        from dnnv.properties.transformers import Canonical
+        from .transformers import Canonical
 
-        return Canonical().visit(self)
+        with self.ctx:
+            return Canonical().visit(self)
 
     def propagate_constants(self) -> "Expression":
-        from dnnv.properties.transformers import PropagateConstants
+        from .transformers import PropagateConstants
 
-        return PropagateConstants().visit(self)
+        with self.ctx:
+            return PropagateConstants().visit(self)
 
     def to_cnf(self) -> "Expression":
-        from dnnv.properties.transformers import ToCNF
+        from .transformers import ToCNF
 
-        return ToCNF().visit(self)
+        with self.ctx:
+            return ToCNF().visit(self)
 
     @property
     def is_concrete(self) -> bool:
@@ -191,49 +201,82 @@ class Expression:
                 not isinstance(v, Expression) or v.is_concrete for v in kwargs.values()
             )
         ):
-            args = [arg.value if isinstance(arg, Expression) else arg for arg in args]
-            kwargs = {
+            args_values = [
+                arg.value if isinstance(arg, Expression) else arg for arg in args
+            ]
+            kwargs_values = {
                 k: v.value if isinstance(v, Expression) else v
                 for k, v in kwargs.items()
             }
-            return Constant(self.value(*args, **kwargs))
+            return Constant(self.value(*args_values, **kwargs_values))
         return FunctionCall(self, args, kwargs)
 
 
-class Constant(Expression):
-    _instances = {}  # type: Dict[Type, Dict[Any, Any]]
-    count = 0
+def hidesignature(func):
+    # hides the function signature from mypy
+    # used in CachedExpression to hide signatures of:
+    #   - initialize
+    #   - build_identifier
+    # which have more specific signatures in subclasses
+    # TODO : can we find a better way to do this?
+    return func
 
-    def __new__(cls, value: Any):
-        try:
-            if isinstance(value, Constant):
-                value = value.value
-            if type(value) not in Constant._instances:
-                Constant._instances[type(value)] = {}
-            instances = Constant._instances[type(value)]
-            if value not in instances:
-                instances[value] = super().__new__(cls)
-            return instances[value]
-        except TypeError as e:
-            if "unhashable type" not in e.args[0]:
-                raise e
-        if id(value) not in Constant._instances[type(value)]:
-            Constant._instances[type(value)][id(value)] = super().__new__(cls)
-        return Constant._instances[type(value)][id(value)]
 
-    def __getnewargs__(self):
-        return (self._value,)
+class CachedExpression(Expression):
+    __initialized = False
 
-    def __init__(self, value: Any):
-        try:
-            if object.__getattribute__(self, "_exists"):
-                return
-        except:
-            pass
+    def __new__(cls, *args, ctx: Optional[Context] = None, **kwargs):
+        inspect.getcallargs(cls.initialize, None, *args, *kwargs)
+        ctx = ctx or get_context()
+        if cls not in ctx._instance_cache:
+            ctx._instance_cache[cls] = {}
+        identifier = cls.build_identifier(*args, **kwargs)
+        if identifier not in ctx._instance_cache[cls]:
+            ctx._instance_cache[cls][identifier] = super().__new__(cls)
+            ctx._instance_cache[cls][identifier].__initialized = False
+            ctx._instance_cache[cls][identifier].__newargs = (args, ctx, kwargs)
+        return ctx._instance_cache[cls][identifier]
+
+    def __init__(self, *args, ctx: Optional[Context] = None, **kwargs):
+        super().__init__(ctx=ctx)
+        if self.__initialized:
+            return
+        self.initialize(*args, **kwargs)
+        self.__initialized = True
+
+    def __getnewargs_ex__(self):
+        args, ctx, kwargs = self.__newargs
+        kwargs["ctx"] = ctx
+        return args, kwargs
+
+    @hidesignature
+    @abstractmethod
+    def initialize(self, *args, **kwargs):
+        raise NotImplementedError()
+
+    @hidesignature
+    @classmethod
+    @abstractmethod
+    def build_identifier(cls, *args, **kwargs):
+        raise NotImplementedError()
+
+
+class Constant(CachedExpression):
+    def initialize(self, value: Any):
         self._value = value
-        self._exists = True
-        self._id = Constant.count
-        Constant.count += 1
+        self._id = len(self.ctx._instance_cache[Constant])
+
+    @classmethod
+    def build_identifier(cls, value: Any):
+        if isinstance(value, Constant):
+            value = value._value
+        value_type = type(value)
+        try:
+            value_hash = hash(value)
+            value_identifier = value
+        except:
+            value_identifier = id(value)
+        return value_type, value_identifier
 
     @property
     def is_concrete(self):
@@ -290,34 +333,20 @@ class Constant(Expression):
         return str(value)
 
 
-class Symbol(Expression):
-    _instances = {}  # type: Dict[Type[Symbol], Dict[str, Symbol]]
-    _exists = False
-
-    def __new__(cls, identifier: Union[Constant, str]):
-        if isinstance(identifier, Constant):
-            identifier = identifier.value
-        if not isinstance(identifier, str):
-            identifier = str(identifier)
-        if cls not in Symbol._instances:
-            Symbol._instances[cls] = {}
-        if identifier not in Symbol._instances[cls]:
-            Symbol._instances[cls][identifier] = super().__new__(cls)
-        return Symbol._instances[cls][identifier]
-
-    def __getnewargs__(self):
-        return (self.identifier,)
-
-    def __init__(self, identifier: Union[Constant, str]):
-        if self._exists:
-            return
-        if isinstance(identifier, Constant):
-            identifier = identifier.value
-        if not isinstance(identifier, str):
-            identifier = str(identifier)
-        self.identifier = identifier
+class Symbol(CachedExpression):
+    def initialize(self, identifier: Union[Constant, str]):
+        self.identifier = str(identifier)
         self._value = None
-        self._exists = True
+
+    @classmethod
+    def build_identifier(cls, identifier: Union[Constant, str]):
+        if isinstance(identifier, Constant):
+            identifier = identifier.value
+        if not isinstance(identifier, str):
+            raise TypeError(
+                f"Argument identifier for {cls.__name__} must be of type str"
+            )
+        return identifier
 
     @property
     def value(self):
@@ -401,22 +430,34 @@ def find_symbols(phi: Expression, symbol_class: Type[Symbol] = Symbol):
 
 
 class Parameter(Symbol):
-    def __new__(cls, identifier: Union[Constant, str], type: Type, default: Any = None):
-        return super().__new__(cls, f"P({identifier})")
-
-    def __getnewargs__(self):
-        return (self.identifier, self.type, self.default)
-
-    def __init__(
-        self, identifier: Union[Constant, str], type: Type, default: Any = None
+    def initialize(
+        self,
+        identifier: Union[Constant, str],
+        type: Type[T],
+        default: Optional[Union[Constant, T]] = None,
     ):
-        super().__init__(f"P({identifier})")
+        super().initialize(identifier)
         self.name = str(identifier)
         self.type = type
         if isinstance(default, Constant):
             self.default = default.value
         else:
             self.default = default
+
+    @classmethod
+    def build_identifier(
+        cls,
+        identifier: Union[Constant, str],
+        type: Type[T],
+        default: Optional[Union[Constant, T]] = None,
+    ):
+        if isinstance(identifier, Constant):
+            identifier = identifier.value
+        if not isinstance(identifier, str):
+            raise TypeError(
+                f"Argument identifier for {cls.__name__} must be of type str"
+            )
+        return identifier
 
     def __repr__(self):
         return str(self)
@@ -428,14 +469,11 @@ class Parameter(Symbol):
 
 
 class Network(Symbol):
-    def __new__(cls, identifier: Union[Constant, str] = "N"):
-        return super().__new__(cls, identifier)
+    def __new__(cls, identifier: Union[Constant, str] = "N", *args, **kwargs):
+        return super().__new__(cls, identifier, *args, **kwargs)
 
-    def __getnewargs__(self):
-        return (self.identifier,)
-
-    def __init__(self, identifier: Union[Constant, str] = "N"):
-        super().__init__(identifier)
+    def __init__(self, identifier: Union[Constant, str] = "N", *args, **kwargs):
+        return super().__init__(identifier, *args, **kwargs)
 
     def __getitem__(self, item):
         if self.is_concrete and isinstance(item, Constant):
@@ -462,7 +500,8 @@ class Network(Symbol):
 
 
 class Image(Expression):
-    def __init__(self, path: Union[Expression, str]):
+    def __init__(self, path: Union[Expression, str], *, ctx: Optional[Context] = None):
+        super().__init__(ctx=ctx)
         self.path = path
 
     @classmethod
@@ -492,7 +531,10 @@ class FunctionCall(Expression):
         function: Expression,
         args: Tuple[Expression, ...],
         kwargs: Dict[str, Expression],
+        *,
+        ctx: Optional[Context] = None,
     ):
+        super().__init__(ctx=ctx)
         self.function = function
         self.args = args
         self.kwargs = kwargs
@@ -539,8 +581,8 @@ class FunctionCall(Expression):
 
 
 class AssociativeExpression(Expression):
-    def __init__(self, *expr: Expression):
-        super().__init__()
+    def __init__(self, *expr: Expression, ctx: Optional[Context] = None):
+        super().__init__(ctx=ctx)
         self.expressions = []  # type: List[Expression]
         for expression in expr:
             if isinstance(expression, self.__class__):
@@ -564,7 +606,15 @@ class AssociativeExpression(Expression):
 
 
 class TernaryExpression(Expression):
-    def __init__(self, expr1: Expression, expr2: Expression, expr3: Expression):
+    def __init__(
+        self,
+        expr1: Expression,
+        expr2: Expression,
+        expr3: Expression,
+        *,
+        ctx: Optional[Context] = None,
+    ):
+        super().__init__(ctx=ctx)
         self.expr1 = expr1
         self.expr2 = expr2
         self.expr3 = expr3
@@ -577,7 +627,10 @@ class TernaryExpression(Expression):
 
 
 class BinaryExpression(Expression):
-    def __init__(self, expr1: Expression, expr2: Expression):
+    def __init__(
+        self, expr1: Expression, expr2: Expression, *, ctx: Optional[Context] = None
+    ):
+        super().__init__(ctx=ctx)
         self.expr1 = expr1
         self.expr2 = expr2
 
@@ -589,7 +642,8 @@ class BinaryExpression(Expression):
 
 
 class UnaryExpression(Expression):
-    def __init__(self, expr: Expression):
+    def __init__(self, expr: Expression, *, ctx: Optional[Context] = None):
+        super().__init__(ctx=ctx)
         self.expr = expr
 
     def __repr__(self):
@@ -622,11 +676,13 @@ class Attribute(BinaryExpression):
 
 
 class Slice(TernaryExpression):
-    def __init__(self, start: Any, stop: Any, step: Any):
+    def __init__(
+        self, start: Any, stop: Any, step: Any, *, ctx: Optional[Context] = None
+    ):
         start = start if isinstance(start, Expression) else Constant(start)
         stop = stop if isinstance(stop, Expression) else Constant(stop)
         step = step if isinstance(step, Expression) else Constant(step)
-        super().__init__(start, stop, step)
+        super().__init__(start, stop, step, ctx=ctx)
 
     @property
     def start(self):
@@ -828,7 +884,10 @@ class Quantifier(LogicalExpression):
         self,
         variable: Symbol,
         formula: Union[Expression, Callable[[Symbol], Expression]],
+        *,
+        ctx: Optional[Context] = None,
     ):
+        super().__init__(ctx=ctx)
         self.variable = variable
         if not isinstance(formula, Expression):
             formula = formula(variable)

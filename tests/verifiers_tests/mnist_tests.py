@@ -4,6 +4,7 @@ import unittest
 from dnnv import nn
 from dnnv import properties
 from dnnv.properties import Symbol
+from dnnv.properties.context import get_context
 from dnnv.verifiers.common import SAT, UNSAT, UNKNOWN
 from dnnv.verifiers import bab, eran, neurify, planet, reluplex
 
@@ -20,9 +21,7 @@ class MNISTTests(unittest.TestCase):
                 del os.environ[varname]
 
     def reset_property_context(self):
-        # TODO : refactor property implementation so this can be removed
-        # required to ensure concretized symbols don't carry over
-        Symbol._instances = {}
+        get_context().reset()
 
     def check_results(self, result, results):
         if len(results) == 0:
