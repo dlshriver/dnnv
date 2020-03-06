@@ -926,11 +926,8 @@ def __argcmp_helper(cmp_fn, A, Ai, i=0) -> Union[Constant, IfThenElse]:
 
 
 def __argcmp(
-    cmp_fn: Callable[[Expression, Expression], Expression], F: FunctionCall
+    cmp_fn: Callable[[Expression, Expression], Expression], A: Expression
 ) -> Union[Constant, IfThenElse]:
-    if len(F.args) > 1 or len(F.kwargs) != 0:
-        raise RuntimeError("Too many arguments for argcmp")
-    A = F.args[0]
     if not isinstance(A, Expression):
         return Constant(np.argmax(A))
     elif A.is_concrete:
@@ -949,49 +946,51 @@ def __argcmp(
 
 
 def __argcmp_eq(
-    cmp_fn: Callable[[Expression, Expression], Expression], F: FunctionCall, c: Constant
-) -> Union[And, Constant]:
+    cmp_fn: Callable[[Expression, Expression], Expression],
+    F: FunctionCall,
+    E: Expression,
+) -> Union[And, Or, Constant]:
     if len(F.args) > 1 or len(F.kwargs) != 0:
         raise RuntimeError("Too many arguments for argcmp")
     A = F.args[0]
-    if not isinstance(A, Expression):
-        return Constant(np.argmax(A) == c.value)
-    elif A.is_concrete:
-        return Constant(np.argmax(A.value) == c.value)
+    if A.is_concrete and E.is_concrete:
+        return Constant(np.argmax(A.value) == E.value)
     elif isinstance(A, FunctionCall) and isinstance(A.function, Network):
         if not A.function.is_concrete:
             raise RuntimeError(
                 "argcmp can not be applied to outputs of non-concrete networks"
             )
-        ci = c.value
         output_shape = A.function.value.output_shape[0]
         Ai = list(np.ndindex(output_shape))
-        return And(*[cmp_fn(A[Ai[ci]], A[Ai[i]]) for i in range(len(Ai)) if i != ci])
-    else:
-        raise RuntimeError(f"Unsupported type for argcmp input: {type(A)}")
+        if E.is_concrete:
+            c = E.value
+            return And(*[cmp_fn(A[Ai[c]], A[Ai[i]]) for i in range(len(Ai)) if i != c])
+        return And(*[Implies(F == c, E == c) for c in range(len(Ai))])
+    return NotImplemented
 
 
 def __argcmp_neq(
-    cmp_fn: Callable[[Expression, Expression], Expression], F: FunctionCall, c: Constant
-) -> Union[Or, Constant]:
+    cmp_fn: Callable[[Expression, Expression], Expression],
+    F: FunctionCall,
+    E: Expression,
+) -> Union[And, Or, Constant]:
     if len(F.args) > 1 or len(F.kwargs) != 0:
         raise RuntimeError("Too many arguments for argcmp")
     A = F.args[0]
-    if not isinstance(A, Expression):
-        return Constant(np.argmax(A) != c.value)
-    elif A.is_concrete:
-        return Constant(np.argmax(A.value) != c.value)
+    if A.is_concrete and E.is_concrete:
+        return Constant(np.argmax(A.value) != E.value)
     elif isinstance(A, FunctionCall) and isinstance(A.function, Network):
         if not A.function.is_concrete:
             raise RuntimeError(
                 "argcmp can not be applied to outputs of non-concrete networks"
             )
-        ci = c.value
         output_shape = A.function.value.output_shape[0]
         Ai = list(np.ndindex(output_shape))
-        return Or(*[~cmp_fn(A[Ai[ci]], A[Ai[i]]) for i in range(len(Ai)) if i != ci])
-    else:
-        raise RuntimeError(f"Unsupported type for argcmp input: {type(A)}")
+        if E.is_concrete:
+            c = E.value
+            return Or(*[~cmp_fn(A[Ai[c]], A[Ai[i]]) for i in range(len(Ai)) if i != c])
+        return And(*[Or(F != c, E != c) for c in range(len(Ai))])
+    return NotImplemented
 
 
 def __abs(x) -> Union[Constant, IfThenElse]:
@@ -1007,7 +1006,7 @@ _BUILTIN_FUNCTION_TRANSFORMS = {
     (np.argmin, Equal): partial(__argcmp_eq, lambda a, b: a <= b),
     (np.argmax, NotEqual): partial(__argcmp_neq, lambda a, b: a >= b),
     (np.argmin, NotEqual): partial(__argcmp_neq, lambda a, b: a <= b),
-}  # type: Dict[Tuple[Callable, Type[Expression]], Callable[[FunctionCall, Constant], Expression]]
+}  # type: Dict[Tuple[Callable, Type[Expression]], Callable[[FunctionCall, Expression], Expression]]
 
 _BUILTIN_FUNCTIONS = {
     abs: __abs,
