@@ -3,6 +3,7 @@ import numpy as np
 import types
 
 from abc import abstractmethod
+from functools import partial
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type, TypeVar, Union
 
 from .context import Context, get_context
@@ -538,13 +539,16 @@ class FunctionCall(Expression):
         self.function = function
         self.args = args
         self.kwargs = kwargs
+        self._value = None
 
     @property
     def value(self):
         if self.is_concrete:
-            args = tuple(arg.value for arg in self.args)
-            kwargs = {name: value.value for name, value in self.kwargs.items()}
-            return self.function.value(*args, **kwargs)
+            if self._value is None:
+                args = tuple(arg.value for arg in self.args)
+                kwargs = {name: value.value for name, value in self.kwargs.items()}
+                self._value = self.function.value(*args, **kwargs)
+            return self._value
         return super().value
 
     def __repr__(self):
@@ -914,19 +918,23 @@ argmax = np.argmax
 argmin = np.argmin
 
 
-def __argcmp_helper(cmp_fn, A, Ai, i, j) -> Union[Constant, IfThenElse]:
-    if j == len(Ai):
+def __argcmp_helper(cmp_fn, A, Ai, i=0) -> Union[Constant, IfThenElse]:
+    if i == len(Ai) - 1:
         return Constant(i)
-    return IfThenElse(
-        cmp_fn(A[Ai[i]], A[Ai[j]]),
-        __argcmp_helper(cmp_fn, A, Ai, i, j + 1),
-        __argcmp_helper(cmp_fn, A, Ai, j, j + 1),
-    )
+    cond = And(*[cmp_fn(A[Ai[i]], A[Ai[j]]) for j in range(len(Ai)) if j != i])
+    return IfThenElse(cond, Constant(i), __argcmp_helper(cmp_fn, A, Ai, i + 1))
 
 
-def __argcmp(cmp_fn, A: Expression) -> Union[Constant, IfThenElse]:
+def __argcmp(
+    cmp_fn: Callable[[Expression, Expression], Expression], F: FunctionCall
+) -> Union[Constant, IfThenElse]:
+    if len(F.args) > 1 or len(F.kwargs) != 0:
+        raise RuntimeError("Too many arguments for argcmp")
+    A = F.args[0]
     if not isinstance(A, Expression):
         return Constant(np.argmax(A))
+    elif A.is_concrete:
+        return Constant(np.argmax(A.value))
     elif isinstance(A, FunctionCall) and isinstance(A.function, Network):
         if not A.function.is_concrete:
             raise RuntimeError(
@@ -934,23 +942,22 @@ def __argcmp(cmp_fn, A: Expression) -> Union[Constant, IfThenElse]:
             )
         output_shape = A.function.value.output_shape[0]
         Ai = list(np.ndindex(output_shape))
-        argcmp = __argcmp_helper(cmp_fn, A, Ai, 0, 1)
+        argcmp = __argcmp_helper(cmp_fn, A, Ai)
         return argcmp
     else:
         raise RuntimeError(f"Unsupported type for argcmp input: {type(A)}")
 
 
-def __argmax(A: Expression) -> Union[Constant, IfThenElse]:
-    return __argcmp(lambda a, b: a >= b, A)
-
-
-def __argmin(A: Expression) -> Union[Constant, IfThenElse]:
-    return __argcmp(lambda a, b: a <= b, A)
-
-
-def __argcmp_eq(cmp_fn, A: Expression, c: Constant) -> Union[And, Constant]:
+def __argcmp_eq(
+    cmp_fn: Callable[[Expression, Expression], Expression], F: FunctionCall, c: Constant
+) -> Union[And, Constant]:
+    if len(F.args) > 1 or len(F.kwargs) != 0:
+        raise RuntimeError("Too many arguments for argcmp")
+    A = F.args[0]
     if not isinstance(A, Expression):
-        return Constant(np.argmax(A) == c)
+        return Constant(np.argmax(A) == c.value)
+    elif A.is_concrete:
+        return Constant(np.argmax(A.value) == c.value)
     elif isinstance(A, FunctionCall) and isinstance(A.function, Network):
         if not A.function.is_concrete:
             raise RuntimeError(
@@ -964,9 +971,16 @@ def __argcmp_eq(cmp_fn, A: Expression, c: Constant) -> Union[And, Constant]:
         raise RuntimeError(f"Unsupported type for argcmp input: {type(A)}")
 
 
-def __argcmp_neq(cmp_fn, A: Expression, c: Constant) -> Union[Or, Constant]:
+def __argcmp_neq(
+    cmp_fn: Callable[[Expression, Expression], Expression], F: FunctionCall, c: Constant
+) -> Union[Or, Constant]:
+    if len(F.args) > 1 or len(F.kwargs) != 0:
+        raise RuntimeError("Too many arguments for argcmp")
+    A = F.args[0]
     if not isinstance(A, Expression):
-        return Constant(np.argmax(A) != c)
+        return Constant(np.argmax(A) != c.value)
+    elif A.is_concrete:
+        return Constant(np.argmax(A.value) != c.value)
     elif isinstance(A, FunctionCall) and isinstance(A.function, Network):
         if not A.function.is_concrete:
             raise RuntimeError(
@@ -980,49 +994,27 @@ def __argcmp_neq(cmp_fn, A: Expression, c: Constant) -> Union[Or, Constant]:
         raise RuntimeError(f"Unsupported type for argcmp input: {type(A)}")
 
 
-def __argmax_eq(A: FunctionCall, c: Constant) -> Union[And, Constant]:
-    if len(A.args) > 1 or len(A.kwargs) != 0:
-        raise RuntimeError("Too many arguments for argmax")
-    return __argcmp_eq(lambda a, b: a >= b, A.args[0], c)
-
-
-def __argmax_neq(A: FunctionCall, c: Constant) -> Union[Or, Constant]:
-    if len(A.args) > 1 or len(A.kwargs) != 0:
-        raise RuntimeError("Too many arguments for argmax")
-    return __argcmp_neq(lambda a, b: a >= b, A.args[0], c)
-
-
-def __argmin_eq(A: FunctionCall, c: Constant) -> Union[And, Constant]:
-    if len(A.args) > 1 or len(A.kwargs) != 0:
-        raise RuntimeError("Too many arguments for argmin")
-    return __argcmp_eq(lambda a, b: a <= b, A.args[0], c)
-
-
-def __argmin_neq(A: FunctionCall, c: Constant) -> Union[Or, Constant]:
-    if len(A.args) > 1 or len(A.kwargs) != 0:
-        raise RuntimeError("Too many arguments for argmin")
-    return __argcmp_neq(lambda a, b: a <= b, A.args[0], c)
-
-
 def __abs(x) -> Union[Constant, IfThenElse]:
     if not isinstance(x, Expression):
-        return Constant(np.abs(x))
+        return Constant(abs(x))
+    elif x.is_concrete:
+        return Constant(abs(x.value))
     return IfThenElse(x >= 0, x, -x)
 
 
 _BUILTIN_FUNCTION_TRANSFORMS = {
-    (np.argmax, Equal): __argmax_eq,
-    (np.argmin, Equal): __argmin_eq,
-    (np.argmax, NotEqual): __argmax_neq,
-    (np.argmin, NotEqual): __argmin_neq,
-}  # type: Dict[Any, Callable[[FunctionCall, Constant], Expression]]
+    (np.argmax, Equal): partial(__argcmp_eq, lambda a, b: a >= b),
+    (np.argmin, Equal): partial(__argcmp_eq, lambda a, b: a <= b),
+    (np.argmax, NotEqual): partial(__argcmp_neq, lambda a, b: a >= b),
+    (np.argmin, NotEqual): partial(__argcmp_neq, lambda a, b: a <= b),
+}  # type: Dict[Tuple[Callable, Type[Expression]], Callable[[FunctionCall, Constant], Expression]]
 
 _BUILTIN_FUNCTIONS = {
     abs: __abs,
     np.abs: __abs,
-    np.argmax: __argmax,
-    np.argmin: __argmin,
-}  # type: Dict[Any, Callable[..., Expression]]
+    np.argmax: partial(__argcmp, lambda a, b: a >= b),
+    np.argmin: partial(__argcmp, lambda a, b: a <= b),
+}  # type: Dict[Callable, Callable[..., Expression]]
 
 # TODO : organize this list better
 __all__ = [
