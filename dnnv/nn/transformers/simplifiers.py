@@ -1,5 +1,6 @@
 import numpy as np
 
+from copy import deepcopy
 from typing import Optional, Union
 
 from .. import operations
@@ -42,7 +43,7 @@ class Compose(Simplifier):
         return operation
 
 
-class BundleConvPadding(Simplifier):
+class BundlePadding(Simplifier):
     def visit_Conv(self, operation: operations.Conv) -> operations.Conv:
         input_op = operation.x
         if not isinstance(input_op, operations.Pad):
@@ -52,6 +53,23 @@ class BundleConvPadding(Simplifier):
             return operation
         if not np.all(p == 0 for p in input_op.pads[:4]):
             return operation
+        operation = deepcopy(operation)
+        pad_top, pad_left = input_op.pads[2:4]
+        pad_bottom, pad_right = input_op.pads[6:8]
+        operation.pads = pads + np.array([pad_top, pad_left, pad_bottom, pad_right])
+        operation.x = input_op.x
+        return operation
+
+    def visit_MaxPool(self, operation: operations.MaxPool) -> operations.MaxPool:
+        input_op = operation.x
+        if not isinstance(input_op, operations.Pad):
+            return operation
+        pads = operation.pads
+        if input_op.mode != "constant" or input_op.value != 0.0:
+            return operation
+        if not np.all(p == 0 for p in input_op.pads[:4]):
+            return operation
+        operation = deepcopy(operation)
         pad_top, pad_left = input_op.pads[2:4]
         pad_bottom, pad_right = input_op.pads[6:8]
         operation.pads = pads + np.array([pad_top, pad_left, pad_bottom, pad_right])
@@ -138,38 +156,68 @@ class MoveActivationsBackward(Simplifier):
         return self.move_back(operation)
 
 
-class PropagateConstants(Simplifier):
-    def visit_Concat(
-        self, operation: operations.Concat
-    ) -> Union[np.ndarray, operations.Concat]:
-        if all(not isinstance(x, Operation) for x in operation.x):
-            return np.concatenate([x for x in operation.x])
-        return operation
+class ReshapeToFlatten(Simplifier):
+    def visit_Reshape(self, operation: operations.Reshape):
+        if not isinstance(operation.shape, operations.Concat):
+            return operation
+        concat: operations.Concat = operation.shape
+        if concat.axis != 0:
+            return operation
+        if len(concat.x) != 2 or concat.x[1] != -1:
+            return operation
+        if not isinstance(concat.x[0], operations.Unsqueeze):
+            return operation
+        unsqueeze: operations.Unsqueeze = concat.x[0]
+        if len(unsqueeze.axes) != 1 or unsqueeze.axes[0] != 0:
+            return operation
+        if not isinstance(unsqueeze.x, operations.Gather):
+            return operation
+        gather: operations.Gather = unsqueeze.x
+        if gather.axis != 0 or gather.indices.shape != () or gather.indices != 0:
+            return operation
+        if not isinstance(gather.x, operations.Shape):
+            return operation
+        shape: operations.Shape = gather.x
+        return operations.Flatten(shape.x, axis=1)
 
-    def visit_Gather(
-        self, operation: operations.Gather
-    ) -> Union[np.ndarray, operations.Gather]:
-        if not isinstance(operation.x, Operation) and not isinstance(
-            operation.indices, Operation
-        ):
-            return np.take(operation.x, operation.indices, axis=operation.axis)
-        return operation
 
-    def visit_Shape(
-        self, operation: operations.Shape
-    ) -> Union[np.ndarray, operations.Shape]:
-        input_op = operation.x
-        return OperationGraph([input_op]).output_shape[0]
+# TODO : fix/remove?
+# class PropagateConstants(Simplifier):
+#     def visit_Concat(
+#         self, operation: operations.Concat
+#     ) -> Union[np.ndarray, operations.Concat]:
+#         if all(not isinstance(x, Operation) for x in operation.x):
+#             return np.concatenate([x for x in operation.x])
+#         return operation
 
-    def visit_Unsqueeze(
-        self, operation: operations.Unsqueeze
-    ) -> Union[np.ndarray, operations.Unsqueeze]:
-        if not isinstance(operation.x, Operation):
-            x = operation.x
-            for axis in operation.axes:
-                x = np.expand_dims(x, axis)
-            return x
-        return operation
+#     def visit_Gather(
+#         self, operation: operations.Gather
+#     ) -> Union[np.ndarray, operations.Gather]:
+#         if not isinstance(operation.x, Operation) and not isinstance(
+#             operation.indices, Operation
+#         ):
+#             return np.take(operation.x, operation.indices, axis=operation.axis)
+#         return operation
+
+#     def visit_Shape(
+#         self, operation: operations.Shape
+#     ) -> Union[np.ndarray, operations.Shape]:
+#         input_op = operation.x
+#         if isinstance(input_op, operations.Input):
+#             if any(d < 0 for d in input_op.shape):
+#                 return operation
+#             return input_op.shape
+#         return OperationGraph([input_op]).output_shape[0]
+
+#     def visit_Unsqueeze(
+#         self, operation: operations.Unsqueeze
+#     ) -> Union[np.ndarray, operations.Unsqueeze]:
+#         if not isinstance(operation.x, Operation):
+#             x = operation.x
+#             for axis in operation.axes:
+#                 x = np.expand_dims(x, axis)
+#             return x
+#         return operation
 
 
 class SqueezeGemms(Simplifier):

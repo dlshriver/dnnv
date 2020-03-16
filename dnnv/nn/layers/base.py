@@ -98,7 +98,9 @@ class InputLayer(Layer):
 
     @classmethod
     def from_operation_graph(cls, operation_graph):
-        shape = operation_graph.output_operations[0].shape
+        shape = tuple(
+            d if d >= 0 else 1 for d in operation_graph.output_operations[0].shape
+        )
         dtype = operation_graph.output_operations[0].dtype
         return cls(shape, dtype)
 

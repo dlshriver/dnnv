@@ -45,6 +45,18 @@ class Gemm(Operation):
         )
 
 
+class LogSoftmax(Operation):
+    def __init__(self, x, *, axis=1):
+        self.x = x
+        self.axis = axis
+
+    @classmethod
+    def from_onnx(cls, onnx_node, *inputs):
+        attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
+        axis = attributes.get("axis", 1)
+        return cls(*inputs, axis=axis)
+
+
 class MatMul(Operation):
     def __init__(self, a, b):
         self.a = a
