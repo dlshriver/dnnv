@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-PROJECT_DIR=$(cd $(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/..; pwd)
+PROJECT_DIR=${PROJECT_DIR:-$(cd $(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/..; pwd)}
 
 cd $PROJECT_DIR/lib
 wget http://github.com/xianyi/OpenBLAS/archive/v0.3.6.tar.gz
