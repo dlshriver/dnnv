@@ -28,7 +28,7 @@ class CommandLineExecutor(VerifierExecutor):
 
     def run(self):
         logger = logging.getLogger(__name__)
-        arg_string = " ".join(self.args)
+        arg_string = "stdbuf -oL -eL " + " ".join(self.args)
         logger.info(f"EXECUTING: {arg_string}")
         try:
             proc = sp.Popen(self.args, stdout=sp.PIPE, stderr=sp.PIPE, encoding="utf8")
