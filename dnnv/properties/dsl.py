@@ -360,8 +360,12 @@ def parse(path: Path, args: Optional[List[str]] = None):
     with open(path, "r") as f:
         module = ast.parse(f.read())
     for node in module.body[:-1]:
-        if not isinstance(node, (ast.Assign, ast.Import, ast.ImportFrom)):
-            raise PropertyParserError(node)
+        if not isinstance(node, (ast.Assign, ast.Import, ast.ImportFrom)) and not (
+            isinstance(node, ast.Expr) and isinstance(node.value, ast.Str)
+        ):
+            raise PropertyParserError(
+                f"Unsupported structure in property (line {node.lineno}): {node}"
+            )
     property_node = module.body[-1]
     if not isinstance(property_node, ast.Expr):
         raise PropertyParserError()
