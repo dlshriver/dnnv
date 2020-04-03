@@ -21,14 +21,14 @@ class CommandLineExecutor(VerifierExecutor):
     """
 
     def __init__(self, *args: str, verifier_error: Type[VerifierError] = VerifierError):
-        self.args = args
+        self.args = ("stdbuf", "-oL", "-eL") + args
         self.verifier_error = verifier_error
         self.output_lines = []  # type: List[str]
         self.error_lines = []  # type: List[str]
 
     def run(self):
         logger = logging.getLogger(__name__)
-        arg_string = "stdbuf -oL -eL " + " ".join(self.args)
+        arg_string = " ".join(self.args)
         logger.info(f"EXECUTING: {arg_string}")
         proc = None
         try:
@@ -41,6 +41,9 @@ class CommandLineExecutor(VerifierExecutor):
                     ("STDOUT", proc.stdout, self.output_lines),
                     ("STDERR", proc.stderr, self.error_lines),
                 ]:
+                    ready, _, _ = select.select([stream], [], [], 0)
+                    if not ready:
+                        continue
                     line = stream.readline()
                     if not line:
                         continue
