@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 
-PROJECT_DIR=${PROJECT_DIR:-$(cd $(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/..; pwd)}
+PROJECT_DIR=${PROJECT_DIR:-$(
+    cd $(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/..
+    pwd
+)}
+
+cd $PROJECT_DIR/bin
+wget https://github.com/Kitware/CMake/releases/download/v3.17.1/cmake-3.17.1-Linux-x86_64.sh
+chmod u+x cmake-3.17.1-Linux-x86_64.sh
+yes | ./cmake-3.17.1-Linux-x86_64.sh
+cp -r cmake-3.17.1-Linux-x86_64/bin/* .
+cp -r cmake-3.17.1-Linux-x86_64/share/* $PROJECT_DIR/share/
 
 cd $PROJECT_DIR/lib
 wget http://github.com/xianyi/OpenBLAS/archive/v0.3.6.tar.gz
@@ -11,20 +21,11 @@ make PREFIX=$PROJECT_DIR install
 cd ..
 rm v0.3.6.tar.gz
 
-cd $PROJECT_DIR/lib
-wget https://downloads.sourceforge.net/project/lpsolve/lpsolve/5.5.2.5/lp_solve_5.5.2.5_dev_ux64.tar.gz
-tar -xzf lp_solve_5.5.2.5_dev_ux64.tar.gz
-rm lp_solve_5.5.2.5_dev_ux64.tar.gz
-mkdir $PROJECT_DIR/include/lpsolve/
-cp lp_*.h $PROJECT_DIR/include/lpsolve/
+cd $PROJECT_DIR
+./scripts/install_lpsolve.sh
 
-cd $PROJECT_DIR/lib
-wget https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v5.6.0.tar.gz
-tar -xzf v5.6.0.tar.gz
-cd SuiteSparse-5.6.0
-make
-cp lib/* $PROJECT_DIR/lib
-rm v5.6.0.tar.gz
+cd $PROJECT_DIR
+./scripts/install_suitesparse.sh
 
 cd $PROJECT_DIR/bin
 git clone https://github.com/dlshriver/Neurify.git

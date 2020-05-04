@@ -107,4 +107,3 @@ class OutputSelect(Operation):
     def __init__(self, operation, index):
         self.operation = operation
         self.index = index
-
