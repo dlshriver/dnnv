@@ -73,4 +73,7 @@ $ python -m dnnv network.onnx property.prop --eran --prop.epsilon=2.0
 
 A set of example networks and properties that can be run with DNNV are available [here](http://cs.virginia.edu/~dls2fc/eranmnist_benchmark.tar.gz).
 
-## Contributing
+
+## Acknowledgements
+
+This material is based in part upon work supported by the National Science Foundation under grant number 1900676.
