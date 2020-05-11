@@ -235,7 +235,6 @@ class ConvexPolytopeExtractor(PropertyExtractor):
         for conjunction in not_expression:
             logger.info("CONJUNCTION: %s", conjunction)
             if len(conjunction.networks) != 1:
-                continue
                 raise self.translator_error(
                     "Exactly one network input and output are required"
                 )
