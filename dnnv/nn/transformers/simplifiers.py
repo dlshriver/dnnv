@@ -81,6 +81,7 @@ class ConvertBatchNorm(Simplifier):
     def visit_BatchNormalization(self, operation: operations.BatchNormalization):
         input_op = operation.x
         if isinstance(input_op, operations.Conv):
+            input_op = deepcopy(input_op)
             std = np.sqrt(operation.variance + operation.epsilon)
             a = operation.scale / std
             b = operation.bias - operation.scale * operation.mean / std
@@ -218,6 +219,42 @@ class ReshapeToFlatten(Simplifier):
 #                 x = np.expand_dims(x, axis)
 #             return x
 #         return operation
+
+
+class SqueezeConvs(Simplifier):
+    def is_diagonal(self, array):
+        i, j = array.shape
+        return ~np.any(array.reshape(-1)[:-1].reshape(i - 1, j + 1)[:, 1:])
+
+    def visit_Conv(self, operation: operations.Conv) -> operations.Conv:
+        if (
+            isinstance(operation.x, operations.Conv)
+            and all(p == 0 for p in operation.pads)
+            and operation.x.w.shape[2] == 1
+            and operation.x.w.shape[3] == 1
+            and all(s == 1 for s in operation.x.strides)
+            and all(p == 0 for p in operation.x.pads)
+            and all(d == 1 for d in operation.x.dilations)
+            and operation.x.group == 1
+            and self.is_diagonal(operation.x.w[:, :, 0, 0])
+        ):
+            print("TEST", np.diag(operation.x.w[:, :, 0, 0]), operation.x.b)
+            w = np.diag(operation.x.w[:, :, 0, 0]).reshape((1, -1, 1, 1))
+            b = operation.x.b
+
+            out_c, in_c, k_h, k_w = operation.w.shape
+
+            weights = operation.w * np.tile(w, (out_c, 1, k_h, k_w))
+            bias = operation.b + (operation.w * np.tile(b, (out_c, 1, k_h, k_w))).sum(
+                axis=(1, 2, 3)
+            )
+
+            op = deepcopy(operation)
+            op.x = operation.x.x
+            op.w = weights
+            op.b = bias
+            return op
+        return operation
 
 
 class SqueezeGemms(Simplifier):

@@ -242,8 +242,14 @@ class ConvexPolytopeExtractor(PropertyExtractor):
                 raise self.translator_error("Exactly one network input is required")
             for prop in super().extract_from(conjunction):
                 if prop.input_constraint.as_hyperrectangle().is_consistent == False:
+                    logger.warning(
+                        "Skipping conjunction with inconsistent input constraints."
+                    )
                     continue
                 if prop.output_constraint.is_consistent == False:
+                    logger.warning(
+                        "Skipping conjunction with inconsistent output constraints."
+                    )
                     continue
                 yield prop
 
@@ -466,4 +472,3 @@ class ConvexPolytopeExtractor(PropertyExtractor):
             np.array([{"index": i} for i in np.ndindex(shape)]).reshape(shape),
             np.ones(shape),
         )
-
