@@ -53,7 +53,7 @@ class MNISTTests(unittest.TestCase):
                 self.check_results(result, results)
 
     def test_convSmallRELU__Point(self):
-        os.environ["INPUT_LAYER"] = "4"
+        os.environ["INPUT_LAYER"] = "0"
         verifiers = {
             # "bab": bab, # too slow
             "eran": eran,

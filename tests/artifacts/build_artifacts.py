@@ -236,18 +236,18 @@ def build_random_weight_artifacts():
 
 
 def download_eran_benchmark():
-    # URL: http://cs.virginia.edu/~dls2fc/eran_benchmark.tar.gz
+    # URL: http://cs.virginia.edu/~dls2fc/eranmnist_benchmark.tar.gz
 
     artifact_dir = Path(__file__).parent / "networks"
     artifact_dir.mkdir(parents=True, exist_ok=True)
 
-    if not Path("/tmp/eran_benchmark.tar.gz").exists():
-        with open("/tmp/eran_benchmark.tar.gz", "wb+") as f:
+    if not Path("/tmp/eranmnist_benchmark.tar.gz").exists():
+        with open("/tmp/eranmnist_benchmark.tar.gz", "wb+") as f:
             with urllib.request.urlopen(
-                "http://cs.virginia.edu/~dls2fc/eran_benchmark.tar.gz"
+                "http://cs.virginia.edu/~dls2fc/eranmnist_benchmark.tar.gz"
             ) as f_url:
                 f.write(f_url.read())
-        with tarfile.open("/tmp/eran_benchmark.tar.gz") as tar:
+        with tarfile.open("/tmp/eranmnist_benchmark.tar.gz") as tar:
             tar.extractall("/tmp")
             for member in tar.getmembers():
                 if member.name.endswith(".onnx"):

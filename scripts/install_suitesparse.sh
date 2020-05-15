@@ -15,7 +15,7 @@ cd $PROJECT_DIR/lib
 wget https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v5.6.0.tar.gz
 tar -xzf v5.6.0.tar.gz
 cd SuiteSparse-5.6.0
-make library
+make library BLAS="-L$PROJECT_DIR/lib -lopenblas"
 cp lib/* $PROJECT_DIR/lib
 cp */Lib/*.a $PROJECT_DIR/lib
 cp SuiteSparse_config/libsuitesparseconfig.a $PROJECT_DIR/lib

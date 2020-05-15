@@ -6,7 +6,7 @@ cd $PROJECT_DIR/lib
 git clone https://github.com/eth-sri/eran.git
 cd eran
 git pull
-git checkout 45955cd
+git checkout bfc63cc
 
 export LD_LIBRARY_PATH=$PROJECT_DIR/lib:$LD_LIBRARY_PATH
 
@@ -40,7 +40,7 @@ rm mpfr-4.0.1.tar.xz
 git clone https://github.com/eth-sri/ELINA.git
 cd ELINA
 git pull
-git checkout 6bb10c3
+git checkout d16c100
 LDFLAGS="-L$PROJECT_DIR/lib" CXXFLAGS="-I$PROJECT_DIR/include" ./configure -prefix $PROJECT_DIR -gmp-prefix $PROJECT_DIR -mpfr-prefix $PROJECT_DIR
 make
 make install
