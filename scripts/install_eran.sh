@@ -40,7 +40,7 @@ rm mpfr-4.0.1.tar.xz
 git clone https://github.com/eth-sri/ELINA.git
 cd ELINA
 git pull
-git checkout d16c100
+git checkout 14cc788
 LDFLAGS="-L$PROJECT_DIR/lib" CXXFLAGS="-I$PROJECT_DIR/include" ./configure -prefix $PROJECT_DIR -gmp-prefix $PROJECT_DIR -mpfr-prefix $PROJECT_DIR
 make
 make install
