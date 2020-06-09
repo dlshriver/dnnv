@@ -50,7 +50,6 @@ def check(lb, ub):
     return UNKNOWN
 
 
-@sandboxed(verifier_error=ERANError)
 def verify(
     dnn: OperationGraph,
     phi: Expression,

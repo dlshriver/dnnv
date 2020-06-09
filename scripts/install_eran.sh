@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 
-PROJECT_DIR=${PROJECT_DIR:-$(cd $(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/..; pwd)}
+PROJECT_DIR=${PROJECT_DIR:-$(
+    cd $(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/..
+    pwd
+)}
 cd $PROJECT_DIR/lib
 
 git clone https://github.com/eth-sri/eran.git
 cd eran
 git pull
-git checkout bfc63cc
+git checkout 0bbd864
 
 export LD_LIBRARY_PATH=$PROJECT_DIR/lib:$LD_LIBRARY_PATH
 
@@ -37,11 +40,19 @@ make install
 cd ..
 rm mpfr-4.0.1.tar.xz
 
+wget https://github.com/cddlib/cddlib/releases/download/0.94j/cddlib-0.94j.tar.gz
+tar -xvf cddlib-0.94j.tar.gz
+cd cddlib-0.94j
+./configure --prefix=$PROJECT_DIR
+make
+make install
+cd ..
+
 git clone https://github.com/eth-sri/ELINA.git
 cd ELINA
 git pull
-git checkout 14cc788
-LDFLAGS="-L$PROJECT_DIR/lib" CXXFLAGS="-I$PROJECT_DIR/include" ./configure -prefix $PROJECT_DIR -gmp-prefix $PROJECT_DIR -mpfr-prefix $PROJECT_DIR
+git checkout 23fe9d5
+LDFLAGS="-L$PROJECT_DIR/lib" CXXFLAGS="-I$PROJECT_DIR/include" ./configure -prefix $PROJECT_DIR -gmp-prefix $PROJECT_DIR -mpfr-prefix $PROJECT_DIR -cdd-prefix $PROJECT_DIR -use-deeppoly
 make
 make install
 cd ..
