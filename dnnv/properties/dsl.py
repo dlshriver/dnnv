@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from . import base
+from .context import Context
 from .visitors import ExpressionVisitor
 
 
@@ -359,8 +360,12 @@ def parse(path: Path, args: Optional[List[str]] = None):
     with open(path, "r") as f:
         module = ast.parse(f.read())
     for node in module.body[:-1]:
-        if not isinstance(node, (ast.Assign, ast.Import, ast.ImportFrom)):
-            raise PropertyParserError(node)
+        if not isinstance(node, (ast.Assign, ast.Import, ast.ImportFrom)) and not (
+            isinstance(node, ast.Expr) and isinstance(node.value, ast.Str)
+        ):
+            raise PropertyParserError(
+                f"Unsupported structure in property (line {node.lineno}): {node}"
+            )
     property_node = module.body[-1]
     if not isinstance(property_node, ast.Expr):
         raise PropertyParserError()
@@ -379,12 +384,13 @@ def parse(path: Path, args: Optional[List[str]] = None):
     global_dict.update(globals()["__builtins__"])
     global_dict.update(base.__dict__)
 
-    code = compile(module, filename=path.name, mode="exec")
-    exec(code, global_dict)
-    phi = global_dict["phi"]
-    LimitQuantifiers()(phi)
+    with Context():
+        code = compile(module, filename=path.name, mode="exec")
+        exec(code, global_dict)
+        phi = global_dict["phi"]
+        LimitQuantifiers()(phi)
 
-    phi = phi.propagate_constants()
-    parse_cli(phi, args)
+        phi = phi.propagate_constants()
+        parse_cli(phi, args)
 
     return phi

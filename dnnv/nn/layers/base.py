@@ -98,7 +98,9 @@ class InputLayer(Layer):
 
     @classmethod
     def from_operation_graph(cls, operation_graph):
-        shape = operation_graph.output_operations[0].shape
+        shape = tuple(
+            d if d >= 0 else 1 for d in operation_graph.output_operations[0].shape
+        )
         dtype = operation_graph.output_operations[0].dtype
         return cls(shape, dtype)
 
@@ -127,7 +129,7 @@ class FullyConnected(Layer):
         assert len(op) == 1
         op = op[0]
         activation = None
-        if isinstance(op, (Relu, Sigmoid)):
+        if isinstance(op, (Relu, Sigmoid, Tanh)):
             activation = op.__class__.__name__.lower()
             op = op.inputs
             assert len(op) == 1
@@ -248,7 +250,7 @@ class Convolutional(Layer):
 
         # check activation type
         activation = None
-        if isinstance(op, (Relu, Sigmoid)):
+        if isinstance(op, (Relu, Sigmoid, Tanh)):
             activation = op.__class__.__name__.lower()
             op = op.inputs
             assert len(op) == 1

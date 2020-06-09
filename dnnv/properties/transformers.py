@@ -1,7 +1,7 @@
 import numpy as np
 
 from collections import defaultdict
-from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type, Union
 
 from .base import *
 from .base import _BUILTIN_FUNCTIONS, _BUILTIN_FUNCTION_TRANSFORMS
@@ -250,12 +250,13 @@ class Canonical(ExpressionTransformer):
 
 class SubstituteFunctionCalls(GenericExpressionTransformer):
     def __init__(
-        self, functions: Optional[Dict[Any, Callable[..., Expression]]] = None
+        self, functions: Optional[Dict[Callable, Callable[..., Expression]]] = None
     ):
         super().__init__()
-        self.functions = functions
-        if self.functions is None:
+        if functions is None:
             self.functions = _BUILTIN_FUNCTIONS
+        else:
+            self.functions = functions
         self.function_transforms = _BUILTIN_FUNCTION_TRANSFORMS
 
     def generic_visit(self, expression: Expression):
@@ -266,25 +267,23 @@ class SubstituteFunctionCalls(GenericExpressionTransformer):
             if (
                 isinstance(expr1, FunctionCall)
                 and expr1.function.is_concrete
-                and expr2.is_concrete
                 and (expr1.function.value, expr_type) in self.function_transforms
             ):
-                return self.visit(
-                    self.function_transforms[(expr1.function.value, expr_type)](
-                        expr1, Constant(expr2.value)
-                    )
+                result = self.function_transforms[(expr1.function.value, expr_type)](
+                    expr1, expr2
                 )
-            elif (
+                if result is not NotImplemented:
+                    return self.visit(result)
+            if (
                 isinstance(expr2, FunctionCall)
                 and expr2.function.is_concrete
-                and expr1.is_concrete
                 and (expr2.function.value, expr_type) in self.function_transforms
             ):
-                return self.visit(
-                    self.function_transforms[(expr2.function.value, expr_type)](
-                        expr2, Constant(expr1.value)
-                    )
+                result = self.function_transforms[(expr2.function.value, expr_type)](
+                    expr2, expr1
                 )
+                if result is not NotImplemented:
+                    return self.visit(result)
             return expr_type(self.visit(expr1), self.visit(expr2))
         return super().generic_visit(expression)
 
@@ -399,14 +398,16 @@ class PropagateConstants(ExpressionTransformer):
         return Add(Constant(constant_value), *expressions)
 
     def visit_And(self, expression: And):
-        expressions = []
-        constant_expressions = []
+        expressions: Set[Expression] = set()
+        constant_expressions = set()
         for expr in expression.expressions:
             expr = self.visit(expr)
             if isinstance(expr, Constant):
-                constant_expressions.append(expr)
+                constant_expressions.add(expr)
+            elif (~expr) in expressions:
+                return Constant(False)
             else:
-                expressions.append(expr)
+                expressions.add(expr)
         if len(constant_expressions) == 0 and len(expressions) == 0:
             return Constant(True)
         constant_value = True
@@ -415,7 +416,7 @@ class PropagateConstants(ExpressionTransformer):
         if not constant_value or len(expressions) == 0:
             return Constant(constant_value)
         if len(expressions) == 1:
-            return expressions[0]
+            return expressions.pop()
         return And(*expressions)
 
     def visit_Constant(self, expression: Constant):
@@ -602,14 +603,16 @@ class PropagateConstants(ExpressionTransformer):
         return NotEqual(expr1, expr2)
 
     def visit_Or(self, expression: Or):
-        expressions = []
-        constant_expressions = []
+        expressions: Set[Expression] = set()
+        constant_expressions = set()
         for expr in expression.expressions:
             expr = self.visit(expr)
             if isinstance(expr, Constant):
-                constant_expressions.append(expr)
+                constant_expressions.add(expr)
+            elif (~expr) in expressions:
+                return Constant(True)
             else:
-                expressions.append(expr)
+                expressions.add(expr)
         if len(constant_expressions) == 0 and len(expressions) == 0:
             return Constant(False)
         constant_value = False
@@ -618,7 +621,7 @@ class PropagateConstants(ExpressionTransformer):
         if constant_value or len(expressions) == 0:
             return Constant(constant_value)
         if len(expressions) == 1:
-            return expressions[0]
+            return expressions.pop()
         return Or(*expressions)
 
     def visit_Parameter(self, expression: Parameter):
@@ -687,15 +690,15 @@ class ToCNF(GenericExpressionTransformer):
         return expr
 
     def visit_And(self, expression: And) -> And:
-        expressions = []  # type: List[Expression]
+        expressions = set()  # type: Set[Expression]
         for expr in expression.expressions:
             expr = self.visit(expr)
             if isinstance(expr, And):
-                expressions.extend(expr.expressions)
+                expressions = expressions.union(expr.expressions)
             else:
-                expressions.append(expr)
+                expressions.add(expr)
         if len(expressions) == 1:
-            return And(expressions[0])
+            return And(expressions.pop())
         return And(*expressions)
 
     def visit_Forall(self, expression: Forall):
@@ -706,38 +709,38 @@ class ToCNF(GenericExpressionTransformer):
         return self.visit(Or(~expression.expr1, expression.expr2))
 
     def visit_Or(self, expression: Or) -> And:
-        expressions = []  # type: List[Expression]
+        expressions = set()  # type: Set[Expression]
         conjunction = None  # type: Optional[And]
         for expr in expression.expressions:
             expr = self.visit(expr)
             if isinstance(expr, Or):
-                expressions.extend(expr.expressions)
+                expressions = expressions.union(expr.expressions)
             elif isinstance(expr, And) and conjunction is None:
                 conjunction = expr
             else:
-                expressions.append(expr)
+                expressions.add(expr)
         if conjunction is None:
             if len(expressions) == 0:
                 return And(Constant(True))
             elif len(expressions) == 1:
-                return And(expressions[0])
+                return And(expressions.pop())
             return And(Or(*expressions))
         if len(expressions) == 0:
             return conjunction
-        clauses = list(
+        clauses = set(
             (e,) for e in conjunction.expressions
-        )  # type: List[Tuple[Expression, ...]]
+        )  # type: Set[Tuple[Expression, ...]]
         for expr in expressions:
             if isinstance(expr, And):
-                new_clauses = []
+                new_clauses = set()
                 for clause in clauses:
                     for e in expr.expressions:
-                        new_clauses.append(clause + (e,))
+                        new_clauses.add(tuple(set(clause + (e,))))
                 clauses = new_clauses
             else:
                 assert not isinstance(expr, Or)
-                new_clauses = []
+                new_clauses = set()
                 for clause in clauses:
-                    new_clauses.append(clause + (expr,))
+                    new_clauses.add(tuple(set(clause + (expr,))))
                 clauses = new_clauses
         return And(*[Or(*clause) for clause in clauses])

@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 
-cd bin
+PROJECT_DIR=${PROJECT_DIR:-$(cd $(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/..; pwd)}
+
+cd $PROJECT_DIR/bin
 if [ -e gurobi810 ]
 then
     echo "Gurobi is already installed"

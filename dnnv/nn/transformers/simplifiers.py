@@ -1,19 +1,50 @@
 import numpy as np
 
-from typing import Optional, Union
+from copy import copy
+from typing import Any, Dict, List, Optional, Set, Type, Union
 
 from .. import operations
 from ..graph import OperationGraph
 from ..operations import Operation
 from ...utils import get_subclasses
 
-from .base import OperationTransformer
+from .base import OperationTransformer, OperationVisitor
+
+
+class Analysis(OperationVisitor):
+    def __init__(self, dnn: OperationGraph):
+        self.results: Dict[Operation, Any] = {}
+        dnn.walk(self)
+
+    def __getitem__(self, index):
+        return self.results[index]
+
+
+class SplitAnalysis(Analysis):
+    def __init__(self, dnn: OperationGraph):
+        self._cache: Set[Operation] = set()
+        super().__init__(dnn)
+
+    def visit(self, operation: Operation):
+        if operation not in self._cache:
+            self._cache.add(operation)
+            super().visit(operation)
+            self.results[operation] = False
+        else:
+            self.results[operation] = True
+        return self
 
 
 class Simplifier(OperationTransformer):
-    def __init__(self):
-        self._cache = {}
+    ANALYSES: Dict[str, Type[Analysis]] = {}
+
+    def __init__(self, dnn: OperationGraph):
+        self._cache: Dict[Operation, Operation] = {}
         self._modified_graph = False
+        self.dnn = dnn
+        self.analysis: Dict[str, Analysis] = {
+            name: analysis(dnn) for name, analysis in self.ANALYSES.items()
+        }
 
     def visit(self, operation: Operation) -> Operation:
         if operation not in self._cache:
@@ -26,9 +57,9 @@ class Simplifier(OperationTransformer):
 
 
 class Compose(Simplifier):
-    def __init__(self, *simplifiers: Simplifier):
-        super().__init__()
-        self.simplifiers = simplifiers
+    def __init__(self, dnn: OperationGraph, *simplifiers: Type[Simplifier]):
+        super().__init__(dnn)
+        self.simplifiers = [simplifier(dnn) for simplifier in simplifiers]
 
     def visit(self, operation: Operation) -> Operation:
         modified_graph = True
@@ -42,7 +73,7 @@ class Compose(Simplifier):
         return operation
 
 
-class BundleConvPadding(Simplifier):
+class BundlePadding(Simplifier):
     def visit_Conv(self, operation: operations.Conv) -> operations.Conv:
         input_op = operation.x
         if not isinstance(input_op, operations.Pad):
@@ -52,6 +83,23 @@ class BundleConvPadding(Simplifier):
             return operation
         if not np.all(p == 0 for p in input_op.pads[:4]):
             return operation
+        operation = copy(operation)
+        pad_top, pad_left = input_op.pads[2:4]
+        pad_bottom, pad_right = input_op.pads[6:8]
+        operation.pads = pads + np.array([pad_top, pad_left, pad_bottom, pad_right])
+        operation.x = input_op.x
+        return operation
+
+    def visit_MaxPool(self, operation: operations.MaxPool) -> operations.MaxPool:
+        input_op = operation.x
+        if not isinstance(input_op, operations.Pad):
+            return operation
+        pads = operation.pads
+        if input_op.mode != "constant" or input_op.value != 0.0:
+            return operation
+        if not np.all(p == 0 for p in input_op.pads[:4]):
+            return operation
+        operation = copy(operation)
         pad_top, pad_left = input_op.pads[2:4]
         pad_bottom, pad_right = input_op.pads[6:8]
         operation.pads = pads + np.array([pad_top, pad_left, pad_bottom, pad_right])
@@ -60,9 +108,14 @@ class BundleConvPadding(Simplifier):
 
 
 class ConvertBatchNorm(Simplifier):
+    ANALYSES = {"is_split": SplitAnalysis}
+
     def visit_BatchNormalization(self, operation: operations.BatchNormalization):
         input_op = operation.x
-        if isinstance(input_op, operations.Conv):
+        if (
+            isinstance(input_op, operations.Conv)
+            and not self.analysis["is_split"][input_op]
+        ):
             std = np.sqrt(operation.variance + operation.epsilon)
             a = operation.scale / std
             b = operation.bias - operation.scale * operation.mean / std
@@ -138,37 +191,62 @@ class MoveActivationsBackward(Simplifier):
         return self.move_back(operation)
 
 
-class PropagateConstants(Simplifier):
-    def visit_Concat(
-        self, operation: operations.Concat
-    ) -> Union[np.ndarray, operations.Concat]:
-        if all(not isinstance(x, Operation) for x in operation.x):
-            return np.concatenate([x for x in operation.x])
-        return operation
+class ReshapeToFlatten(Simplifier):
+    def visit_Reshape(self, operation: operations.Reshape):
+        if not isinstance(operation.shape, operations.Concat):
+            return operation
+        concat: operations.Concat = operation.shape
+        if concat.axis != 0:
+            return operation
+        if len(concat.x) != 2 or concat.x[1] != -1:
+            return operation
+        if not isinstance(concat.x[0], operations.Unsqueeze):
+            return operation
+        unsqueeze: operations.Unsqueeze = concat.x[0]
+        if len(unsqueeze.axes) != 1 or unsqueeze.axes[0] != 0:
+            return operation
+        if not isinstance(unsqueeze.x, operations.Gather):
+            return operation
+        gather: operations.Gather = unsqueeze.x
+        if gather.axis != 0 or gather.indices.shape != () or gather.indices != 0:
+            return operation
+        if not isinstance(gather.x, operations.Shape):
+            return operation
+        shape: operations.Shape = gather.x
+        return operations.Flatten(shape.x, axis=1)
 
-    def visit_Gather(
-        self, operation: operations.Gather
-    ) -> Union[np.ndarray, operations.Gather]:
-        if not isinstance(operation.x, Operation) and not isinstance(
-            operation.indices, Operation
+
+class SqueezeConvs(Simplifier):
+    def is_diagonal(self, array):
+        i, j = array.shape
+        return ~np.any(array.reshape(-1)[:-1].reshape(i - 1, j + 1)[:, 1:])
+
+    def visit_Conv(self, operation: operations.Conv) -> operations.Conv:
+        if (
+            isinstance(operation.x, operations.Conv)
+            and operation.x.w.shape[2] == 1
+            and operation.x.w.shape[3] == 1
+            and all(s == 1 for s in operation.x.strides)
+            and all(p == 0 for p in operation.x.pads)
+            and all(d == 1 for d in operation.x.dilations)
+            and operation.x.group == 1
+            and self.is_diagonal(operation.x.w[:, :, 0, 0])
         ):
-            return np.take(operation.x, operation.indices, axis=operation.axis)
-        return operation
+            w = np.diag(operation.x.w[:, :, 0, 0]).reshape((1, -1, 1, 1))
+            b = operation.x.b
 
-    def visit_Shape(
-        self, operation: operations.Shape
-    ) -> Union[np.ndarray, operations.Shape]:
-        input_op = operation.x
-        return OperationGraph([input_op]).output_shape[0]
+            out_c, in_c, k_h, k_w = operation.w.shape
 
-    def visit_Unsqueeze(
-        self, operation: operations.Unsqueeze
-    ) -> Union[np.ndarray, operations.Unsqueeze]:
-        if not isinstance(operation.x, Operation):
-            x = operation.x
-            for axis in operation.axes:
-                x = np.expand_dims(x, axis)
-            return x
+            weights = operation.w * np.tile(w, (out_c, 1, k_h, k_w))
+            bias = operation.b + (operation.w * np.tile(b, (out_c, 1, k_h, k_w))).sum(
+                axis=(1, 2, 3)
+            )
+
+            op = copy(operation)
+            op.x = operation.x.x
+            op.w = weights
+            op.b = bias
+            return op
         return operation
 
 
@@ -203,8 +281,9 @@ def simplify(
     dnn: OperationGraph, simplifier: Optional[Simplifier] = None
 ) -> OperationGraph:
     if simplifier is None:
-        simplifier = Compose(*[c() for c in get_subclasses(Simplifier)])
-    return OperationGraph(dnn.walk(simplifier))
+        simplifier = Compose(dnn, *[c for c in get_subclasses(Simplifier)])
+    simplified_graph = OperationGraph(dnn.walk(simplifier))
+    return simplified_graph
 
 
 __all__ = ["simplify"]

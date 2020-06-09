@@ -5,4 +5,4 @@ from .nn import *
 from .patterns import *
 from .tensor import *
 
-Activation: OperationPattern = Relu | Sigmoid | Tanh
+Activation: OperationPattern = Relu | Sigmoid | Tanh  # TODO: enable isinstance checks

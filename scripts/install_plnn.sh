@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-PROJECT_DIR=$(cd $(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/..; pwd)
-cd lib
+PROJECT_DIR=${PROJECT_DIR:-$(cd $(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/..; pwd)}
+cd $PROJECT_DIR/lib
 
 git clone https://github.com/oval-group/PLNN-verification.git
 cd PLNN-verification

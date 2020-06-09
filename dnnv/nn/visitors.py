@@ -172,6 +172,11 @@ class PrintVisitor(OperationVisitor):
         self.print_op_id(operation)
         print("Input(%s, dtype=%s)" % (operation.shape, operation.dtype.name))
 
+    def visit_LogSoftmax(self, operation):
+        self.generic_visit(operation)
+        self.print_op_id(operation)
+        print("LogSoftmax(%s, axis=%s)" % (self.get_op_id(operation.x), operation.axis))
+
     def visit_MatMul(self, operation):
         self.generic_visit(operation)
         self.print_op_id(operation)
@@ -232,6 +237,11 @@ class PrintVisitor(OperationVisitor):
         self.generic_visit(operation)
         self.print_op_id(operation)
         print("Softmax(%s, axis=%s)" % (self.get_op_id(operation.x), operation.axis))
+
+    def visit_Tanh(self, operation):
+        self.generic_visit(operation)
+        self.print_op_id(operation)
+        print("Tanh(%s)" % self.get_op_id(operation.x))
 
     def visit_Transpose(self, operation):
         self.generic_visit(operation)

@@ -157,8 +157,12 @@ def to_mipverify_inputs(
     if dirname is None:
         dirname = tempfile.tempdir
 
-    lb = np.asarray(input_interval.lower_bound).transpose((0, 2, 3, 1))
-    ub = np.asarray(input_interval.upper_bound).transpose((0, 2, 3, 1))
+    lb = np.asarray(input_interval.lower_bound)
+    ub = np.asarray(input_interval.upper_bound)
+    if lb.ndim == 4:
+        lb = lb.transpose((0, 2, 3, 1))
+    if ub.ndim == 4:
+        ub = ub.transpose((0, 2, 3, 1))
     if np.any(lb < 0) or np.any(ub > 1):
         raise translator_error(
             "Inputs intervals that extend outside of [0, 1] are not supported"

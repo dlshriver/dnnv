@@ -43,7 +43,8 @@ def validate_counter_example(prop: Property, stdout: List[str], stderr: List[str
             cex[position] = value
     for constraint in prop.input_constraint.constraints:
         t = sum(c * cex[i] for c, i in zip(constraint.coefficients, constraint.indices))
-        if (t - constraint.b) > 1e-6:
+        # planet output has a precision of 5 decimal places
+        if (t - constraint.b) > 1e-5:
             raise PlanetError("Invalid counter example found: input outside bounds.")
     output = prop.network.value(cex)
     for constraint in prop.output_constraint.constraints:

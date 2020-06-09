@@ -95,7 +95,7 @@ class Input(Operation):
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):
         dims = [
-            1 if dim.dim_param else dim.dim_value
+            -1 if dim.dim_param else dim.dim_value
             for dim in onnx_node.type.tensor_type.shape.dim
         ]
         shape = np.array(dims)
@@ -107,4 +107,3 @@ class OutputSelect(Operation):
     def __init__(self, operation, index):
         self.operation = operation
         self.index = index
-

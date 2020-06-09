@@ -2,13 +2,12 @@ import numpy as np
 import unittest
 
 from dnnv.properties.base import *
+from dnnv.properties.context import get_context
 
 
 class ExpressionTests(unittest.TestCase):
     def reset_property_context(self):
-        # TODO : refactor property implementation so this can be removed
-        # required to ensure concretized symbols don't carry over
-        Symbol._instances = {}
+        get_context().reset()
 
     def setUp(self):
         self.reset_property_context()
@@ -295,11 +294,7 @@ class ExpressionTests(unittest.TestCase):
 
 class ConstantTests(unittest.TestCase):
     def reset_property_context(self):
-        # TODO : refactor property implementation so this can be removed
-        # required to ensure concretized symbols don't carry over
-        Constant._instances = {}
-        Constant.count = 0
-        Symbol._instances = {}
+        get_context().reset()
 
     def setUp(self):
         self.reset_property_context()
@@ -366,7 +361,8 @@ class ConstantTests(unittest.TestCase):
         self.assertEqual(repr(slice2), "::1")
 
         ndarray = Constant(np.array([-1, 0, 1]))
-        self.assertEqual(repr(ndarray), "<class 'numpy.ndarray'>(id=0x8)")
+        # TODO : this is dependent on current implementation, can we make it less so?
+        self.assertEqual(repr(ndarray), "<class 'numpy.ndarray'>(id=0x9)")
 
     def test_str(self):
         dict1 = Constant({"a": 1, "b": 2, "c": 3})

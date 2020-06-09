@@ -4,6 +4,7 @@ import unittest
 from dnnv import nn
 from dnnv import properties
 from dnnv.properties import Symbol
+from dnnv.properties.context import get_context
 from dnnv.verifiers.common import SAT, UNSAT, UNKNOWN
 
 from tests.utils import network_artifact_dir, property_artifact_dir
@@ -28,9 +29,7 @@ class VerifierTests:
                 del os.environ[varname]
 
     def reset_property_context(self):
-        # TODO : refactor property implementation so this can be removed
-        # required to ensure concretized symbols don't carry over
-        Symbol._instances = {}
+        get_context().reset()
 
     def test_sum_gt_one_localrobustness_shift_left_unsat(self):
         os.environ["SHIFT"] = "-100"
