@@ -11,30 +11,34 @@ def convert(operations):
         output_funcs.append(converter.visit(op))
 
     def func(*inputs, squeeze=True):
-        concrete = True
-        if any(isinstance(x, tf.Tensor) for x in inputs):
-            concrete = False
-        converter._cache.clear()
-        outputs = []
-        for output_func in output_funcs:
-            output = output_func(*inputs)
-            if isinstance(output, tf.Tensor) and tf.executing_eagerly():
-                output = output.numpy()
-            outputs.append(output)
-        converter._cache.clear()
-        if concrete:
-            tensor_indices = []
-            for i, output in enumerate(outputs):
-                if isinstance(output, tf.Tensor):
-                    tensor_indices.append(i)
-            if len(tensor_indices) > 0:
-                with tf.Session() as sess:
-                    concrete_outputs = sess.run([outputs[i] for i in tensor_indices])
-                for i, j in enumerate(tensor_indices):
-                    outputs[j] = concrete_outputs[i]
-        if squeeze and len(outputs) == 1:
-            return outputs[0]
-        return tuple(outputs)
+        graph = tf.Graph()
+        with graph.as_default():
+            concrete = True
+            if any(isinstance(x, tf.Tensor) for x in inputs):
+                concrete = False
+            converter._cache.clear()
+            outputs = []
+            for output_func in output_funcs:
+                output = output_func(*inputs)
+                if isinstance(output, tf.Tensor) and tf.executing_eagerly():
+                    output = output.numpy()
+                outputs.append(output)
+            converter._cache.clear()
+            if concrete:
+                tensor_indices = []
+                for i, output in enumerate(outputs):
+                    if isinstance(output, tf.Tensor):
+                        tensor_indices.append(i)
+                if len(tensor_indices) > 0:
+                    with tf.Session() as sess:
+                        concrete_outputs = sess.run(
+                            [outputs[i] for i in tensor_indices]
+                        )
+                    for i, j in enumerate(tensor_indices):
+                        outputs[j] = concrete_outputs[i]
+            if squeeze and len(outputs) == 1:
+                return outputs[0]
+            return tuple(outputs)
 
     return func
 
