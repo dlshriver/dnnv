@@ -160,8 +160,8 @@ def to_neurify_inputs(
     if dirname is None:
         dirname = tempfile.tempdir
 
-    lb = input_interval.lower_bound
-    ub = input_interval.upper_bound
+    lb = input_interval.lower_bounds[0]
+    ub = input_interval.upper_bounds[0]
     sample_input = (lb + ub) / 2
     with tempfile.NamedTemporaryFile(
         mode="w+", dir=dirname, suffix=".interval", delete=False

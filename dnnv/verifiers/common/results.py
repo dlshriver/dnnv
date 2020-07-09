@@ -5,6 +5,9 @@ class PropertyCheckResult:
     def __str__(self):
         return self.name
 
+    def __repr__(self):
+        return f"PropertyCheckResult({self.name})"
+
     def __invert__(self):
         if self == UNSAT:
             return SAT

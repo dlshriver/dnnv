@@ -12,9 +12,10 @@ from dnnv.verifiers.common import (
     SAT,
     UNSAT,
     UNKNOWN,
-    ConvexPolytope,
-    ConvexPolytopeExtractor,
-    sandboxed,
+    HalfspacePolytope,
+    HalfspacePolytopePropertyExtractor,
+    HyperRectangle,
+    as_layers,
 )
 
 from .errors import ERANError, ERANTranslatorError
@@ -64,18 +65,22 @@ def verify(
     phi.networks[0].concretize(dnn)
 
     result = UNSAT
-    property_extractor = ConvexPolytopeExtractor()
-    for prop in property_extractor.extract_from(phi):
+    property_extractor = HalfspacePolytopePropertyExtractor(
+        HyperRectangle, HalfspacePolytope
+    )
+    for prop in property_extractor.extract_from(~phi):
+        if prop.input_constraint.num_variables > 1:
+            raise ERANTranslatorError("Unsupported network: More than 1 input variable")
         with tf.Session(graph=tf.Graph()) as tf_session:
-            layers = prop.output_constraint.as_layers(
-                prop.network,
+            layers = as_layers(
+                prop.suffixed_op_graph(),
                 extra_layer_types=ERAN_LAYER_TYPES,
                 translator_error=ERANTranslatorError,
             )
-            input_interval = prop.input_constraint.as_hyperrectangle()
+            input_interval = prop.input_constraint
 
-            spec_lb = input_interval.lower_bound
-            spec_ub = input_interval.upper_bound
+            spec_lb = input_interval.lower_bounds[0]
+            spec_ub = input_interval.upper_bounds[0]
             if len(spec_lb.shape) == 4:
                 spec_lb = spec_lb.transpose((0, 2, 3, 1))
                 spec_ub = spec_ub.transpose((0, 2, 3, 1))

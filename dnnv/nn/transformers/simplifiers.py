@@ -67,6 +67,7 @@ class Compose(Simplifier):
             modified_graph = False
             for simplifier in self.simplifiers:
                 simplifier._modified_graph = False
+                simplifier._cache = {}
                 operation = simplifier.visit(operation)
                 modified_graph |= simplifier._modified_graph
             self._modified_graph |= modified_graph
@@ -274,6 +275,23 @@ class SqueezeGemms(Simplifier):
                 beta=operation.beta,
             )
         # TODO : reduce when operation.b is Gemm
+        return operation
+
+
+class DropUnnecessaryConcat(Simplifier):
+    def visit_Concat(self, operation: operations.Concat) -> operations.Operation:
+        if len(operation.x) == 1:
+            return operation.x[0]
+        return operation
+
+
+class DropUnnecessaryFlatten(Simplifier):
+    def visit_Flatten(self, operation: operations.Flatten) -> operations.Operation:
+        if (
+            operation.axis == 1
+            and len(OperationGraph([operation.x]).output_shape[0]) == 2
+        ):
+            return operation.x
         return operation
 
 
