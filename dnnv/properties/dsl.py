@@ -1,4 +1,5 @@
 import ast
+import sys
 
 from collections import defaultdict
 from pathlib import Path
@@ -31,7 +32,7 @@ class Py2PropertyTransformer(ast.NodeTransformer):
         if isinstance(node.value, ast.Lambda):
             assert isinstance(node.targets[0], ast.Name)
             self._lambda_aliases.add(node.targets[0].id)
-        return super().generic_visit(node)
+        return self.generic_visit(node)
 
     def visit_Call(self, node: ast.Call):
         attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
@@ -57,14 +58,29 @@ class Py2PropertyTransformer(ast.NodeTransformer):
                 variable = ast.Call(sym_func, sym_func_args, [], **attributes)
 
                 orig_expr = args[1]
-                lambda_args = ast.arguments(
-                    [ast.arg(symbol_name.id, None, **attributes)],
-                    None,
-                    [],
-                    [],
-                    None,
-                    [],
-                )
+                if sys.version_info.major >= 3 and sys.version_info.minor >= 8:
+                    lambda_args = ast.arguments(
+                        [],
+                        [ast.arg(symbol_name.id, None, **attributes)],
+                        None,
+                        [],
+                        [],
+                        None,
+                        [],
+                    )
+                elif sys.version_info.major >= 3:
+                    lambda_args = ast.arguments(
+                        [ast.arg(symbol_name.id, None, **attributes)],
+                        None,
+                        [],
+                        [],
+                        None,
+                        [],
+                    )
+                else:
+                    raise PropertyParserError(
+                        "Currently only Python versions 3.7+ are supported."
+                    )
                 lambda_func = ast.Lambda(lambda_args, orig_expr, **attributes)
                 new_expr = ast.Call(lambda_func, [variable], [], **attributes)
 
@@ -90,7 +106,7 @@ class Py2PropertyTransformer(ast.NodeTransformer):
     def visit_Compare(self, node: ast.Compare):
         attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
         if len(node.ops) == 1:
-            return super().generic_visit(node)
+            return self.generic_visit(node)
         comparisons = []
         left = self.visit(node.left)
         for op, right in zip(node.ops, node.comparators):
@@ -151,9 +167,6 @@ class Py2PropertyTransformer(ast.NodeTransformer):
             raise PropertyParserError(
                 "We do not currently support definition of dicts containing non-primitive values."
             )
-        # keys = [self.visit(key) for key in node.keys]
-        # values = [self.visit(value) for value in node.values]
-        # new_node = ast.Dict(keys, values, **attributes)
         const_func = ast.Name("Constant", ast.Load(), **attributes)
         return ast.Call(const_func, [node], [], **attributes)
 
@@ -177,7 +190,7 @@ class Py2PropertyTransformer(ast.NodeTransformer):
             return True
         return False
 
-    def visit_List(self, node: ast.Tuple):
+    def visit_List(self, node: ast.List):
         attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
         for expr in node.elts:
             if not self._ensure_primitive(expr):
@@ -187,7 +200,7 @@ class Py2PropertyTransformer(ast.NodeTransformer):
         const_func = ast.Name("Constant", ast.Load(), **attributes)
         return ast.Call(const_func, [node], [], **attributes)
 
-    def visit_Set(self, node: ast.Tuple):
+    def visit_Set(self, node: ast.Set):
         attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
         for expr in node.elts:
             if not self._ensure_primitive(expr):
@@ -245,14 +258,16 @@ class Py2PropertyTransformer(ast.NodeTransformer):
             )
         return self.generic_visit(node)
 
+    def visit_Constant(self, node: ast.Constant):
+        attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
+        const_func = ast.Name("Constant", ast.Load(), **attributes)
+        return ast.Call(const_func, [node], [], **attributes)
+
     def visit_Index(self, node: ast.Index):
         return self.generic_visit(node)
 
     def visit_Await(self, node: ast.Await):
         raise PropertyParserError("We do not support await expressions.")
-
-    def visit_Constant(self, node: ast.Constant):
-        raise PropertyParserError("We do not support constant expressions.")
 
     def visit_Yield(self, node: ast.Yield):
         raise PropertyParserError("We do not support yield expressions.")
@@ -281,7 +296,7 @@ class Py2PropertyTransformer(ast.NodeTransformer):
     def visit_SetComp(self, node: ast.SetComp):
         raise PropertyParserError("We do not currently support set comprehensions.")
 
-    def visit_Starred(self, node: ast.SetComp):
+    def visit_Starred(self, node: ast.Starred):
         raise PropertyParserError("We do not currently support starred expressions.")
 
 
