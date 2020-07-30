@@ -21,6 +21,18 @@ class Atan(Operation):
         return cls(*inputs)
 
 
+class Elu(Operation):
+    def __init__(self, x, *, alpha=1.0):
+        self.x = x
+        self.alpha = alpha
+
+    @classmethod
+    def from_onnx(cls, onnx_node, *inputs):
+        attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
+        alpha = attributes.get("alpha", 1.0)
+        return cls(*inputs, alpha=alpha)
+
+
 class Gemm(Operation):
     def __init__(
         self, a, b, c, *, alpha=1.0, beta=1.0, transpose_a=False, transpose_b=False

@@ -227,6 +227,23 @@ class TensorflowConverter(OperationVisitor):
 
         return dropout_func
 
+    def visit_Elu(self, operation):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+
+        @self._cached
+        def elu_func(*inputs):
+            if operation.alpha != 1.0:
+                raise NotImplementedError(
+                    "The tensorflow converter currently does not support ELU activations with alpha other than 1.0"
+                )
+            x = _concretize([x_], inputs)
+            result = tf.nn.elu(x)
+            return result
+
+        return elu_func
+
     def visit_Flatten(self, operation):
         x_ = operation.x
         if isinstance(x_, Operation):
