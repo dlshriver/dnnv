@@ -371,7 +371,7 @@ def parse_cli(phi: base.Expression, args):
         parameter.concretize(parameter_value)
 
 
-def parse(path: Path, args: Optional[List[str]] = None):
+def parse(path: Path, args: Optional[List[str]] = None) -> base.Expression:
     with open(path, "r") as f:
         module = ast.parse(f.read())
     for node in module.body[:-1]:
