@@ -6,9 +6,16 @@ from dnnv import properties
 from dnnv.properties import Symbol
 from dnnv.properties.context import get_context
 from dnnv.verifiers.common import SAT, UNSAT, UNKNOWN
-from dnnv.verifiers import bab, eran, neurify, planet, reluplex
+from dnnv.verifiers import neurify, planet, reluplex
 
+from tests.verifiers_tests.utils import has_verifier
 from tests.utils import network_artifact_dir, property_artifact_dir
+
+bab, eran = None, None
+if has_verifier("bab"):
+    import dnnv.verifiers.bab as bab
+if has_verifier("eran"):
+    import dnnv.verifiers.eran as eran
 
 RUNS_PER_PROP = int(os.environ.get("_DNNV_TEST_RUNS_PER_PROP", "1"))
 
@@ -44,6 +51,8 @@ class MNISTTests(unittest.TestCase):
             os.environ["SEED"] = str(i)
             results = []
             for name, verifier in verifiers.items():
+                if not has_verifier(name):
+                    continue
                 self.reset_property_context()
                 dnn = nn.parse(network_artifact_dir / "mnist_relu_3_50.onnx")
                 phi = properties.parse(
@@ -64,6 +73,8 @@ class MNISTTests(unittest.TestCase):
             os.environ["SEED"] = str(i)
             results = []
             for name, verifier in verifiers.items():
+                if not has_verifier(name):
+                    continue
                 self.reset_property_context()
                 dnn = nn.parse(network_artifact_dir / "convSmallRELU__Point.onnx")
                 phi = properties.parse(

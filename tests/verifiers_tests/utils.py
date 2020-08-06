@@ -12,6 +12,28 @@ from tests.utils import network_artifact_dir, property_artifact_dir
 RUNS_PER_PROP = int(os.environ.get("_DNNV_TEST_RUNS_PER_PROP", "1"))
 
 
+def has_verifier(verifier):
+    if verifier == "eran":
+        try:
+            import eran
+
+            return True
+        except ImportError:
+            return False
+    elif verifier == "bab":
+        try:
+            import plnn
+
+            return True
+        except ImportError:
+            return False
+    for path in os.environ["PATH"].split(os.pathsep):
+        exe = os.path.join(path, verifier)
+        if os.path.isfile(exe) and os.access(exe, os.X_OK):
+            return True
+    return False
+
+
 class VerifierTests:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
