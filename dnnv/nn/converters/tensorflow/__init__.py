@@ -380,7 +380,13 @@ class TensorflowConverter(OperationVisitor):
                 b = b.astype(a.dtype.as_numpy_dtype)
             if isinstance(a, np.ndarray) and isinstance(b, np.ndarray):
                 a = a.astype(b.dtype)
-            result = tf.matmul(a, b)
+
+            if len(a.shape) == 2 and len(b.shape) == 1:
+                result = tf.matmul(a, b[:, None])[:, 0]
+            elif len(a.shape) == 1 and len(b.shape) == 2:
+                result = tf.matmul(a[None], b)[0]
+            else:
+                result = tf.matmul(a, b)
             return result
 
         return matmul_func

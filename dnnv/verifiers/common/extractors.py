@@ -282,14 +282,19 @@ class Property:
         return "\n".join(strs)
 
     def suffixed_op_graph(self) -> OperationGraph:
-        from dnnv.nn.operations import Gemm, Relu, Flatten, Concat
+        import dnnv.nn.operations as operations
 
         if not isinstance(self.output_constraint, HalfspacePolytope):
             raise ValueError(
                 f"{type(self.output_constraint).__name__} constraints are not yet supported"
             )
-        output_operations = [Flatten(o) for o in self.op_graph.output_operations]
-        new_output_op = Concat(output_operations, axis=1)
+        if len(self.op_graph.output_operations) == 1:
+            new_output_op = self.op_graph.output_operations[0]
+        else:
+            output_operations = [
+                operations.Flatten(o) for o in self.op_graph.output_operations
+            ]
+            new_output_op = operations.Concat(output_operations, axis=1)
         size = self.output_constraint.size()
         k = len(self.output_constraint.halfspaces)
         W = np.zeros((size, k), dtype=np.float32)
@@ -300,14 +305,14 @@ class Property:
                 b[n] += 1e-6  # TODO : remove magic number
             for i, c in zip(hs.indices, hs.coefficients):
                 W[i, n] = c
-        new_output_op = Gemm(new_output_op, W, b)
-        new_output_op = Relu(new_output_op)
+        new_output_op = operations.Add(operations.MatMul(new_output_op, W), b)
+        new_output_op = operations.Relu(new_output_op)
 
         W_mask = np.zeros((k, 1), dtype=np.float32)
         b_mask = np.zeros(1, dtype=np.float32)
         for i in range(k):
             W_mask[i, 0] = 1
-        new_output_op = Gemm(new_output_op, W_mask, b_mask)
+        new_output_op = operations.Add(operations.MatMul(new_output_op, W_mask), b_mask)
         return OperationGraph([new_output_op]).simplify()
 
 
