@@ -23,6 +23,7 @@ export LD_LIBRARY_PATH=$GUROBI_HOME/lib:$LD_LIBRARY_PATH
 # eran paths
 export PYTHONPATH=$PROJECT_DIR/lib/eran/tf_verify:$PYTHONPATH
 export PYTHONPATH=$PROJECT_DIR/lib/ELINA/python_interface:$PYTHONPATH
+export PYTHONPATH=$PROJECT_DIR/lib/eran/ELINA/python_interface:$PYTHONPATH
 
 # julia paths
 export PATH=$PROJECT_DIR/bin/julia-1.0.4/bin:$PATH
