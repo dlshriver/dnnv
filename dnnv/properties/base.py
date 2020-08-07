@@ -964,6 +964,8 @@ def __argcmp_eq(
         Ai = list(np.ndindex(output_shape))
         if E.is_concrete:
             c = E.value
+            if c > len(Ai):
+                return Constant(False)
             return And(*[cmp_fn(A[Ai[c]], A[Ai[i]]) for i in range(len(Ai)) if i != c])
         return And(*[Implies(F == c, E == c) for c in range(len(Ai))])
     return NotImplemented

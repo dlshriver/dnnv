@@ -28,7 +28,7 @@ def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
         dnn.simplify().pprint()
         print()
 
-    phi = properties.parse(args.property, args=extra_args)
+    phi = properties.parse(args.property, format=args.prop_format, args=extra_args)
     print("Verifying property:")
     print(phi)
 

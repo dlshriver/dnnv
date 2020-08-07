@@ -131,7 +131,7 @@ class PrintVisitor(OperationVisitor):
     def visit_Flatten(self, operation):
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print("Flatten(%s)" % self.get_op_id(operation.x))
+        print("Flatten(%s, axis=%s)" % (self.get_op_id(operation.x), operation.axis))
 
     def visit_Gather(self, operation):
         self.generic_visit(operation)

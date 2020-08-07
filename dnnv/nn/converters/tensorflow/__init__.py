@@ -11,34 +11,31 @@ def convert(operations):
         output_funcs.append(converter.visit(op))
 
     def func(*inputs, squeeze=True):
+        concrete = True
+        if any(isinstance(x, tf.Tensor) for x in inputs):
+            concrete = False
+        converter._cache.clear()
         graph = tf.Graph()
         with graph.as_default():
-            concrete = True
-            if any(isinstance(x, tf.Tensor) for x in inputs):
-                concrete = False
-            converter._cache.clear()
             outputs = []
             for output_func in output_funcs:
                 output = output_func(*inputs)
                 if isinstance(output, tf.Tensor) and tf.executing_eagerly():
                     output = output.numpy()
                 outputs.append(output)
-            converter._cache.clear()
-            if concrete:
-                tensor_indices = []
-                for i, output in enumerate(outputs):
-                    if isinstance(output, tf.Tensor):
-                        tensor_indices.append(i)
-                if len(tensor_indices) > 0:
-                    with tf.Session() as sess:
-                        concrete_outputs = sess.run(
-                            [outputs[i] for i in tensor_indices]
-                        )
-                    for i, j in enumerate(tensor_indices):
-                        outputs[j] = concrete_outputs[i]
-            if squeeze and len(outputs) == 1:
-                return outputs[0]
-            return tuple(outputs)
+        if concrete:
+            tensor_indices = []
+            for i, output in enumerate(outputs):
+                if isinstance(output, tf.Tensor):
+                    tensor_indices.append(i)
+            if len(tensor_indices) > 0:
+                with tf.Session(graph=graph) as sess:
+                    concrete_outputs = sess.run([outputs[i] for i in tensor_indices])
+                for i, j in enumerate(tensor_indices):
+                    outputs[j] = concrete_outputs[i]
+        if squeeze and len(outputs) == 1:
+            return outputs[0]
+        return tuple(outputs)
 
     return func
 
@@ -230,6 +227,23 @@ class TensorflowConverter(OperationVisitor):
 
         return dropout_func
 
+    def visit_Elu(self, operation):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+
+        @self._cached
+        def elu_func(*inputs):
+            if operation.alpha != 1.0:
+                raise NotImplementedError(
+                    "The tensorflow converter currently does not support ELU activations with alpha other than 1.0"
+                )
+            x = _concretize([x_], inputs)
+            result = tf.nn.elu(x)
+            return result
+
+        return elu_func
+
     def visit_Flatten(self, operation):
         x_ = operation.x
         if isinstance(x_, Operation):
@@ -366,7 +380,13 @@ class TensorflowConverter(OperationVisitor):
                 b = b.astype(a.dtype.as_numpy_dtype)
             if isinstance(a, np.ndarray) and isinstance(b, np.ndarray):
                 a = a.astype(b.dtype)
-            result = tf.matmul(a, b)
+
+            if len(a.shape) == 2 and len(b.shape) == 1:
+                result = tf.matmul(a, b[:, None])[:, 0]
+            elif len(a.shape) == 1 and len(b.shape) == 2:
+                result = tf.matmul(a[None], b)[0]
+            else:
+                result = tf.matmul(a, b)
             return result
 
         return matmul_func

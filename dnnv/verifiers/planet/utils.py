@@ -14,9 +14,9 @@ def as_rlv(
     layers: List[Layer],
     translator_error: Type[VerifierTranslatorError] = VerifierTranslatorError,
 ) -> Iterable[str]:
-    if (input_interval.lower_bound == -np.inf).any():
+    if (input_interval.lower_bounds[0] == -np.inf).any():
         raise translator_error("A lower bound must be specified for all inputs")
-    if (input_interval.upper_bound == np.inf).any():
+    if (input_interval.upper_bounds[0] == np.inf).any():
         raise translator_error("An upper bound must be specified for all inputs")
     input_layer = layers[0]
     if not isinstance(input_layer, InputLayer):
@@ -70,8 +70,8 @@ def as_rlv(
     for input_index in np.ndindex(input_layer.shape):
         input_index_str = ":".join(str(i) for i in input_index)
         name = f"input:{input_index_str}"
-        yield f"Assert <= {input_interval.lower_bound[input_index]:.12f} 1.0 {name}"
-        yield f"Assert >= {input_interval.upper_bound[input_index]:.12f} 1.0 {name}"
+        yield f"Assert <= {input_interval.lower_bounds[0][input_index]:.12f} 1.0 {name}"
+        yield f"Assert >= {input_interval.upper_bounds[0][input_index]:.12f} 1.0 {name}"
     if len(prev_layer) != 1:
         raise translator_error("More than 1 output node is not currently supported")
     yield f"Assert >= 0.0 1.0 {prev_layer[0]}"

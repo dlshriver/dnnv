@@ -41,9 +41,14 @@ def as_tf(
                             .flatten()
                         )
                     ]
-            if len(x.shape) != 2:
+            if len(x.shape) > 2:
                 x = tf.reshape(x, (x.shape[0], -1))
-            x = tf.nn.bias_add(tf.matmul(x, weights), layer.bias.astype(np.float32))
+            if len(x.shape) == 1:
+                x = tf.reshape(x, (1, x.shape[0]))
+                x = tf.nn.bias_add(tf.matmul(x, weights), layer.bias.astype(np.float32))
+                x = x[0]
+            else:
+                x = tf.nn.bias_add(tf.matmul(x, weights), layer.bias.astype(np.float32))
             if layer.activation == "relu":
                 x = tf.nn.relu(x)
             elif layer.activation == "sigmoid":

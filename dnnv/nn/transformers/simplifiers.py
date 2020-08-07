@@ -67,6 +67,7 @@ class Compose(Simplifier):
             modified_graph = False
             for simplifier in self.simplifiers:
                 simplifier._modified_graph = False
+                simplifier._cache = {}
                 operation = simplifier.visit(operation)
                 modified_graph |= simplifier._modified_graph
             self._modified_graph |= modified_graph
@@ -150,6 +151,18 @@ class DropIdentity(Simplifier):
         return operation.x
 
 
+class MatMulVectorArgsReorder(Simplifier):
+    def visit_MatMul(self, operation: operations.MatMul) -> operations.MatMul:
+        if (
+            not isinstance(operation.a, Operation)
+            and isinstance(operation.b, Operation)
+            and len(OperationGraph([operation.b]).output_shape[0]) == 1
+            and len(operation.a.shape) == 2
+        ):
+            return operations.MatMul(operation.b, operation.a.T)
+        return operation
+
+
 class MatMulAddToGemm(Simplifier):
     def visit_Add(
         self, operation: operations.Add
@@ -164,7 +177,16 @@ class MatMulAddToGemm(Simplifier):
             if isinstance(input_op, operations.MatMul):
                 a = input_op.a
                 b = input_op.b
-                return operations.Gemm(a, b, c)
+                if isinstance(a, Operation):
+                    a_ndim = len(OperationGraph([a]).output_shape[0])
+                else:
+                    a_ndim = len(a.shape)
+                if isinstance(b, Operation):
+                    b_ndim = len(OperationGraph([b]).output_shape[0])
+                else:
+                    b_ndim = len(b.shape)
+                if a_ndim == 2 and b_ndim == 2:
+                    return operations.Gemm(a, b, c)
         return operation
 
 
@@ -274,6 +296,45 @@ class SqueezeGemms(Simplifier):
                 beta=operation.beta,
             )
         # TODO : reduce when operation.b is Gemm
+        return operation
+
+
+class SqueezeMatMulAdds(Simplifier):
+    def visit_Add(self, operation: operations.Add):
+        if (
+            isinstance(operation.a, operations.MatMul)
+            and isinstance(operation.a.a, operations.Add)
+            and isinstance(operation.a.a.a, operations.MatMul)
+        ):
+            first_mm = operation.a.a.a
+            second_mm = operation.a
+            first_add = operation.a.a
+            second_add = operation
+
+            a = first_mm.a
+            b_0 = first_mm.b
+            b_1 = second_mm.b
+            b = np.matmul(b_0, b_1)
+            c = np.matmul(first_add.b, b_1) + second_add.b
+            return operations.Add(operations.MatMul(a, b), c)
+        # TODO : can also reduce in other cases, e.g., (MatMul >> MatMul >> Add)
+        return operation
+
+
+class DropUnnecessaryConcat(Simplifier):
+    def visit_Concat(self, operation: operations.Concat) -> operations.Operation:
+        if len(operation.x) == 1:
+            return operation.x[0]
+        return operation
+
+
+class DropUnnecessaryFlatten(Simplifier):
+    def visit_Flatten(self, operation: operations.Flatten) -> operations.Operation:
+        if (
+            operation.axis == 1
+            and len(OperationGraph([operation.x]).output_shape[0]) == 2
+        ):
+            return operation.x
         return operation
 
 

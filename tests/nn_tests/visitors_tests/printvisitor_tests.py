@@ -130,7 +130,7 @@ BatchNormalization_35           : BatchNormalization(Conv_35)
 Add_15                          : Add(BatchNormalization_35, Relu_30)
 Relu_32                         : Relu(Add_15)
 GlobalAveragePool_0             : GlobalAveragePool(Relu_32)
-Flatten_0                       : Flatten(GlobalAveragePool_0)
+Flatten_0                       : Flatten(GlobalAveragePool_0, axis=1)
 Gemm_0                          : Gemm(Flatten_0, ndarray(shape=(1000, 512)), ndarray(shape=(1000,)))
 """
 

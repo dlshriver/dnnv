@@ -15,9 +15,11 @@ from dnnv.verifiers.common import (
     SAT,
     UNSAT,
     UNKNOWN,
-    CommandLineExecutor,
-    ConvexPolytopeExtractor,
+    HalfspacePolytope,
+    HalfspacePolytopePropertyExtractor,
+    HyperRectangle,
     Property,
+    as_layers,
 )
 from dnnv.verifiers.planet.utils import to_rlv_file
 
@@ -73,15 +75,20 @@ def verify(dnn: OperationGraph, phi: Expression, **kwargs):
     phi.networks[0].concretize(dnn)
 
     result = UNSAT
-    property_extractor = ConvexPolytopeExtractor()
+    property_extractor = HalfspacePolytopePropertyExtractor(
+        HyperRectangle, HalfspacePolytope
+    )
     with tempfile.TemporaryDirectory() as dirname:
-        for prop in property_extractor.extract_from(phi):
-            layers = prop.output_constraint.as_layers(
-                prop.network, translator_error=BabTranslatorError
+        for prop in property_extractor.extract_from(~phi):
+            if prop.input_constraint.num_variables > 1:
+                raise BabTranslatorError(
+                    "Unsupported network: More than 1 input variable"
+                )
+            layers = as_layers(
+                prop.suffixed_op_graph(), translator_error=BabTranslatorError,
             )
-            input_interval = prop.input_constraint.as_hyperrectangle()
             rlv_file_path = to_rlv_file(
-                input_interval,
+                prop.input_constraint,
                 layers,
                 dirname=dirname,
                 translator_error=BabTranslatorError,

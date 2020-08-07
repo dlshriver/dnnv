@@ -12,8 +12,11 @@ from dnnv.verifiers.common import (
     UNSAT,
     UNKNOWN,
     CommandLineExecutor,
-    ConvexPolytopeExtractor,
+    HalfspacePolytope,
+    HalfspacePolytopePropertyExtractor,
+    HyperRectangle,
     Property,
+    as_layers,
 )
 
 from .errors import NeurifyError, NeurifyTranslatorError
@@ -44,7 +47,7 @@ def parse_results(stdout: List[str], stderr: List[str]):
 
 def validate_counter_example(prop: Property, stdout: List[str], stderr: List[str]):
     cex_found = False
-    input_shape, input_dtype = prop.network.value.input_details[0]
+    input_shape, input_dtype = prop.op_graph.input_details[0]
     for line in stdout:
         if cex_found:
             values = line.split(":")[-1][1:-1].split()
@@ -55,21 +58,14 @@ def validate_counter_example(prop: Property, stdout: List[str], stderr: List[str
         if line.endswith("Solution:"):
             cex_found = True
     else:
-        input_interval = prop.input_constraint.as_hyperrectangle()
-        lb = input_interval.lower_bound
-        ub = input_interval.upper_bound
+        lb = prop.input_constraint.lower_bounds[0]
+        ub = prop.input_constraint.upper_bounds[0]
         cex = ((lb + ub) / 2).astype(input_dtype)
-    for constraint in prop.input_constraint.constraints:
-        t = sum(c * cex[i] for c, i in zip(constraint.coefficients, constraint.indices))
-        if (t - constraint.b) > 1e-6:
-            raise NeurifyError("Invalid counter example found: input outside bounds.")
-    output = prop.network.value(cex)
-    for constraint in prop.output_constraint.constraints:
-        t = sum(
-            c * output[i] for c, i in zip(constraint.coefficients, constraint.indices)
-        )
-        if (t - constraint.b) > 1e-6:
-            raise NeurifyError("Invalid counter example found.")
+    if not prop.input_constraint.validate(cex):
+        raise NeurifyError("Invalid counter example found: input outside bounds.")
+    output = prop.op_graph(cex)
+    if not prop.output_constraint.validate(output):
+        raise NeurifyError("Invalid counter example found: output outside bounds.")
 
 
 def verify(dnn: OperationGraph, phi: Expression, **kwargs: Dict[str, Any]):
@@ -78,15 +74,20 @@ def verify(dnn: OperationGraph, phi: Expression, **kwargs: Dict[str, Any]):
     phi.networks[0].concretize(dnn)
 
     result = UNSAT
-    property_extractor = ConvexPolytopeExtractor()
+    property_extractor = HalfspacePolytopePropertyExtractor(
+        HyperRectangle, HalfspacePolytope
+    )
     with tempfile.TemporaryDirectory() as dirname:
-        for prop in property_extractor.extract_from(phi):
-            layers = prop.output_constraint.as_layers(
-                prop.network, translator_error=NeurifyTranslatorError
+        for prop in property_extractor.extract_from(~phi):
+            if prop.input_constraint.num_variables > 1:
+                raise NeurifyTranslatorError(
+                    "Unsupported network: More than 1 input variable"
+                )
+            layers = as_layers(
+                prop.suffixed_op_graph(), translator_error=NeurifyTranslatorError,
             )
-            input_interval = prop.input_constraint.as_hyperrectangle()
             neurify_inputs = to_neurify_inputs(
-                input_interval,
+                prop.input_constraint,
                 layers,
                 dirname=dirname,
                 translator_error=NeurifyTranslatorError,
@@ -99,7 +100,7 @@ def verify(dnn: OperationGraph, phi: Expression, **kwargs: Dict[str, Any]):
                 "-x",
                 neurify_inputs["input_path"],
                 "-sl",
-                "0.000000000001",  # TODO: remove magic number
+                "0.0000000000001",  # TODO: remove magic number
                 "-I",
                 neurify_inputs["input_interval_path"],
                 "-v",

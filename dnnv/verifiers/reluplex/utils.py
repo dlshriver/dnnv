@@ -12,9 +12,9 @@ def as_reluplex_nnet(
     layers: List[Layer],
     translator_error: Type[VerifierTranslatorError] = VerifierTranslatorError,
 ) -> Iterable[str]:
-    if (input_interval.lower_bound == -np.inf).any():
+    if (input_interval.lower_bounds[0] == -np.inf).any():
         raise translator_error("A lower bound must be specified for all inputs")
-    if (input_interval.upper_bound == np.inf).any():
+    if (input_interval.upper_bounds[0] == np.inf).any():
         raise translator_error("An upper bound must be specified for all inputs")
 
     input_layer = layers[0]
@@ -44,8 +44,12 @@ def as_reluplex_nnet(
     yield "%d,%d,%d,%d," % (num_layers, input_size, output_size, max_layer_size)
     yield ",".join([str(size) for size in layer_sizes]) + ","
     yield "0,"
-    yield ",".join(["%.12f" % m for m in input_interval.lower_bound.flatten()]) + ","
-    yield ",".join(["%.12f" % m for m in input_interval.upper_bound.flatten()]) + ","
+    yield ",".join(
+        ["%.12f" % m for m in input_interval.lower_bounds[0].flatten()]
+    ) + ","
+    yield ",".join(
+        ["%.12f" % m for m in input_interval.upper_bounds[0].flatten()]
+    ) + ","
     yield ",".join(["0.0" for _ in range(input_size + 1)]) + ","  # input mean
     yield ",".join(["1.0" for _ in range(input_size + 1)]) + ","  # input range
     for layer_num, layer in enumerate(fc_layers, 1):

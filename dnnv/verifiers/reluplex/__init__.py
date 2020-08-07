@@ -11,8 +11,11 @@ from dnnv.verifiers.common import (
     UNSAT,
     UNKNOWN,
     CommandLineExecutor,
-    ConvexPolytopeExtractor,
+    HalfspacePolytope,
+    HalfspacePolytopePropertyExtractor,
+    HyperRectangle,
     Property,
+    as_layers,
 )
 
 from .errors import ReluplexError, ReluplexTranslatorError
@@ -29,7 +32,7 @@ def parse_results(stdout: List[str], stderr: List[str]):
 
 
 def validate_counter_example(prop: Property, stdout: List[str], stderr: List[str]):
-    shape, dtype = prop.network.value.input_details[0]
+    shape, dtype = prop.op_graph.input_details[0]
     cex = np.zeros(np.product(shape), dtype)
     found = False
     for line in stdout:
@@ -39,17 +42,11 @@ def validate_counter_example(prop: Property, stdout: List[str], stderr: List[str
         if line.startswith("Solution found!"):
             found = True
     cex = cex.reshape(shape)
-    for constraint in prop.input_constraint.constraints:
-        t = sum(c * cex[i] for c, i in zip(constraint.coefficients, constraint.indices))
-        if (t - constraint.b) > 1e-6:
-            raise ReluplexError("Invalid counter example found: input outside bounds.")
-    output = prop.network.value(cex)
-    for constraint in prop.output_constraint.constraints:
-        t = sum(
-            c * output[i] for c, i in zip(constraint.coefficients, constraint.indices)
-        )
-        if (t - constraint.b) > 1e-6:
-            raise ReluplexError("Invalid counter example found.")
+    if not prop.input_constraint.validate(cex):
+        raise ReluplexError("Invalid counter example found: input outside bounds.")
+    output = prop.op_graph(cex)
+    if not prop.output_constraint.validate(output):
+        raise ReluplexError("Invalid counter example found: output outside bounds.")
 
 
 def verify(dnn: OperationGraph, phi: Expression):
@@ -58,15 +55,20 @@ def verify(dnn: OperationGraph, phi: Expression):
     phi.networks[0].concretize(dnn)
 
     result = UNSAT
-    property_extractor = ConvexPolytopeExtractor()
+    property_extractor = HalfspacePolytopePropertyExtractor(
+        HyperRectangle, HalfspacePolytope
+    )
     with tempfile.TemporaryDirectory() as dirname:
-        for prop in property_extractor.extract_from(phi):
-            layers = prop.output_constraint.as_layers(
-                prop.network, translator_error=ReluplexTranslatorError
+        for prop in property_extractor.extract_from(~phi):
+            if prop.input_constraint.num_variables > 1:
+                raise ReluplexTranslatorError(
+                    "Unsupported network: More than 1 input variable"
+                )
+            layers = as_layers(
+                prop.suffixed_op_graph(), translator_error=ReluplexTranslatorError,
             )
-            input_interval = prop.input_constraint.as_hyperrectangle()
             nnet_file_name = to_nnet_file(
-                input_interval,
+                prop.input_constraint,
                 layers,
                 dirname=dirname,
                 translator_error=ReluplexTranslatorError,

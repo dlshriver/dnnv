@@ -9,9 +9,8 @@ from ..operations import Operation
 from ..utils import as_numpy
 
 
-def parse(path: Path):
+def _parse_onnx_model(onnx_model: onnx.ModelProto) -> OperationGraph:
     logger = logging.getLogger(__name__)
-    onnx_model = onnx.load(str(path))
 
     node_map = {}
     operation_map = {}
@@ -67,4 +66,9 @@ def parse(path: Path):
         output_operations.append(operation_map[output_info.name])
 
     return OperationGraph(output_operations)
+
+
+def parse(path: Path) -> OperationGraph:
+    onnx_model = onnx.load(str(path))
+    return _parse_onnx_model(onnx_model)
 

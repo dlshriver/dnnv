@@ -14,7 +14,7 @@ from .. import logging
 class HelpFormatter(argparse.HelpFormatter):
     def _format_action_invocation(self, action):
         if not action.option_strings:
-            metavar, = self._metavar_formatter(action, action.dest)(1)
+            (metavar,) = self._metavar_formatter(action, action.dest)(1)
             return metavar
         else:
             parts = []
@@ -81,6 +81,15 @@ def parse_args():
 
     parser.add_argument("network", type=Path)
     parser.add_argument("property", type=Path)
+
+    prop_format_group = parser.add_mutually_exclusive_group()
+    prop_format_group.add_argument(
+        "--vnnlib",
+        action="store_const",
+        const="vnnlib",
+        dest="prop_format",
+        help="use the vnnlib property format",
+    )
 
     verifier_group = parser.add_argument_group("verifiers")
     for verifier in pkgutil.iter_modules(verifiers.__path__):

@@ -1,10 +1,5 @@
 #!/bin/bash
 
-if [ -z "${DISPLAY:x}" ]
-then
-    . ~/.bashrc
-fi
-
 if [ -e ./.venv/bin/activate ]
 then
     . .venv/bin/activate
@@ -27,6 +22,7 @@ export LD_LIBRARY_PATH=$GUROBI_HOME/lib:$LD_LIBRARY_PATH
 
 # eran paths
 export PYTHONPATH=$PROJECT_DIR/lib/eran/tf_verify:$PYTHONPATH
+export PYTHONPATH=$PROJECT_DIR/lib/ELINA/python_interface:$PYTHONPATH
 export PYTHONPATH=$PROJECT_DIR/lib/eran/ELINA/python_interface:$PYTHONPATH
 
 # julia paths

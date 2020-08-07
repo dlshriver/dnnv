@@ -11,8 +11,11 @@ from dnnv.verifiers.common import (
     UNSAT,
     UNKNOWN,
     CommandLineExecutor,
-    ConvexPolytopeExtractor,
+    HalfspacePolytope,
+    HalfspacePolytopePropertyExtractor,
+    HyperRectangle,
     Property,
+    as_layers,
 )
 
 from .errors import PlanetError, PlanetTranslatorError
@@ -31,7 +34,7 @@ def parse_results(stdout: List[str], stderr: List[str]):
 
 
 def validate_counter_example(prop: Property, stdout: List[str], stderr: List[str]):
-    shape, dtype = prop.network.value.input_details[0]
+    shape, dtype = prop.op_graph.input_details[0]
     cex = np.zeros(shape, dtype)
     found = False
     for line in stdout:
@@ -41,18 +44,13 @@ def validate_counter_example(prop: Property, stdout: List[str], stderr: List[str
             position = tuple(int(i) for i in line.split(":")[1:-1])
             value = float(line.split()[-1])
             cex[position] = value
-    for constraint in prop.input_constraint.constraints:
-        t = sum(c * cex[i] for c, i in zip(constraint.coefficients, constraint.indices))
-        # planet output has a precision of 5 decimal places
-        if (t - constraint.b) > 1e-5:
-            raise PlanetError("Invalid counter example found: input outside bounds.")
-    output = prop.network.value(cex)
-    for constraint in prop.output_constraint.constraints:
-        t = sum(
-            c * output[i] for c, i in zip(constraint.coefficients, constraint.indices)
-        )
-        if (t - constraint.b) > 1e-6:
-            raise PlanetError("Invalid counter example found.")
+    cex = cex.reshape(shape)
+    # planet output has a precision of 5 decimal places
+    if not prop.input_constraint.validate(cex, threshold=1e-5):
+        raise PlanetError("Invalid counter example found: input outside bounds.")
+    output = prop.op_graph(cex)
+    if not prop.output_constraint.validate(output):
+        raise PlanetError("Invalid counter example found: output outside bounds.")
 
 
 def verify(dnn: OperationGraph, phi: Expression):
@@ -60,17 +58,22 @@ def verify(dnn: OperationGraph, phi: Expression):
     phi.networks[0].concretize(dnn)
 
     result = UNSAT
-    property_extractor = ConvexPolytopeExtractor()
+    property_extractor = HalfspacePolytopePropertyExtractor(
+        HyperRectangle, HalfspacePolytope
+    )
     with tempfile.TemporaryDirectory() as dirname:
-        for prop in property_extractor.extract_from(phi):
-            layers = prop.output_constraint.as_layers(
-                prop.network,
+        for prop in property_extractor.extract_from(~phi):
+            if prop.input_constraint.num_variables > 1:
+                raise PlanetTranslatorError(
+                    "Unsupported network: More than 1 input variable"
+                )
+            layers = as_layers(
+                prop.suffixed_op_graph(),
                 extra_layer_types=PLANET_LAYER_TYPES,
                 translator_error=PlanetTranslatorError,
             )
-            input_interval = prop.input_constraint.as_hyperrectangle()
             rlv_file_name = to_rlv_file(
-                input_interval,
+                prop.input_constraint,
                 layers,
                 dirname=dirname,
                 translator_error=PlanetTranslatorError,

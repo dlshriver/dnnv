@@ -35,12 +35,14 @@ def as_neurify_nnet(
                 shape = list(np.asarray(layer.shape)[[0, 2, 3, 1]])  # uses NHWC format
             elif len(layer.shape) == 2:
                 shape = layer.shape
+            elif len(layer.shape) == 1:
+                shape = layer.shape
             else:
                 raise translator_error(
                     "Unsupported number of axes for network input."
                     f" Expected 4 or 2, got {len(layer.shape)}"
                 )
-            if shape[0] != 1:
+            if len(shape) > 1 and shape[0] != 1:
                 raise translator_error("Batch sizes greater than 1 are not supported")
             layer_sizes.append(np.product(layer.shape))
         elif isinstance(layer, Convolutional):
@@ -160,8 +162,8 @@ def to_neurify_inputs(
     if dirname is None:
         dirname = tempfile.tempdir
 
-    lb = input_interval.lower_bound
-    ub = input_interval.upper_bound
+    lb = input_interval.lower_bounds[0]
+    ub = input_interval.upper_bounds[0]
     sample_input = (lb + ub) / 2
     with tempfile.NamedTemporaryFile(
         mode="w+", dir=dirname, suffix=".interval", delete=False
@@ -173,7 +175,7 @@ def to_neurify_inputs(
     with tempfile.NamedTemporaryFile(
         mode="w+", dir=dirname, suffix=".input", delete=False
     ) as input_file:
-        if sample_input.shape[0] != 1:
+        if len(sample_input.shape) > 1 and sample_input.shape[0] != 1:
             raise translator_error("Batch sizes greater than 1 are not supported")
         input_file.write(",".join(f"{x:.12f}" for x in sample_input.flatten()))
         neurify_inputs["input_path"] = input_file.name

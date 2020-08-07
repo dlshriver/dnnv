@@ -11,8 +11,11 @@ from dnnv.verifiers.common import (
     UNSAT,
     UNKNOWN,
     CommandLineExecutor,
-    ConvexPolytopeExtractor,
+    HalfspacePolytope,
+    HalfspacePolytopePropertyExtractor,
+    HyperRectangle,
     Property,
+    as_layers,
 )
 
 from .errors import MIPVerifyError, MIPVerifyTranslatorError
@@ -35,17 +38,22 @@ def verify(dnn: OperationGraph, phi: Expression, **kwargs: Dict[str, Any]):
     phi.networks[0].concretize(dnn)
 
     result = UNSAT
-    property_extractor = ConvexPolytopeExtractor()
+    property_extractor = HalfspacePolytopePropertyExtractor(
+        HyperRectangle, HalfspacePolytope
+    )
     with tempfile.TemporaryDirectory() as dirname:
-        for prop in property_extractor.extract_from(phi):
-            layers = prop.output_constraint.as_layers(
-                prop.network,
+        for prop in property_extractor.extract_from(~phi):
+            if prop.input_constraint.num_variables > 1:
+                raise MIPVerifyTranslatorError(
+                    "Unsupported network: More than 1 input variable"
+                )
+            layers = as_layers(
+                prop.suffixed_op_graph(),
                 extra_layer_types=MIPVERIFY_LAYER_TYPES,
                 translator_error=MIPVerifyTranslatorError,
             )
-            input_interval = prop.input_constraint.as_hyperrectangle()
             mipverify_inputs = to_mipverify_inputs(
-                input_interval,
+                prop.input_constraint,
                 layers,
                 dirname=dirname,
                 translator_error=MIPVerifyTranslatorError,
