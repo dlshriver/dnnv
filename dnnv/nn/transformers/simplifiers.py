@@ -260,9 +260,9 @@ class SqueezeConvs(Simplifier):
             out_c, in_c, k_h, k_w = operation.w.shape
 
             weights = operation.w * np.tile(w, (out_c, 1, k_h, k_w))
-            bias = operation.b + (operation.w * np.tile(b, (out_c, 1, k_h, k_w))).sum(
-                axis=(1, 2, 3)
-            )
+            bias = operation.b + (
+                operation.w * np.tile(b.reshape((1, -1, 1, 1)), (out_c, 1, k_h, k_w))
+            ).sum(axis=(1, 2, 3))
 
             op = copy(operation)
             op.x = operation.x.x

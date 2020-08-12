@@ -3,6 +3,7 @@ import numpy as np
 from collections import namedtuple
 
 from .operations import Operation
+from .utils import TensorDetails
 
 
 class OperationVisitor:
@@ -23,8 +24,6 @@ class OperationVisitor:
 
 
 class GetInputDetails(OperationVisitor):
-    InputDetails = namedtuple("InputDetails", ["shape", "dtype"])
-
     def __init__(self):
         self.visited = set()
         self.input_details = []
@@ -37,7 +36,7 @@ class GetInputDetails(OperationVisitor):
 
     def visit_Input(self, operation):
         self.input_details.append(
-            self.InputDetails(
+            TensorDetails(
                 tuple((i if i > 0 else 1) for i in operation.shape), operation.dtype
             )
         )

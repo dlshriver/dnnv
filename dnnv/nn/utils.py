@@ -1,7 +1,10 @@
 import numpy as np
 import onnx
 
+from collections import namedtuple
 from onnx import numpy_helper
+
+TensorDetails = namedtuple("TensorDetails", ["shape", "dtype"])
 
 ONNX_TO_NUMPY_DTYPE = {
     onnx.TensorProto.DOUBLE: np.dtype("float64"),
