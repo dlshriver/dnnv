@@ -1,5 +1,5 @@
 class PropertyCheckResult:
-    def __init__(self, name):
+    def __init__(self, name: str):
         self.name = name
 
     def __str__(self):

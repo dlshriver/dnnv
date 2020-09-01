@@ -1,19 +1,16 @@
 import os
 import unittest
 
-from tests.verifiers_tests.utils import VerifierTests, has_verifier
-
+from tests.verifiers_tests.utils import VerifierTests
 from tests.utils import network_artifact_dir, property_artifact_dir
 
-eran = None
-if has_verifier("eran"):
-    import dnnv.verifiers.eran as eran
+from dnnv.verifiers.eran import ERAN
 
 
-@unittest.skipIf(not has_verifier("eran"), "ERAN is not installed")
+@unittest.skipIf(not ERAN.is_installed(), "ERAN is not installed")
 class ERANVerifierTests(VerifierTests, unittest.TestCase):
     def initialize(self):
-        self.verifier = eran
+        self.verifier = ERAN
         self.is_complete = False
 
 

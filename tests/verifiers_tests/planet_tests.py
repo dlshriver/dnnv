@@ -1,17 +1,16 @@
 import os
 import unittest
 
-import dnnv.verifiers.planet as planet
-
-from tests.verifiers_tests.utils import VerifierTests, has_verifier
-
+from tests.verifiers_tests.utils import VerifierTests
 from tests.utils import network_artifact_dir, property_artifact_dir
 
+from dnnv.verifiers.planet import Planet
 
-@unittest.skipIf(not has_verifier("planet"), "Planet is not installed")
+
+@unittest.skipIf(not Planet.is_installed(), "Planet is not installed")
 class PlanetVerifierTests(VerifierTests, unittest.TestCase):
     def initialize(self):
-        self.verifier = planet
+        self.verifier = Planet
         self.is_complete = True
 
 

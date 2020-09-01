@@ -4,7 +4,8 @@ import tempfile
 from typing import Dict, Iterable, List, Optional, Type, Union
 
 from dnnv.nn.layers import Convolutional, FullyConnected, InputLayer, Layer
-from dnnv.verifiers.common import HyperRectangle, VerifierTranslatorError
+from dnnv.verifiers.common.errors import VerifierTranslatorError
+from dnnv.verifiers.common.reductions import HyperRectangle
 
 
 def as_neurify_nnet(

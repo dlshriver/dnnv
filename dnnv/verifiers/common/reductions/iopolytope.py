@@ -5,7 +5,7 @@ import numpy as np
 from abc import ABC, abstractmethod
 from collections import namedtuple
 from scipy.optimize import linprog
-from typing import Dict, Iterable, List, Optional, Tuple, Type, Union
+from typing import Dict, Generator, List, Optional, Tuple, Type, Union
 
 from dnnv.nn import OperationGraph, OperationTransformer
 from dnnv.properties import ExpressionVisitor
@@ -25,7 +25,8 @@ from dnnv.properties.base import (
     Symbol,
 )
 
-from .errors import VerifierTranslatorError
+from .base import Property, Reduction
+from ..errors import VerifierTranslatorError
 
 
 class Variable:
@@ -233,7 +234,7 @@ class HyperRectangle(HalfspacePolytope):
         return "\n".join(strs)
 
 
-class Property:
+class IOPolytopeProperty(Property):
     def __init__(
         self,
         networks: List[Network],
@@ -281,6 +282,14 @@ class Property:
         ]
         return "\n".join(strs)
 
+    def validate_counter_example(self, cex, threshold=1e-6):
+        if not self.input_constraint.validate(cex, threshold=threshold):
+            return False, "Invalid counter example found: input outside bounds."
+        output = self.op_graph(cex)
+        if not self.output_constraint.validate(output, threshold=threshold):
+            return False, "Invalid counter example found: output outside bounds."
+        return True, None
+
     def suffixed_op_graph(self) -> OperationGraph:
         import dnnv.nn.operations as operations
 
@@ -316,40 +325,20 @@ class Property:
         return OperationGraph([new_output_op]).simplify()
 
 
-class PropertyExtractor(ExpressionVisitor):
-    def __init__(
-        self, extraction_error: Type[VerifierTranslatorError] = VerifierTranslatorError
-    ):
-        self.extraction_error = extraction_error
-
-    def extract_from(self, expression: Expression) -> Iterable[Property]:
-        raise NotImplementedError()
-
-    def visit(self, expression):
-        method_name = "visit_%s" % expression.__class__.__name__
-        visitor = getattr(self, method_name, None)
-        if visitor is None:
-            raise self.extraction_error(
-                "Unsupported property:"
-                f" expression type {type(expression).__name__!r} is not currently supported"
-            )
-        return visitor(expression)
-
-
-class HalfspacePolytopePropertyExtractor(PropertyExtractor):
+class IOPolytopeReduction(Reduction):
     def __init__(
         self,
         input_constraint_type,
         output_constraint_type,
-        extraction_error: Type[VerifierTranslatorError] = VerifierTranslatorError,
+        reduction_error: Type[VerifierTranslatorError] = VerifierTranslatorError,
     ):
-        super().__init__(extraction_error=extraction_error)
+        super().__init__(reduction_error=reduction_error)
         self.input_constraint_type = input_constraint_type
         self.output_constraint_type = output_constraint_type
         self.logger = logging.getLogger(__name__)
         self._stack: List[Expression] = []
-        self._network_input_shapes = {}
-        self._network_output_shapes = {}
+        self._network_input_shapes: Dict[Expression, Tuple[int, ...]] = {}
+        self._network_output_shapes: Dict[Network, Tuple[int, ...]] = {}
         self.initialize()
 
     def initialize(self):
@@ -362,12 +351,14 @@ class HalfspacePolytopePropertyExtractor(PropertyExtractor):
         self.coefs: Dict[Expression, np.ndarray] = {}
 
     def build_property(self):
-        return Property(self.networks, self.input_constraint, self.output_constraint)
+        return IOPolytopeProperty(
+            self.networks, self.input_constraint, self.output_constraint
+        )
 
-    def _extract(self, expression: And) -> Iterable[Property]:
+    def _reduce(self, expression: And) -> Generator[Property, None, None]:
         self.initialize()
         if len(expression.variables) != 1:
-            raise self.extraction_error("Exactly one network input is required")
+            raise self.reduction_error("Exactly one network input is required")
         self.visit(expression)
         prop = self.build_property()
         if prop.input_constraint.is_consistent == False:
@@ -382,7 +373,9 @@ class HalfspacePolytopePropertyExtractor(PropertyExtractor):
             return
         yield prop
 
-    def extract_from(self, expression: Expression) -> Iterable[Property]:
+    def reduce_property(
+        self, expression: Expression
+    ) -> Generator[Property, None, None]:
         if not isinstance(expression, Exists):
             raise NotImplementedError()  # TODO
         dnf_expression = Or(~(~expression).canonical())
@@ -390,16 +383,24 @@ class HalfspacePolytopePropertyExtractor(PropertyExtractor):
 
         for conjunction in dnf_expression:
             self.logger.info("CONJUNCTION: %s", conjunction)
-            yield from self._extract(conjunction)
+            yield from self._reduce(conjunction)
 
     def visit(self, expression):
         self._stack.append(type(expression))
-        super().visit(expression)
+        method_name = "visit_%s" % expression.__class__.__name__
+        visitor = getattr(self, method_name, None)
+        if visitor is None:
+            raise self.reduction_error(
+                "Unsupported property:"
+                f" expression type {type(expression).__name__!r} is not currently supported"
+            )
+        result = visitor(expression)
         self._stack.pop()
+        return result
 
     def visit_Add(self, expression: Add):
         if len(self._stack) > 3:
-            raise self.extraction_error(
+            raise self.reduction_error(
                 "Not Canonical:"
                 f" {type(expression).__name__!r} expression found below expected level"
             )
@@ -414,7 +415,7 @@ class HalfspacePolytopePropertyExtractor(PropertyExtractor):
 
     def visit_And(self, expression: And):
         if len(self._stack) != 1:
-            raise self.extraction_error(
+            raise self.reduction_error(
                 "Not Canonical: 'And' expression not at top level"
             )
         for expr in sorted(expression.expressions, key=lambda e: -len(e.networks)):
@@ -428,19 +429,19 @@ class HalfspacePolytopePropertyExtractor(PropertyExtractor):
             self.visit(expression.function)
             input_details = expression.function.value.input_details
             if len(expression.args) != len(input_details):
-                raise self.extraction_error(
+                raise self.reduction_error(
                     "Invalid property:"
                     f" Not enough inputs for network '{expression.function}'"
                 )
             if len(expression.kwargs) > 0:
-                raise self.extraction_error(
+                raise self.reduction_error(
                     "Unsupported property:"
                     f" Executing networks with keyword arguments is not currently supported"
                 )
             for arg, d in zip(expression.args, input_details):
                 if arg in self._network_input_shapes:
                     if self._network_input_shapes[arg] != tuple(d.shape):
-                        raise self.extraction_error(
+                        raise self.reduction_error(
                             f"Invalid property: variable with multiple shapes: '{arg}'"
                         )
                 self._network_input_shapes[arg] = tuple(d.shape)
@@ -452,23 +453,23 @@ class HalfspacePolytopePropertyExtractor(PropertyExtractor):
             )
             self.coefs[expression] = np.ones(shape)
         else:
-            raise self.extraction_error(
+            raise self.reduction_error(
                 "Unsupported property:"
                 f" Function {expression.function} is not currently supported"
             )
 
     def _add_constraint(self, expression: Union[LessThan, LessThanOrEqual]):
         if len(self._stack) > 2:
-            raise self.extraction_error(
+            raise self.reduction_error(
                 f"Not Canonical: {type(expression).__name__!r} expression below expected level"
             )
         if not isinstance(expression.expr1, Add):
-            raise self.extraction_error(
+            raise self.reduction_error(
                 "Not Canonical:"
                 f" LHS of {type(expression).__name__!r} is not an 'Add' expression"
             )
         if not isinstance(expression.expr2, Constant):
-            raise self.extraction_error(
+            raise self.reduction_error(
                 "Not Canonical:"
                 f" RHS of {type(expression).__name__!r} is not a 'Constant' expression"
             )
@@ -486,14 +487,14 @@ class HalfspacePolytopePropertyExtractor(PropertyExtractor):
 
         c_shapes = set(c.shape for c in self.coefs.values())
         if len(c_shapes) > 1:
-            raise self.extraction_error(
+            raise self.reduction_error(
                 "Invalid property: Adding expressions with different shapes is not supported"
             )
         c_shape = c_shapes.pop()
         if rhs.shape != c_shape:
             rhs = np.zeros(c_shape) + rhs
         if rhs.shape != c_shape:
-            raise self.extraction_error(
+            raise self.reduction_error(
                 "Invalid property: Comparing expressions with different shapes is not supported"
             )
 
@@ -518,7 +519,7 @@ class HalfspacePolytopePropertyExtractor(PropertyExtractor):
             else:
                 shape = coef.shape
                 if c_shape is not None and c_shape != shape:
-                    raise self.extraction_error(
+                    raise self.reduction_error(
                         "Invalid property: Adding expressions with different shapes is not supported"
                     )
                 c_shape = shape
@@ -535,7 +536,7 @@ class HalfspacePolytopePropertyExtractor(PropertyExtractor):
                         for i in np.ndindex(rhs.shape)
                     ]
                 if not len(constraints) == new_shape[0]:
-                    raise self.extraction_error(
+                    raise self.reduction_error(
                         "Invalid property: Adding expressions with different shapes is not supported"
                     )
                 for c, idx_, coef_ in zip(
@@ -574,7 +575,7 @@ class HalfspacePolytopePropertyExtractor(PropertyExtractor):
             else:
                 symbols.append(expr)
         if len(symbols) > 1:
-            raise self.extraction_error(
+            raise self.reduction_error(
                 "Unsupported property: Multiplication of symbolic values"
             )
         self.variables[expression] = self.variables[symbols[0]]
@@ -598,7 +599,7 @@ class HalfspacePolytopePropertyExtractor(PropertyExtractor):
                 self._network_output_shapes[expression]
                 != expression.value.output_shape[0]
             ):
-                raise self.extraction_error(
+                raise self.reduction_error(
                     f"Invalid property: network with multiple shapes: '{expression}'"
                 )
             variable = Variable(
@@ -614,9 +615,7 @@ class HalfspacePolytopePropertyExtractor(PropertyExtractor):
 
     def visit_Subscript(self, expression: Subscript):
         if not isinstance(expression.index, Constant):
-            raise self.extraction_error(
-                "Unsupported property: Symbolic subscript index"
-            )
+            raise self.reduction_error("Unsupported property: Symbolic subscript index")
         index = expression.index.value
         expr = expression.expr
         self.visit(expression.expr)
@@ -628,11 +627,11 @@ class HalfspacePolytopePropertyExtractor(PropertyExtractor):
         if self.input is None:
             self.input = expression
             if expression not in self._network_input_shapes:
-                raise self.extraction_error(f"Unknown shape for variable {expression}")
+                raise self.reduction_error(f"Unknown shape for variable {expression}")
             variable = Variable(self._network_input_shapes[expression], str(expression))
             self.input_constraint = self.input_constraint_type(variable)
         elif self.input is not expression:
-            raise self.extraction_error("Multiple inputs detected in property")
+            raise self.reduction_error("Multiple inputs detected in property")
         shape = self._network_input_shapes[expression]
         self.variables[expression] = Variable(
             self._network_input_shapes[expression], str(expression)
@@ -644,10 +643,8 @@ class HalfspacePolytopePropertyExtractor(PropertyExtractor):
 
 
 __all__ = [
-    "HalfspacePolytopePropertyExtractor",
-    "PropertyExtractor",
-    "Property",
     "HalfspacePolytope",
     "HyperRectangle",
+    "IOPolytopeProperty",
+    "IOPolytopeReduction",
 ]
-

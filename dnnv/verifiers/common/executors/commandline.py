@@ -1,19 +1,11 @@
-import multiprocessing as mp
+import logging
 import select
 import subprocess as sp
 
-from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Type
+from typing import List, Tuple, Type
 
-from dnnv import logging
-
-from .errors import VerifierError
-
-
-class VerifierExecutor(ABC):
-    @abstractmethod
-    def run(self):
-        raise NotImplementedError()
+from .base import VerifierExecutor
+from ..errors import VerifierError
 
 
 class CommandLineExecutor(VerifierExecutor):
@@ -21,10 +13,9 @@ class CommandLineExecutor(VerifierExecutor):
     """
 
     def __init__(self, *args: str, verifier_error: Type[VerifierError] = VerifierError):
-        self.args = ("stdbuf", "-oL", "-eL") + args
-        self.verifier_error = verifier_error
-        self.output_lines = []  # type: List[str]
-        self.error_lines = []  # type: List[str]
+        super().__init__(*args, verifier_error=verifier_error)
+        self.output_lines: List[str] = []
+        self.error_lines: List[str] = []
 
     def run(self):
         logger = logging.getLogger(__name__)

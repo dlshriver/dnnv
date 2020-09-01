@@ -4,3 +4,6 @@ class VerifierError(Exception):
 
 class VerifierTranslatorError(Exception):
     pass
+
+
+__all__ = ["VerifierError", "VerifierTranslatorError"]
