@@ -154,11 +154,9 @@ def to_mipverify_inputs(
     translator_error: Type[VerifierTranslatorError] = VerifierTranslatorError,
 ) -> Dict[str, str]:
     mipverify_inputs = {}
-    if dirname is None:
-        dirname = tempfile.tempdir
 
-    lb = np.asarray(input_interval.lower_bound)
-    ub = np.asarray(input_interval.upper_bound)
+    lb = np.asarray(input_interval.lower_bounds[0])
+    ub = np.asarray(input_interval.upper_bounds[0])
     if lb.ndim == 4:
         lb = lb.transpose((0, 2, 3, 1))
     if ub.ndim == 4:

@@ -183,4 +183,3 @@ class MaxPool(Operation):
             storage_order=storage_order,
             strides=strides
         )
-

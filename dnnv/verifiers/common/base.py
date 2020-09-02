@@ -1,5 +1,6 @@
 import logging
 import os
+import tempfile
 
 from abc import ABC, abstractmethod
 from functools import partial
@@ -85,16 +86,22 @@ class Verifier(ABC):
             yield subproperty
 
     def run(self) -> PropertyCheckResult:
-        result = UNSAT
-        for subproperty in self.reduce_property():
-            subproperty_result, cex = self.check(subproperty)
-            result |= subproperty_result
-            if result == SAT:
-                self.logger.debug("SAT! Validating counter example.")
-                if cex is not None:
-                    self.validate_counter_example(subproperty, cex)
-            if result == SAT or result == UNKNOWN:
-                return result
+        orig_tempdir = tempfile.tempdir
+        try:
+            with tempfile.TemporaryDirectory() as tempdir:
+                tempfile.tempdir = tempdir
+                result = UNSAT
+                for subproperty in self.reduce_property():
+                    subproperty_result, cex = self.check(subproperty)
+                    result |= subproperty_result
+                    if result == SAT:
+                        self.logger.debug("SAT! Validating counter example.")
+                        if cex is not None:
+                            self.validate_counter_example(subproperty, cex)
+                    if result == SAT or result == UNKNOWN:
+                        break
+        finally:
+            tempfile.tempdir = orig_tempdir
         return result
 
     def validate_counter_example(self, prop: Property, cex: Any) -> bool:

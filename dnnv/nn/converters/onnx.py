@@ -38,7 +38,11 @@ class OnnxConverter(OperationVisitor):
 
         nodes = [n for n in self.visited.values() if isinstance(n, onnx.NodeProto)]
         graph_def = onnx.helper.make_graph(
-            nodes, name, self.inputs, self.outputs, initializer=self.initializer,
+            nodes,
+            name,
+            self.inputs,
+            self.outputs,
+            initializer=self.initializer,
         )
         model_def = onnx.helper.make_model(graph_def, producer_name="dnnv")
         model_def = onnx.shape_inference.infer_shapes(model_def)

@@ -83,8 +83,6 @@ def to_rlv_file(
     dirname: Optional[str] = None,
     translator_error: Type[VerifierTranslatorError] = VerifierTranslatorError,
 ) -> str:
-    if dirname is None:
-        dirname = tempfile.tempdir
     with tempfile.NamedTemporaryFile(
         mode="w+", dir=dirname, suffix=".rlv", delete=False
     ) as rlv_file:

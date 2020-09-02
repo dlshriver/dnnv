@@ -54,7 +54,9 @@ class AppendNetwork(argparse.Action):
 
 class SetVerifierParameter(argparse.Action):
     def __init__(
-        self, *args, **kwargs,
+        self,
+        *args,
+        **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self.verifier_parameters = {}
@@ -111,7 +113,10 @@ def parse_args():
         if verifier.is_installed():
             vname = verifier.__name__.lower()
             verifier_group.add_argument(
-                f"--{vname}", dest="verifiers", action="append_const", const=verifier,
+                f"--{vname}",
+                dest="verifiers",
+                action="append_const",
+                const=verifier,
             )
             verifier_parameters_group = parser.add_argument_group(f"{vname} parameters")
             for pname, pinfo in verifier.parameters.items():

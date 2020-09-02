@@ -18,6 +18,7 @@ class NnenumExecutor(VerifierExecutor):
         from nnenum.specification import Specification
 
         Settings.CHECK_SINGLE_THREAD_BLAS = False
+        Settings.PRINT_OUTPUT = False
 
         onnx_filename, (lb, ub) = self.args
         init_box = np.array(list(zip(lb, ub)), dtype=np.float32)
@@ -49,9 +50,8 @@ class Nnenum(Verifier):
                 "Unsupported network: More than 1 input variable"
             )
 
-        dirname = tempfile.tempdir
         with tempfile.NamedTemporaryFile(
-            mode="w+", dir=dirname, suffix=".onnx", delete=False
+            mode="w+", suffix=".onnx", delete=False
         ) as onnx_model_file:
             prop.suffixed_op_graph().export_onnx(onnx_model_file.name)
 

@@ -119,7 +119,12 @@ class HalfspacePolytope(Constraint):
             b[ci] = c.b
         obj = np.zeros(n)
         try:
-            result = linprog(obj, A_ub=A, b_ub=b, bounds=(None, None),)
+            result = linprog(
+                obj,
+                A_ub=A,
+                b_ub=b,
+                bounds=(None, None),
+            )
         except ValueError as e:
             if "The problem is (trivially) infeasible" in e.args[0]:
                 return False
@@ -500,7 +505,7 @@ class IOPolytopeReduction(Reduction):
 
         constraints: List[
             Tuple[List[Tuple[Variable, Tuple[int, ...]]], List[float], float]
-        ] = ([])
+        ] = []
         for key, var, idx, coef in zip_dict_items(
             self.variables, self.indices, self.coefs
         ):

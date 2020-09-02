@@ -9,8 +9,7 @@ from ..errors import VerifierError
 
 
 class CommandLineExecutor(VerifierExecutor):
-    """Executes verifiers using their command line interface.
-    """
+    """Executes verifiers using their command line interface."""
 
     def __init__(self, *args: str, verifier_error: Type[VerifierError] = VerifierError):
         super().__init__(*args, verifier_error=verifier_error)

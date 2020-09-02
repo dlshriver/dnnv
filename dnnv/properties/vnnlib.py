@@ -188,4 +188,3 @@ def parse(path: Path, args: Optional[List[str]] = None) -> Expression:
         phi = phi.propagate_constants()
         parse_cli(phi, args)
     return phi
-

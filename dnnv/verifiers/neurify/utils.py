@@ -160,8 +160,6 @@ def to_neurify_inputs(
     translator_error: Type[VerifierTranslatorError] = VerifierTranslatorError,
 ) -> Dict[str, str]:
     neurify_inputs = {}
-    if dirname is None:
-        dirname = tempfile.tempdir
 
     lb = input_interval.lower_bounds[0]
     ub = input_interval.upper_bounds[0]

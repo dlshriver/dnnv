@@ -14,7 +14,8 @@ class Property:
 
 class Reduction(ABC):
     def __init__(
-        self, reduction_error: Type[VerifierTranslatorError] = VerifierTranslatorError,
+        self,
+        reduction_error: Type[VerifierTranslatorError] = VerifierTranslatorError,
     ):
         self.reduction_error = reduction_error
 

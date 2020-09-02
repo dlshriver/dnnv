@@ -18,7 +18,8 @@ class Reluplex(Verifier):
                 "Unsupported network: More than 1 input variable"
             )
         layers = as_layers(
-            prop.suffixed_op_graph(), translator_error=self.translator_error,
+            prop.suffixed_op_graph(),
+            translator_error=self.translator_error,
         )
         nnet_file_name = to_nnet_file(
             prop.input_constraint,
