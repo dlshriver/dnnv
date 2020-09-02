@@ -1,13 +1,15 @@
 import numpy as np
 import tensorflow.compat.v1 as tf
 
-from ... import Operation, OperationVisitor
+from ..graph import OperationGraph
+from ..operations import Operation
+from ..visitors import OperationVisitor
 
 
-def convert(operations):
+def convert(op_graph: OperationGraph):
     converter = TensorflowConverter()
     output_funcs = []
-    for op in operations:
+    for op in op_graph.output_operations:
         output_funcs.append(converter.visit(op))
 
     def func(*inputs, squeeze=True):
