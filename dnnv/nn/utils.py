@@ -15,6 +15,15 @@ ONNX_TO_NUMPY_DTYPE = {
     onnx.TensorProto.INT64: np.dtype("int64"),
 }
 
+NUMPY_TO_ONNX_DTYPE = {
+    np.dtype("float64"): onnx.TensorProto.DOUBLE,
+    np.dtype("float16"): onnx.TensorProto.FLOAT16,
+    np.dtype("float32"): onnx.TensorProto.FLOAT,
+    np.dtype("int16"): onnx.TensorProto.INT16,
+    np.dtype("int32"): onnx.TensorProto.INT32,
+    np.dtype("int64"): onnx.TensorProto.INT64,
+}
+
 
 def as_numpy(node):
     if isinstance(node, onnx.TensorProto):

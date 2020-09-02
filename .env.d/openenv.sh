@@ -1,7 +1,6 @@
 #!/bin/bash
 
-if [ -e ./.venv/bin/activate ]
-then
+if [ -e ./.venv/bin/activate ]; then
     . .venv/bin/activate
 fi
 
@@ -9,7 +8,10 @@ export ENV_OLD_LD_LIBRARY_PATH=$LD_LIBRARY_PATH
 export ENV_OLD_PATH=$PATH
 export ENV_OLD_PYTHONPATH=$PYTHONPATH
 
-PROJECT_DIR=$(cd $(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/..; pwd)
+PROJECT_DIR=$(
+    cd $(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/..
+    pwd
+)
 
 export PATH=$PROJECT_DIR/bin/:$PATH
 export LD_LIBRARY_PATH=$PROJECT_DIR/lib/:$LD_LIBRARY_PATH
@@ -27,3 +29,6 @@ export PYTHONPATH=$PROJECT_DIR/lib/eran/ELINA/python_interface:$PYTHONPATH
 
 # julia paths
 export PATH=$PROJECT_DIR/bin/julia-1.0.4/bin:$PATH
+
+# nnenum paths
+export PYTHONPATH=$PROJECT_DIR/lib/nnenum/nnenum:$PYTHONPATH
