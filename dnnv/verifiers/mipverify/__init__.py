@@ -1,4 +1,5 @@
 import numpy as np
+import os
 
 from dnnv.verifiers.common.base import Parameter, Verifier
 from dnnv.verifiers.common.results import SAT, UNSAT, UNKNOWN

@@ -13,7 +13,7 @@ requires = [
     "onnx >=1.7,<1.8",
     "psutil >=5.6,<5.7",
     "scipy >=1.4,<1.6",
-    "tensorflow >=2.2,<2.3",
+    "tensorflow >=1.15,<2.3",
     "keras >=2.3,<2.4",
     "simpleparse >=2.2,<2.3",
 ]
