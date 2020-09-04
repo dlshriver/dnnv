@@ -16,19 +16,36 @@ RUN apt install -y gcc g++
 RUN apt install -y wget
 RUN apt install -y git
 RUN apt install -y liblapack-dev
+RUN apt install -y openssl libssl-dev
 
 USER dnnv
 WORKDIR /home/dnnv/
-COPY --chown=dnnv . .
 
-RUN chmod u+x .env.d/*
-RUN chmod u+x scripts/*
-
-RUN ./manage.sh init
+# load env on interactive shell
 RUN echo "source .env.d/openenv.sh" >>.bashrc
+
+# create dummy venv for verifier install
+RUN python3.7 -m venv .venv
+
+# copy infrequently changed files to container
+COPY --chown=dnnv manage.sh .
+COPY --chown=dnnv pyproject.toml .
+COPY --chown=dnnv .env.d/ .env.d/
+COPY --chown=dnnv scripts/ scripts/
+
+# install verifiers
 RUN ./manage.sh install neurify
 RUN ./manage.sh install eran
 RUN ./manage.sh install reluplex
 RUN ./manage.sh install planet
 # RUN ./manage.sh install bab # requires gurobi
-RUN source .env.d/openenv.sh; python tests/artifacts/build_artifacts.py
+
+COPY --chown=dnnv dnnv/ dnnv/
+COPY --chown=dnnv README.md .
+RUN ./manage.sh update
+
+COPY --chown=dnnv tests/ tests/
+RUN source .env.d/openenv.sh && python tests/artifacts/build_artifacts.py
+
+COPY --chown=dnnv docs/ .
+COPY --chown=dnnv tools/ .
