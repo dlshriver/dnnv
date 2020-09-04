@@ -6,6 +6,7 @@ PROJECT_DIR=${PROJECT_DIR:-$(
 )}
 source $PROJECT_DIR/scripts/install_common.sh
 
+ensure_openblas
 ensure_lpsolve
 ensure_suitesparse
 ensure_gmp
@@ -24,5 +25,5 @@ g++ -c -m64 -pipe -std=c++14 -g -O2 -Wall -W -fPIC -DUSE_GLPK -DNDEBUG -I. -I$PR
 g++ -c -m64 -pipe -std=c++14 -g -O2 -Wall -W -fPIC -DUSE_GLPK -DNDEBUG -I. -I$PROJECT_DIR/include -L$PROJECT_DIR/lib/ -o main.o main.cpp
 g++ -c -m64 -pipe -std=c++14 -g -O2 -Wall -W -fPIC -DUSE_GLPK -DNDEBUG -I. -I$PROJECT_DIR/include -L$PROJECT_DIR/lib/ -o verifierContext.o verifierContext.cpp
 g++ -c -m64 -pipe -std=c++14 -g -O2 -Wall -W -fPIC -DUSE_GLPK -DNDEBUG -I. -I$PROJECT_DIR/include -L$PROJECT_DIR/lib/ -o supersetdatabase.o supersetdatabase.cpp
-g++ -m64 -Wl,-O1 -L$PROJECT_DIR/lib -o planet Options.o Solver.o System.o main.o verifierContext.o supersetdatabase.o -Bstatic -lglpk -lgmp -lumfpack -lcholmod -lamd -lcolamd -lccolamd -lcamd -lz -lltdl -ldl -lsuitesparseconfig
+g++ -m64 -Wl,-O1 -L$PROJECT_DIR/lib/ -o planet Options.o Solver.o System.o main.o verifierContext.o supersetdatabase.o -Bstatic -lglpk -lgmp -lumfpack -lcholmod -lamd -lcolamd -lccolamd -lcamd -lz -lltdl -ldl -lsuitesparseconfig
 cp planet $PROJECT_DIR/bin/

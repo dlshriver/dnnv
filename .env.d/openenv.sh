@@ -1,7 +1,7 @@
 #!/bin/bash
 
 if [ -n "$PROJECT_DIR" ]; then
-    echo "Closing open env: $PROJECT_ENV"
+    echo "Closing open env: $PROJECT_ENV ($PROJECT_DIR)"
     . $PROJECT_DIR/.env.d/closeenv.sh
 fi
 
