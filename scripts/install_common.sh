@@ -14,7 +14,7 @@ ensure_cddlib() {
         return
     fi
 
-    wget https://github.com/cddlib/cddlib/releases/download/0.94j/cddlib-0.94j.tar.gz
+    wget -q https://github.com/cddlib/cddlib/releases/download/0.94j/cddlib-0.94j.tar.gz
     tar -xvf cddlib-0.94j.tar.gz
     cd cddlib-0.94j
     ./configure --prefix=$PROJECT_DIR
@@ -31,7 +31,7 @@ ensure_cmake() {
         return
     fi
 
-    wget https://github.com/Kitware/CMake/releases/download/v3.17.1/cmake-3.17.1-Linux-x86_64.sh
+    wget -q https://github.com/Kitware/CMake/releases/download/v3.17.1/cmake-3.17.1-Linux-x86_64.sh
     chmod u+x cmake-3.17.1-Linux-x86_64.sh
     yes | ./cmake-3.17.1-Linux-x86_64.sh
     cp -r cmake-3.17.1-Linux-x86_64/bin/* .
@@ -61,7 +61,7 @@ ensure_glpk() {
         return
     fi
 
-    wget http://ftp.gnu.org/gnu/glpk/glpk-4.65.tar.gz
+    wget -q https://ftp.gnu.org/gnu/glpk/glpk-4.65.tar.gz
     tar xf glpk-4.65.tar.gz
     cd glpk-4.65
     ./configure --prefix=$PROJECT_DIR
@@ -78,7 +78,7 @@ ensure_gmp() {
         return
     fi
 
-    wget https://gmplib.org/download/gmp/gmp-6.1.2.tar.xz
+    wget -q https://gmplib.org/download/gmp/gmp-6.1.2.tar.xz
     tar -xvf gmp-6.1.2.tar.xz
     cd gmp-6.1.2
     ./configure --enable-cxx --prefix=$PROJECT_DIR
@@ -95,7 +95,7 @@ ensure_gurobi() {
         return
     fi
 
-    wget https://packages.gurobi.com/9.0/gurobi9.0.2_linux64.tar.gz
+    wget -q https://packages.gurobi.com/9.0/gurobi9.0.2_linux64.tar.gz
     tar -xvf gurobi9.0.2_linux64.tar.gz
     cd gurobi902/linux64
     cp lib/libgurobi90.so $PROJECT_DIR/lib
@@ -113,7 +113,7 @@ ensure_julia() {
         return
     fi
 
-    wget https://julialang-s3.julialang.org/bin/linux/x64/1.0/julia-1.0.4-linux-x86_64.tar.gz
+    wget -q https://julialang-s3.julialang.org/bin/linux/x64/1.0/julia-1.0.4-linux-x86_64.tar.gz
     tar -xvf julia-1.0.4-linux-x86_64.tar.gz
     rm julia-1.0.4-linux-x86_64.tar.gz
 }
@@ -125,7 +125,7 @@ ensure_libtool() {
         return
     fi
 
-    wget http://gnu.mirror.constant.com/libtool/libtool-2.4.tar.xz
+    wget -q https://gnu.mirror.constant.com/libtool/libtool-2.4.tar.xz
     tar xf libtool-2.4.tar.xz
     cd libtool-2.4
     ./configure --prefix=$PROJECT_DIR
@@ -143,7 +143,7 @@ ensure_lpsolve() {
     fi
 
     cd $PROJECT_DIR/lib
-    wget https://downloads.sourceforge.net/project/lpsolve/lpsolve/5.5.2.5/lp_solve_5.5.2.5_dev_ux64.tar.gz
+    wget -q https://downloads.sourceforge.net/project/lpsolve/lpsolve/5.5.2.5/lp_solve_5.5.2.5_dev_ux64.tar.gz
     tar -xzf lp_solve_5.5.2.5_dev_ux64.tar.gz
     rm lp_solve_5.5.2.5_dev_ux64.tar.gz
     mkdir $PROJECT_DIR/include/lpsolve/
@@ -157,7 +157,7 @@ ensure_m4() {
         return
     fi
 
-    wget ftp://ftp.gnu.org/gnu/m4/m4-1.4.1.tar.gz
+    wget -q https://ftp.gnu.org/gnu/m4/m4-1.4.1.tar.gz
     tar -xvzf m4-1.4.1.tar.gz
     cd m4-1.4.1
     ./configure --prefix=$PROJECT_DIR
@@ -174,7 +174,7 @@ ensure_mpfr() {
         return
     fi
 
-    wget https://www.mpfr.org/mpfr-current/mpfr-4.1.0.tar.xz
+    wget -q https://www.mpfr.org/mpfr-current/mpfr-4.1.0.tar.xz
     tar -xvf mpfr-4.1.0.tar.xz
     cd mpfr-4.1.0
     CFLAGS="$CFLAGS -I$PROJECT_DIR/include" CXXFLAGS="$CXXFLAGS -I$PROJECT_DIR/include" LDFLAGS="$LDFLAGS -L$PROJECT_DIR/lib" ./configure --prefix=$PROJECT_DIR
@@ -191,7 +191,7 @@ ensure_openblas() {
         return
     fi
 
-    wget http://github.com/xianyi/OpenBLAS/archive/v0.3.6.tar.gz
+    wget -q https://github.com/xianyi/OpenBLAS/archive/v0.3.6.tar.gz
     tar -xzf v0.3.6.tar.gz
     cd OpenBLAS-0.3.6
     make
@@ -208,7 +208,7 @@ ensure_suitesparse() {
     fi
 
     cd $PROJECT_DIR/lib
-    wget https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v5.6.0.tar.gz
+    wget -q https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v5.6.0.tar.gz
     tar -xzf v5.6.0.tar.gz
     cd SuiteSparse-5.6.0
     make library BLAS="-L$PROJECT_DIR/lib -lopenblas"
@@ -226,7 +226,7 @@ ensure_valgrind() {
         return
     fi
 
-    wget https://sourceware.org/pub/valgrind/valgrind-3.15.0.tar.bz2
+    wget -q https://sourceware.org/pub/valgrind/valgrind-3.15.0.tar.bz2
     tar xf valgrind-3.15.0.tar.bz2
     cd valgrind-3.15.0
     ./configure --prefix=$PROJECT_DIR
@@ -241,7 +241,7 @@ ensure_zlib() {
         return
     fi
 
-    wget https://www.zlib.net/zlib-1.2.11.tar.xz
+    wget -q https://www.zlib.net/zlib-1.2.11.tar.xz
     tar xf zlib-1.2.11.tar.xz
     cd zlib-1.2.11
     ./configure --prefix=$PROJECT_DIR
