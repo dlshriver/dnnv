@@ -51,5 +51,5 @@ RUN ./manage.sh update
 COPY --chown=dnnv tests/ tests/
 RUN source .env.d/openenv.sh && python tests/artifacts/build_artifacts.py
 
-COPY --chown=dnnv docs/ .
-COPY --chown=dnnv tools/ .
+COPY --chown=dnnv docs/ docs/
+COPY --chown=dnnv tools/ tools/
