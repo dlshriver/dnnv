@@ -1,34 +1,46 @@
 #!/bin/bash
 
-if [ -e ./.venv/bin/activate ]; then
-    . .venv/bin/activate
+if [ -n "$PROJECT_DIR" ]; then
+    echo "Closing open env: $PROJECT_ENV"
+    . $PROJECT_DIR/.env.d/closeenv.sh
 fi
 
-export ENV_OLD_LD_LIBRARY_PATH=$LD_LIBRARY_PATH
-export ENV_OLD_PATH=$PATH
-export ENV_OLD_PYTHONPATH=$PYTHONPATH
+envdir=$(dirname "${BASH_SOURCE[0]}")
+currentproject=$PROJECT_ENV
 
-PROJECT_DIR=$(
-    cd $(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/..
-    pwd
-)
+. $envdir/env.sh
 
-export PATH=$PROJECT_DIR/bin/:$PATH
-export LD_LIBRARY_PATH=$PROJECT_DIR/lib/:$LD_LIBRARY_PATH
-export PYTHONPATH=$PROJECT_DIR:$PYTHONPATH
+if [ "$currentproject" == "$PROJECT_ENV" ]; then
+    . $envdir/closeenv.sh
+    . $envdir/env.sh
+fi
+unset currentproject
+unset envdir
+
+append_path $PROJECT_DIR/bin/ PATH
+append_path $PROJECT_DIR/lib/ LD_LIBRARY_PATH
+append_path $PROJECT_DIR PYTHONPATH
+
+if [ -e ./.venv/bin/activate ]; then
+    . $PROJECT_DIR/.venv/bin/activate
+else
+    echo "Environment does not exist. Initializing..."
+    $PROJECT_DIR/.env.d/initenv.sh
+    . $PROJECT_DIR/.venv/bin/activate
+fi
 
 # gurobi paths
-export GUROBI_HOME=$PROJECT_DIR/bin/gurobi810/linux64
-export PATH=$GUROBI_HOME/bin:$PATH
-export LD_LIBRARY_PATH=$GUROBI_HOME/lib:$LD_LIBRARY_PATH
+set_var GUROBI_HOME $PROJECT_DIR/bin/gurobi810/linux64
+append_path $GUROBI_HOME/bin PATH
+append_path $GUROBI_HOME/lib LD_LIBRARY_PATH
 
 # eran paths
-export PYTHONPATH=$PROJECT_DIR/lib/eran/tf_verify:$PYTHONPATH
-export PYTHONPATH=$PROJECT_DIR/lib/ELINA/python_interface:$PYTHONPATH
-export PYTHONPATH=$PROJECT_DIR/lib/eran/ELINA/python_interface:$PYTHONPATH
+append_path $PROJECT_DIR/lib/eran/tf_verify PYTHONPATH
+append_path $PROJECT_DIR/lib/ELINA/python_interface PYTHONPATH
+append_path $PROJECT_DIR/lib/eran/ELINA/python_interface PYTHONPATH
 
 # julia paths
-export PATH=$PROJECT_DIR/bin/julia-1.0.4/bin:$PATH
+append_path $PROJECT_DIR/bin/julia-1.0.4/bin PATH
 
 # nnenum paths
-export PYTHONPATH=$PROJECT_DIR/lib/nnenum/nnenum:$PYTHONPATH
+append_path $PROJECT_DIR/lib/nnenum/nnenum PYTHONPATH

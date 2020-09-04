@@ -10,24 +10,17 @@ mkdir -p lib
 mkdir -p share
 
 if [ "$1" == "init" ]; then
-    python3.7 -m venv .venv
-    . .venv/bin/activate
-    python -m pip install --upgrade pip setuptools flit
-    flit install -s
+    . .env.d/initenv.sh
 fi
 
 if [ "$1" == "update" ]; then
-    if [ ! -d .venv ]; then
-        echo "Environment does not exist. Try:" >&2
-        echo " ./manage.sh init"
-        exit 1
-    fi
-    . .venv/bin/activate
+    . .env.d/openenv.sh
     python -m pip install --upgrade pip setuptools flit
     flit install -s
 fi
 
 if [ "$1" == "install" ]; then
+    . .env.d/openenv.sh
     shift
     for pkg in "$@"; do
         if [ "$pkg" == "bab" ]; then
@@ -36,9 +29,6 @@ if [ "$1" == "install" ]; then
         elif [ "$pkg" == "eran" ]; then
             echo "Installing ERAN..."
             ./scripts/install_eran.sh
-        elif [ "$pkg" == "gurobi" ]; then
-            echo "Installing Gurobi..."
-            ./scripts/install_gurobi.sh
         elif [ "$pkg" == "mipverify" ]; then
             echo "Installing MIPVerify..."
             ./scripts/install_mipverify.sh
