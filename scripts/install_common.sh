@@ -30,7 +30,7 @@ ensure_cddlib() {
 
 ensure_cmake() {
     cd $PROJECT_DIR/bin
-    if [ -e cmake ]; then
+    if [ $(command -v cmake) ]; then
         echo "CMAKE is already installed"
         return
     fi
@@ -127,7 +127,7 @@ ensure_julia() {
 
 ensure_libtool() {
     cd $PROJECT_DIR/bin
-    if [ -e libtool ]; then
+    if [ $(command -v libtool) ]; then
         echo "libtool is already installed"
         return
     fi
@@ -228,8 +228,8 @@ ensure_suitesparse() {
 
 ensure_valgrind() {
     cd $PROJECT_DIR/bin
-    if [ -e valgrind ]; then
-        echo "zlib is already installed"
+    if [ $(command -v valgrind) ]; then
+        echo "valgrind is already installed"
         return
     fi
 

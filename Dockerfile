@@ -6,20 +6,24 @@ RUN useradd -ms /bin/bash dnnv
 
 SHELL ["/bin/bash", "-c"]
 
-RUN apt update
-RUN apt install -y software-properties-common
-RUN apt install -y build-essential
+RUN apt-get -qq update
+RUN apt-get -qq install -y software-properties-common
+RUN apt-get -qq install -y build-essential
 RUN add-apt-repository -y ppa:deadsnakes/ppa
-RUN apt update
-RUN apt install -y python3.7 python3.7-dev python3.7-venv
-RUN apt install -y gcc g++
-RUN apt install -y wget
-RUN apt install -y git
-RUN apt install -y liblapack-dev
-RUN apt install -y openssl libssl-dev
+RUN apt-get -qq update
+RUN apt-get -qq install -y python3.7 python3.7-dev python3.7-venv
+RUN apt-get -qq install -y cmake
+RUN apt-get -qq install -y wget
+RUN apt-get -qq install -y git
+RUN apt-get -qq install -y liblapack-dev
+RUN apt-get -qq install -y openssl libssl-dev
+RUN apt-get -qq install -y valgrind
+RUN apt-get -qq install -y libtool
 
 USER dnnv
 WORKDIR /home/dnnv/
+
+ENV MAKEFLAGS="--silent"
 
 # load env on interactive shell
 RUN echo "source .env.d/openenv.sh" >>.bashrc
