@@ -1,7 +1,17 @@
 services:
   - docker
 
+cache:
+  directories:
+    - docker_images
+
+before_cache:
+  - docker save -o docker_images/images.tar $(docker images -a -q)
+
 before_install:
+  - docker load -i docker_images/images.tar || true
+
+install:
   - docker build -t dlshriver/dnnv .
 
 script:
