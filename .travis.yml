@@ -10,10 +10,11 @@ cache:
     - docker_images
 
 before_cache:
-  - docker save -o docker_images/images.tar $(docker images -a -q)
+  - docker rmi $(docker images --filter "dangling=true" -q)
+  - docker save $(docker images -a -q) | gzip -3 > docker_images/images.tar.gz
 
 before_install:
-  - docker load -i docker_images/images.tar || true
+  - docker load -i docker_images/images.tar.gz || true
 
 install:
   - docker build -t dlshriver/dnnv .
