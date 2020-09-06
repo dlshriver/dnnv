@@ -120,3 +120,6 @@ ENV/
 !/tests/artifacts/networks/dronet.onnx
 !/tests/artifacts/networks/convSmallRELU__Point.onnx
 !/tests/artifacts/networks/mnist_relu_3_50.onnx
+
+Dockerfile
+.dockerignore
