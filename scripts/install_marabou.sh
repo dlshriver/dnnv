@@ -5,6 +5,7 @@ PROJECT_DIR=${PROJECT_DIR:-$(
     pwd
 )}
 source $PROJECT_DIR/scripts/install_common.sh
+ensure_cmake
 
 cd $PROJECT_DIR/bin
 git clone https://github.com/NeuralNetworkVerification/Marabou
