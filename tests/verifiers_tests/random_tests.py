@@ -13,6 +13,7 @@ from dnnv.verifiers.mipverify import MIPVerify
 from dnnv.verifiers.neurify import Neurify
 from dnnv.verifiers.planet import Planet
 from dnnv.verifiers.reluplex import Reluplex
+from dnnv.verifiers.marabou import Marabou
 
 from tests.utils import network_artifact_dir, property_artifact_dir
 
@@ -53,6 +54,7 @@ class RandomTests(unittest.TestCase):
             "neurify": Neurify,
             "planet": Planet,
             "reluplex": Reluplex,
+            "marabou": Marabou
         }
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
@@ -77,6 +79,7 @@ class RandomTests(unittest.TestCase):
             "neurify": Neurify,
             "planet": Planet,
             "reluplex": Reluplex,
+            "marabou": Marabou
         }
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
@@ -101,6 +104,7 @@ class RandomTests(unittest.TestCase):
             "neurify": Neurify,
             "planet": Planet,
             "reluplex": Reluplex,
+            "marabou": Marabou
         }
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)

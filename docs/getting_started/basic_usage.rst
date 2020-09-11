@@ -38,6 +38,7 @@ option will list the available options:
     --neurify
     --planet
     --reluplex
+    --marabou
 
 DNNV requires a network and property be specified, and accepts
 an optional list of verifiers to be run to check the network and
