@@ -13,10 +13,20 @@ from dnnv.verifiers.mipverify import MIPVerify
 from dnnv.verifiers.neurify import Neurify
 from dnnv.verifiers.planet import Planet
 from dnnv.verifiers.reluplex import Reluplex
+from dnnv.verifiers.verinet import VeriNet
 
 from tests.utils import network_artifact_dir, property_artifact_dir
 
 RUNS_PER_PROP = int(os.environ.get("_DNNV_TEST_RUNS_PER_PROP", "1"))
+
+VERIFIERS = {
+    "bab": BaB,
+    "eran": ERAN,
+    "neurify": Neurify,
+    "planet": Planet,
+    "reluplex": Reluplex,
+    "verinet": VeriNet,
+}
 
 
 class RandomTests(unittest.TestCase):
@@ -47,19 +57,15 @@ class RandomTests(unittest.TestCase):
 
     def test_random_fc_0(self):
         os.environ["OUTPUT_LAYER"] = "-1"
-        verifiers = {
-            "bab": BaB,
-            "eran": ERAN,
-            "neurify": Neurify,
-            "planet": Planet,
-            "reluplex": Reluplex,
-        }
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
             for i in range(RUNS_PER_PROP):
                 os.environ["SEED"] = str(i)
                 results = []
-                for name, verifier in verifiers.items():
+                for name, verifier in VERIFIERS.items():
+                    if name == "verinet" and epsilon == 0.5:
+                        # too slow
+                        continue
                     if not verifier.is_installed():
                         continue
                     self.reset_property_context()
@@ -71,19 +77,15 @@ class RandomTests(unittest.TestCase):
 
     def test_random_fc_1(self):
         os.environ["OUTPUT_LAYER"] = "-1"
-        verifiers = {
-            "bab": BaB,
-            "eran": ERAN,
-            "neurify": Neurify,
-            "planet": Planet,
-            "reluplex": Reluplex,
-        }
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
             for i in range(RUNS_PER_PROP):
                 os.environ["SEED"] = str(i)
                 results = []
-                for name, verifier in verifiers.items():
+                for name, verifier in VERIFIERS.items():
+                    if name == "verinet" and (epsilon == 0.5 or epsilon == 1.0):
+                        # too slow
+                        continue
                     if not verifier.is_installed():
                         continue
                     self.reset_property_context()
@@ -95,19 +97,15 @@ class RandomTests(unittest.TestCase):
 
     def test_random_fc_2(self):
         os.environ["OUTPUT_LAYER"] = "-1"
-        verifiers = {
-            "bab": BaB,
-            "eran": ERAN,
-            "neurify": Neurify,
-            "planet": Planet,
-            "reluplex": Reluplex,
-        }
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
             for i in range(RUNS_PER_PROP):
                 os.environ["SEED"] = str(i)
                 results = []
-                for name, verifier in verifiers.items():
+                for name, verifier in VERIFIERS.items():
+                    if name == "verinet" and epsilon == 0.5:
+                        # too slow
+                        continue
                     if not verifier.is_installed():
                         continue
                     self.reset_property_context()
@@ -119,18 +117,15 @@ class RandomTests(unittest.TestCase):
 
     def test_random_conv_0(self):
         os.environ["OUTPUT_LAYER"] = "-1"
-        verifiers = {
-            "bab": BaB,
-            "eran": ERAN,
-            "neurify": Neurify,
-            "planet": Planet,
-        }
+        excluded_verifiers = {"reluplex"}
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
             for i in range(RUNS_PER_PROP):
                 os.environ["SEED"] = str(i)
                 results = []
-                for name, verifier in verifiers.items():
+                for name, verifier in VERIFIERS.items():
+                    if name in excluded_verifiers:
+                        continue
                     if not verifier.is_installed():
                         continue
                     self.reset_property_context()
@@ -142,18 +137,18 @@ class RandomTests(unittest.TestCase):
 
     def test_random_conv_1(self):
         os.environ["OUTPUT_LAYER"] = "-1"
-        verifiers = {
-            "bab": BaB,
-            "eran": ERAN,
-            "neurify": Neurify,
-            "planet": Planet,
-        }
+        excluded_verifiers = {"reluplex"}
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
             for i in range(RUNS_PER_PROP):
                 os.environ["SEED"] = str(i)
                 results = []
-                for name, verifier in verifiers.items():
+                for name, verifier in VERIFIERS.items():
+                    if name == "verinet" and epsilon == 0.01:
+                        # too slow
+                        continue
+                    if name in excluded_verifiers:
+                        continue
                     if not verifier.is_installed():
                         continue
                     self.reset_property_context()
@@ -165,18 +160,15 @@ class RandomTests(unittest.TestCase):
 
     def test_random_conv_2(self):
         os.environ["OUTPUT_LAYER"] = "-1"
-        verifiers = {
-            "bab": BaB,
-            "eran": ERAN,
-            "neurify": Neurify,
-            "planet": Planet,
-        }
+        excluded_verifiers = {"reluplex"}
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
             for i in range(RUNS_PER_PROP):
                 os.environ["SEED"] = str(i)
                 results = []
-                for name, verifier in verifiers.items():
+                for name, verifier in VERIFIERS.items():
+                    if name in excluded_verifiers:
+                        continue
                     if not verifier.is_installed():
                         continue
                     self.reset_property_context()
