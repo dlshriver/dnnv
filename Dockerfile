@@ -43,6 +43,7 @@ RUN ./manage.sh install eran
 RUN ./manage.sh install reluplex
 RUN ./manage.sh install planet
 # RUN ./manage.sh install bab # requires gurobi
+# RUN ./manage.sh install verinet # requires gurobi
 
 COPY --chown=dnnv dnnv/ dnnv/
 COPY --chown=dnnv README.md .
