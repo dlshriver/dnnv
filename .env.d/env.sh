@@ -1,7 +1,7 @@
 #!/bin/bash
 
-PROJECT_ENV="DNNV"
-PROJECT_DIR=$(
+export PROJECT_ENV="DNNV"
+export PROJECT_DIR=$(
     cd $(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/..
     pwd
 )

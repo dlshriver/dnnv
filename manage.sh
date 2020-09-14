@@ -31,6 +31,9 @@ if [ "$1" == "install" ]; then
         elif [ "$pkg" == "neurify" ]; then
             echo "Installing Neurify..."
             ./scripts/install_neurify.sh
+        elif [ "$pkg" == "nnenum" ]; then
+            echo "Installing nnenum..."
+            ./scripts/install_nnenum.sh
         elif [ "$pkg" == "planet" ]; then
             echo "Installing Planet..."
             ./scripts/install_planet.sh
@@ -41,8 +44,11 @@ if [ "$1" == "install" ]; then
             echo "Installing Reluplex..."
             ./scripts/install_reluplex.sh
         elif [ "$pkg" == "marabou" ]; then
-                echo "Installing Marabou..."
-                ./scripts/install_marabou.sh
+            echo "Installing Marabou..."
+            ./scripts/install_marabou.sh
+        elif [ "$pkg" == "verinet" ]; then
+            echo "Installing VeriNet..."
+            ./scripts/install_verinet.sh
         else
             echo "Unknown package: $pkg"
         fi

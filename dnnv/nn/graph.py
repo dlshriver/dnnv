@@ -108,6 +108,11 @@ class OperationGraph:
 
         return onnx_convert(self)
 
+    def as_pytorch(self):
+        from .converters.pytorch import convert as pytorch_convert
+
+        return pytorch_convert(self)
+
     def as_tf(self):
         from .converters.tensorflow import convert as tf_convert
 

@@ -116,7 +116,15 @@ def main(args: argparse.Namespace):
             activation = "relu"
             if layer == num_layers:
                 activation = "affine"
-            layers.append(build_linear(W, b, activation, input_shape, output_shape,))
+            layers.append(
+                build_linear(
+                    W,
+                    b,
+                    activation,
+                    input_shape,
+                    output_shape,
+                )
+            )
             input_shape = output_shape
             layer += 1
     if not args.drop_normalization:

@@ -20,12 +20,13 @@ class NnenumExecutor(VerifierExecutor):
         Settings.CHECK_SINGLE_THREAD_BLAS = False
         Settings.PRINT_OUTPUT = False
 
-        onnx_filename, (lb, ub) = self.args
+        onnx_filename, (lb, ub), (A, b) = self.args
         init_box = np.array(list(zip(lb, ub)), dtype=np.float32)
 
         network = load_onnx_network(onnx_filename)
 
-        spec = Specification([[1]], [0])
+        # spec = Specification([[1]], [0])
+        spec = Specification(A, b)
 
         result = enumerate_network(init_box, network, spec)
         return result
@@ -53,12 +54,17 @@ class Nnenum(Verifier):
         with tempfile.NamedTemporaryFile(
             mode="w+", suffix=".onnx", delete=False
         ) as onnx_model_file:
-            prop.suffixed_op_graph().export_onnx(onnx_model_file.name)
+            # prop.suffixed_op_graph().export_onnx(onnx_model_file.name)
+            prop.op_graph.export_onnx(onnx_model_file.name)
 
         lb = prop.input_constraint.lower_bounds[0].flatten().copy()
         ub = prop.input_constraint.upper_bounds[0].flatten().copy()
 
-        return onnx_model_file.name, (lb, ub)
+        return (
+            onnx_model_file.name,
+            (lb, ub),
+            prop.output_constraint.as_matrix_inequality(),
+        )
 
     def parse_results(self, prop, results):
         result_str = results.result_str

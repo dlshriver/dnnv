@@ -100,6 +100,8 @@ class OnnxConverter(OperationVisitor):
         opname = f"Input_{idx}"
 
         shape = operation.shape.tolist()
+        if shape[0] < 0:
+            shape[0] = 1
         dtype = NUMPY_TO_ONNX_DTYPE[operation.dtype]
 
         node = onnx.helper.make_tensor_value_info(opname, dtype, shape)
