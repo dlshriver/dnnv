@@ -102,6 +102,22 @@ class HalfspacePolytope(Constraint):
         super().__init__(variable)
         self.halfspaces: List[Halfspace] = []
 
+    def as_matrix_inequality(self):
+        k = len(self.halfspaces)
+        v = {}
+        for c in self.halfspaces:
+            for i in c.indices:
+                if i not in v:
+                    v[i] = len(v)
+        n = len(v)
+        A = np.zeros((k, n))
+        b = np.zeros(k)
+        for ci, c in enumerate(self.halfspaces):
+            for i, a in zip(c.indices, c.coefficients):
+                A[ci, v[i]] = a
+            b[ci] = c.b
+        return A, b
+
     @property
     def is_consistent(self):
         k = len(self.halfspaces)
@@ -333,8 +349,8 @@ class IOPolytopeProperty(Property):
 class IOPolytopeReduction(Reduction):
     def __init__(
         self,
-        input_constraint_type,
-        output_constraint_type,
+        input_constraint_type: Type[Constraint] = HyperRectangle,
+        output_constraint_type: Type[Constraint] = HalfspacePolytope,
         reduction_error: Type[VerifierTranslatorError] = VerifierTranslatorError,
     ):
         super().__init__(reduction_error=reduction_error)

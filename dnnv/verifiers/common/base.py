@@ -61,7 +61,7 @@ class Verifier(ABC):
 
     @classmethod
     def is_installed(cls) -> bool:
-        verifier = cls.__qualname__.lower()
+        verifier = getattr(cls, "EXE", cls.__qualname__.lower())
         for path in os.environ["PATH"].split(os.pathsep):
             exe = os.path.join(path, verifier)
             if os.path.isfile(exe) and os.access(exe, os.X_OK):

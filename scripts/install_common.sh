@@ -105,6 +105,7 @@ ensure_gurobi() {
     wget -q https://packages.gurobi.com/9.0/gurobi9.0.2_linux64.tar.gz
     tar xf gurobi9.0.2_linux64.tar.gz
     cd gurobi902/linux64
+    cp bin/* $PROJECT_DIR/bin/
     cp lib/libgurobi90.so $PROJECT_DIR/lib
     python3 setup.py install
     cd ../../
