@@ -9,6 +9,7 @@ from dnnv.properties.context import get_context
 from dnnv.verifiers import SAT, UNSAT, UNKNOWN
 from dnnv.verifiers.bab import BaB
 from dnnv.verifiers.eran import ERAN
+from dnnv.verifiers.marabou import Marabou
 from dnnv.verifiers.mipverify import MIPVerify
 from dnnv.verifiers.neurify import Neurify
 from dnnv.verifiers.planet import Planet
@@ -22,6 +23,7 @@ RUNS_PER_PROP = int(os.environ.get("_DNNV_TEST_RUNS_PER_PROP", "1"))
 VERIFIERS = {
     "bab": BaB,
     "eran": ERAN,
+    "marabou": Marabou,
     "neurify": Neurify,
     "planet": Planet,
     "reluplex": Reluplex,
@@ -117,7 +119,7 @@ class RandomTests(unittest.TestCase):
 
     def test_random_conv_0(self):
         os.environ["OUTPUT_LAYER"] = "-1"
-        excluded_verifiers = {"reluplex"}
+        excluded_verifiers = {"reluplex", "marabou"}
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
             for i in range(RUNS_PER_PROP):
@@ -137,7 +139,7 @@ class RandomTests(unittest.TestCase):
 
     def test_random_conv_1(self):
         os.environ["OUTPUT_LAYER"] = "-1"
-        excluded_verifiers = {"reluplex"}
+        excluded_verifiers = {"reluplex", "marabou"}
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
             for i in range(RUNS_PER_PROP):
@@ -160,7 +162,7 @@ class RandomTests(unittest.TestCase):
 
     def test_random_conv_2(self):
         os.environ["OUTPUT_LAYER"] = "-1"
-        excluded_verifiers = {"reluplex"}
+        excluded_verifiers = {"reluplex", "marabou"}
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
             for i in range(RUNS_PER_PROP):
