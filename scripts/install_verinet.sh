@@ -10,4 +10,4 @@ ensure_gurobi
 
 cp $PROJECT_DIR/tools/verifier_runners/verinet.py $PROJECT_DIR/bin/verinet.py
 
-pip install "numba==0.47.0"
+pip install "numba>=0.50,<0.60"

@@ -44,8 +44,11 @@ if [ "$1" == "install" ]; then
             echo "Installing Reluplex..."
             ./scripts/install_reluplex.sh
         elif [ "$pkg" == "marabou" ]; then
-                echo "Installing Marabou..."
-                ./scripts/install_marabou.sh
+            echo "Installing Marabou..."
+            ./scripts/install_marabou.sh
+        elif [ "$pkg" == "verinet" ]; then
+            echo "Installing VeriNet..."
+            ./scripts/install_verinet.sh
         else
             echo "Unknown package: $pkg"
         fi
