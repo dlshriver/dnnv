@@ -30,7 +30,14 @@ class MIPVerify(Verifier):
             raise MIPVerifyTranslatorError(
                 "Unsupported network: More than 1 input variable"
             )
-        op_graph, (lbs, ubs) = prop.prefixed_and_suffixed_op_graph()
+        if all((lb >= 0).all() for lb in prop.input_constraint.lower_bounds) and all(
+            (ub <= 1).all() for ub in prop.input_constraint.upper_bounds
+        ):
+            lbs = prop.input_constraint.lower_bounds
+            ubs = prop.input_constraint.upper_bounds
+            op_graph = prop.suffixed_op_graph()
+        else:
+            op_graph, (lbs, ubs) = prop.prefixed_and_suffixed_op_graph()
         layers = as_layers(
             op_graph,
             extra_layer_types=MIPVERIFY_LAYER_TYPES,

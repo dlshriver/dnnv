@@ -1,5 +1,6 @@
 import numpy as np
 import tempfile
+import torch.onnx
 
 from contextlib import contextmanager
 from typing import Any, Dict, List, Optional
@@ -29,12 +30,6 @@ class VeriNet(Verifier):
             mode="w+", suffix=".onnx", delete=False
         ) as onnx_model_file:
             op_graph = prop.suffixed_op_graph()
-            # X = np.random.rand(1, 1, 3, 3).astype(np.float32)
-            # print(op_graph.input_shape)
-            # print(op_graph(X))
-            # import torch
-
-            # print(op_graph.as_pytorch()(torch.from_numpy(X)))
             op_graph.output_operations[0].b = np.hstack(
                 [
                     op_graph.output_operations[0].b,
@@ -44,9 +39,6 @@ class VeriNet(Verifier):
                     ),
                 ]
             )
-            # op_graph.export_onnx(onnx_model_file.name)
-
-            import torch.onnx
 
             torch.onnx.export(
                 op_graph.as_pytorch(),
