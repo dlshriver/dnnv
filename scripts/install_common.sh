@@ -128,7 +128,7 @@ ensure_julia() {
 
 ensure_libtool() {
     cd $PROJECT_DIR/bin
-    if [ $(command -v libtool) ]; then
+    if [ -e $PROJECT_DIR/lib/libltdl.o ]; then
         echo "libtool is already installed"
         return
     fi
