@@ -248,6 +248,7 @@ class SqueezeConvs(Simplifier):
             isinstance(operation.x, operations.Conv)
             and operation.x.w.shape[2] == 1
             and operation.x.w.shape[3] == 1
+            and all(p == 0 for p in operation.pads)
             and all(s == 1 for s in operation.x.strides)
             and all(p == 0 for p in operation.x.pads)
             and all(d == 1 for d in operation.x.dilations)
@@ -268,6 +269,7 @@ class SqueezeConvs(Simplifier):
             op.x = operation.x.x
             op.w = weights
             op.b = bias
+
             return op
         return operation
 

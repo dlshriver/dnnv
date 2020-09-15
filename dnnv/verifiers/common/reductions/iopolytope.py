@@ -135,12 +135,7 @@ class HalfspacePolytope(Constraint):
             b[ci] = c.b
         obj = np.zeros(n)
         try:
-            result = linprog(
-                obj,
-                A_ub=A,
-                b_ub=b,
-                bounds=(None, None),
-            )
+            result = linprog(obj, A_ub=A, b_ub=b, bounds=(None, None),)
         except ValueError as e:
             if "The problem is (trivially) infeasible" in e.args[0]:
                 return False
@@ -311,12 +306,74 @@ class IOPolytopeProperty(Property):
             return False, "Invalid counter example found: output outside bounds."
         return True, None
 
+    def prefixed_and_suffixed_op_graph(
+        self,
+    ) -> Tuple[OperationGraph, Tuple[List[np.ndarray], List[np.ndarray]]]:
+        import dnnv.nn.operations as operations
+
+        if not isinstance(self.input_constraint, HyperRectangle):
+            raise ValueError(
+                f"{type(self.input_constraint).__name__} input constraints are not yet supported"
+            )
+
+        suffixed_op_graph = self.suffixed_op_graph()
+
+        class PrefixTransformer(OperationTransformer):
+            def __init__(self, lbs, ubs):
+                super().__init__()
+                self.lbs = lbs
+                self.ubs = ubs
+                self._input_count = 0
+                self.final_lbs = []
+                self.final_ubs = []
+
+            def visit_Input(
+                self, operation: operations.Input
+            ) -> Union[operations.Conv, operations.Gemm]:
+                new_op: Union[operations.Conv, operations.Gemm]
+                input_shape = self.lbs[self._input_count].shape
+                if len(input_shape) == 2:
+                    ranges = self.ubs[self._input_count] - self.lbs[self._input_count]
+                    mins = self.lbs[self._input_count]
+                    new_op = operations.Gemm(
+                        operation, np.diag(ranges.flatten()), mins.flatten()
+                    )
+                    self.final_lbs.append(np.zeros(mins.shape))
+                    self.final_ubs.append(np.ones(mins.shape))
+                elif len(input_shape) == 4:
+                    b = self.lbs[self._input_count].min(axis=(0, 2, 3))
+                    r = self.ubs[self._input_count].max(axis=(0, 2, 3)) - b
+                    c = len(r)
+                    w = np.zeros((c, c, 1, 1))
+                    for i in range(c):
+                        w[i, i, 0, 0] = 1
+                    w = w * r.reshape((c, 1, 1, 1))
+                    new_op = operations.Conv(operation, w, b)
+                    test_op_graph = OperationGraph([new_op])
+                    self.final_lbs.append((self.lbs[self._input_count] - b) / r)
+                    self.final_ubs.append((self.ubs[self._input_count] - b) / r)
+                else:
+                    raise NotImplementedError(
+                        f"Cannot prefix network with input shape {mins.shape}"
+                    )
+                self._input_count += 1
+                return new_op
+
+        prefix_transformer = PrefixTransformer(
+            self.input_constraint.lower_bounds, self.input_constraint.upper_bounds,
+        )
+        prefixed_op_graph = OperationGraph(suffixed_op_graph.walk(prefix_transformer))
+        return (
+            prefixed_op_graph.simplify(),
+            (prefix_transformer.final_lbs, prefix_transformer.final_ubs),
+        )
+
     def suffixed_op_graph(self) -> OperationGraph:
         import dnnv.nn.operations as operations
 
         if not isinstance(self.output_constraint, HalfspacePolytope):
             raise ValueError(
-                f"{type(self.output_constraint).__name__} constraints are not yet supported"
+                f"{type(self.output_constraint).__name__} output constraints are not yet supported"
             )
         if len(self.op_graph.output_operations) == 1:
             new_output_op = self.op_graph.output_operations[0]

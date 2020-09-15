@@ -1,5 +1,6 @@
 import numpy as np
 import os
+import subprocess as sp
 
 from dnnv.verifiers.common.base import Parameter, Verifier
 from dnnv.verifiers.common.results import SAT, UNSAT, UNKNOWN
@@ -20,7 +21,8 @@ class MIPVerify(Verifier):
         for path in os.environ["PATH"].split(os.pathsep):
             exe = os.path.join(path, verifier)
             if os.path.isfile(exe) and os.access(exe, os.X_OK):
-                return True
+                proc = sp.run(["julia", "-e", "using MIPVerify"])
+                return proc.returncode == 0
         return False
 
     def build_inputs(self, prop):
@@ -28,23 +30,27 @@ class MIPVerify(Verifier):
             raise MIPVerifyTranslatorError(
                 "Unsupported network: More than 1 input variable"
             )
+        op_graph, (lbs, ubs) = prop.prefixed_and_suffixed_op_graph()
         layers = as_layers(
-            prop.suffixed_op_graph(),
+            op_graph,
             extra_layer_types=MIPVERIFY_LAYER_TYPES,
             translator_error=MIPVerifyTranslatorError,
         )
+        input_shape = prop.op_graph.input_shape[0]
+        lb = lbs[0]
+        ub = ubs[0]
         mipverify_inputs = to_mipverify_inputs(
-            prop.input_constraint,
-            layers,
-            # dirname=dirname,
-            translator_error=MIPVerifyTranslatorError,
+            lb, ub, layers, translator_error=MIPVerifyTranslatorError,
         )
         return "julia", mipverify_inputs["property_path"]
 
     def parse_results(self, prop, results):
+        stdout, stderr = results
         result = stdout[-1].lower()
         if "infeasible" in result:
             return UNSAT, None
         elif "optimal" in result:
+            return SAT, None
+        elif "trivial" in result:
             return SAT, None
         raise MIPVerifyTranslatorError(f"Unexpected verification result: {stdout[-1]}")
