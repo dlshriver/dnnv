@@ -11,7 +11,7 @@ from dnnv.verifiers.verinet import VeriNet
 class VeriNetVerifierTests(VerifierTests, unittest.TestCase):
     def initialize(self):
         self.verifier = VeriNet
-        self.is_complete = True
+        self.is_complete = False
 
 
 if __name__ == "__main__":

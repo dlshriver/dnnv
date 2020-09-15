@@ -29,7 +29,7 @@ class OperationGraph:
     def simplify(self):
         from .transformers import simplify
 
-        return simplify(self)
+        return simplify(self.copy())
 
     def pprint(self):
         from .visitors import PrintVisitor

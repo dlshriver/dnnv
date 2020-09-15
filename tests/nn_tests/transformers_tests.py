@@ -59,11 +59,19 @@ class DropPrefixTests(unittest.TestCase):
 
 class SimplifyTests(unittest.TestCase):
     def assert_close(
-        self, model1, model2, threshold=THRESHOLD, input_shape=(1, 3, 224, 224)
+        self,
+        model1,
+        model2,
+        threshold=THRESHOLD,
+        input_shape=(1, 3, 224, 224),
+        loc=0.0,
+        scale=1.0,
     ):
         for i in range(5):
             tf.compat.v1.reset_default_graph()
-            x = np.random.normal(size=input_shape).astype(np.float32)
+            x = np.random.normal(loc=loc, scale=scale, size=input_shape).astype(
+                np.float32
+            )
             y_1 = model1(x)
             y_2 = model2(x)
             self.assertTrue(
@@ -73,32 +81,32 @@ class SimplifyTests(unittest.TestCase):
 
     def test_a_gt_b(self):
         op_graph = parse(artifact_dir / "a_gt_b.onnx")
-        simplified_op_graph = op_graph.simplify()
+        simplified_op_graph = op_graph[:].simplify()
         self.assert_close(op_graph, simplified_op_graph, input_shape=(1, 2))
 
     def test_const_one(self):
         op_graph = parse(artifact_dir / "const_one.onnx")
-        simplified_op_graph = op_graph.simplify()
+        simplified_op_graph = op_graph[:].simplify()
         self.assert_close(op_graph, simplified_op_graph, input_shape=(1, 2))
 
     def test_const_zero(self):
         op_graph = parse(artifact_dir / "const_zero.onnx")
-        simplified_op_graph = op_graph.simplify()
+        simplified_op_graph = op_graph[:].simplify()
         self.assert_close(op_graph, simplified_op_graph, input_shape=(1, 2))
 
     def test_sum_gt_one(self):
         op_graph = parse(artifact_dir / "sum_gt_one.onnx")
-        simplified_op_graph = op_graph.simplify()
+        simplified_op_graph = op_graph[:].simplify()
         self.assert_close(op_graph, simplified_op_graph, input_shape=(1, 10))
 
     def test_resnet34(self):
         op_graph = parse(artifact_dir / "resnet34.onnx")
-        simplified_op_graph = op_graph.simplify()
+        simplified_op_graph = op_graph[:].simplify()
         self.assert_close(op_graph, simplified_op_graph, threshold=10 * THRESHOLD)
 
     def test_resnet50(self):
         op_graph = parse(artifact_dir / "resnet50.onnx")
-        simplified_op_graph = op_graph.simplify()
+        simplified_op_graph = op_graph[:].simplify()
         self.assert_close(op_graph, simplified_op_graph, threshold=10 * THRESHOLD)
 
     @unittest.skip("Too expensive.")
@@ -106,6 +114,118 @@ class SimplifyTests(unittest.TestCase):
         op_graph = parse(artifact_dir / "vgg16.onnx")
         simplified_op_graph = op_graph.simplify()
         self.assert_close(op_graph, simplified_op_graph)
+
+    def test_SqueezeConvs_1(self):
+        from dnnv.nn.transformers.simplifiers import SqueezeConvs
+
+        input_op = operations.Input((1, 1, 3, 3), np.float32)
+        w = np.zeros((1, 1, 1, 1))
+        w[0, 0] = 1
+        b = np.array([0.5])
+        conv_op1 = operations.Conv(input_op, w, b)
+        w = np.random.randn(1, 1, 1, 1)
+        b = np.random.randn(1)
+        conv_op2 = operations.Conv(conv_op1, w, b)
+
+        op_graph = OperationGraph([conv_op2])
+        op_graph_copy = op_graph[:]
+        simplified_op_graph = OperationGraph(
+            op_graph_copy.walk(SqueezeConvs(op_graph_copy))
+        )
+        self.assert_close(
+            op_graph,
+            simplified_op_graph,
+            input_shape=(1, 1, 3, 3),
+            threshold=10 * THRESHOLD,
+        )
+
+        w = np.random.randn(2, 1, 3, 3)
+        b = np.random.randn(2)
+        conv_op2 = operations.Conv(conv_op1, w, b)
+
+        op_graph = OperationGraph([conv_op2])
+        op_graph_copy = op_graph[:]
+        simplified_op_graph = OperationGraph(
+            op_graph_copy.walk(SqueezeConvs(op_graph_copy))
+        )
+        self.assert_close(
+            op_graph,
+            simplified_op_graph,
+            input_shape=(1, 1, 3, 3),
+            threshold=10 * THRESHOLD,
+        )
+
+    def test_SqueezeConvs_2(self):
+        from dnnv.nn.transformers.simplifiers import SqueezeConvs
+
+        input_op = operations.Input((1, 3, 3, 3), np.float32)
+        w = np.zeros((3, 3, 1, 1))
+        for i in range(3):
+            w[i, i] = 1
+        b = np.array([0.1, 0.5, 1.0])
+        conv_op1 = operations.Conv(input_op, w, b)
+        w = np.random.randn(1, 3, 3, 3)
+        b = np.random.randn(1)
+        conv_op2 = operations.Conv(conv_op1, w, b)
+
+        op_graph = OperationGraph([conv_op2])
+        op_graph_copy = op_graph[:]
+        simplified_op_graph = OperationGraph(
+            op_graph_copy.walk(SqueezeConvs(op_graph_copy))
+        )
+        self.assert_close(
+            op_graph,
+            simplified_op_graph,
+            input_shape=(1, 3, 3, 3),
+            threshold=10 * THRESHOLD,
+        )
+
+        w = np.random.randn(3, 3, 3, 3)
+        b = np.random.randn(3)
+        conv_op2 = operations.Conv(conv_op1, w, b)
+
+        op_graph = OperationGraph([conv_op2])
+        op_graph_copy = op_graph[:]
+        simplified_op_graph = OperationGraph(
+            op_graph_copy.walk(SqueezeConvs(op_graph_copy))
+        )
+        self.assert_close(
+            op_graph,
+            simplified_op_graph,
+            input_shape=(1, 3, 3, 3),
+            threshold=10 * THRESHOLD,
+        )
+
+    def test_SqueezeConvs_3(self):
+        from dnnv.nn.transformers.simplifiers import SqueezeConvs
+
+        input_op = operations.Input((1, 3, 3, 3), np.float32)
+        w = np.zeros((3, 3, 1, 1))
+        for i in range(3):
+            w[i, i] = 1
+        b = np.array([0.1, 0.5, 1.0])
+        conv_op1 = operations.Conv(input_op, w, b)
+        w = np.random.randn(1, 3, 3, 3)
+        b = np.random.randn(1)
+        conv_op2 = operations.Conv(conv_op1, w, b, pads=(1, 1, 1, 1))
+
+        op_graph = OperationGraph([conv_op2])
+        op_graph_copy = op_graph[:]
+        simplified_op_graph = OperationGraph(
+            op_graph_copy.walk(SqueezeConvs(op_graph_copy))
+        )
+        self.assert_close(op_graph, simplified_op_graph, input_shape=(1, 3, 3, 3))
+
+        w = np.random.randn(3, 3, 3, 3)
+        b = np.random.randn(3)
+        conv_op2 = operations.Conv(conv_op1, w, b, pads=(1, 1, 1, 1))
+
+        op_graph = OperationGraph([conv_op2])
+        op_graph_copy = op_graph[:]
+        simplified_op_graph = OperationGraph(
+            op_graph_copy.walk(SqueezeConvs(op_graph_copy))
+        )
+        self.assert_close(op_graph, simplified_op_graph, input_shape=(1, 3, 3, 3))
 
 
 class SlicerTests(unittest.TestCase):

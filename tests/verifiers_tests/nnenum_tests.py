@@ -11,7 +11,7 @@ from dnnv.verifiers.nnenum import Nnenum
 class NnenumVerifierTests(VerifierTests, unittest.TestCase):
     def initialize(self):
         self.verifier = Nnenum
-        self.is_complete = False
+        self.is_complete = True
 
 
 if __name__ == "__main__":

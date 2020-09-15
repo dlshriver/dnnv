@@ -24,6 +24,7 @@ VERIFIERS = {
     "bab": BaB,
     "eran": ERAN,
     "marabou": Marabou,
+    "mipverify": MIPVerify,
     "neurify": Neurify,
     "planet": Planet,
     "reluplex": Reluplex,

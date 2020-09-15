@@ -73,7 +73,7 @@ class Conv(Operation):
         w,
         b=None,
         *,
-        dilations=1,
+        dilations=(1, 1),
         group=1,
         kernel_shape=None,
         pads=0,
@@ -82,7 +82,7 @@ class Conv(Operation):
         self.x = x
         self.w = w
         self.b = b
-        self.dilations = dilations
+        self.dilations = np.asarray(dilations)
         self.group = group
         if kernel_shape is not None:
             self.kernel_shape = kernel_shape
