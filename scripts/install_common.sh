@@ -229,7 +229,7 @@ ensure_suitesparse() {
 
 ensure_valgrind() {
     cd $PROJECT_DIR/bin
-    if [ $(command -v valgrind) ]; then
+    if [ -e $PROJECT_DIR/include/callgrind.h ]; then
         echo "valgrind is already installed"
         return
     fi
