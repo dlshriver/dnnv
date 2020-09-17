@@ -36,6 +36,7 @@ COPY --chown=dnnv manage.sh .
 COPY --chown=dnnv pyproject.toml .
 COPY --chown=dnnv .env.d/ .env.d/
 COPY --chown=dnnv scripts/ scripts/
+COPY --chown=dnnv tools/verifier_runners tools/verifier_runners
 
 # install verifiers
 RUN ./manage.sh install neurify
