@@ -104,18 +104,15 @@ class HalfspacePolytope(Constraint):
 
     def as_matrix_inequality(self):
         k = len(self.halfspaces)
-        v = {}
-        for c in self.halfspaces:
-            for i in c.indices:
-                if i not in v:
-                    v[i] = len(v)
-        n = len(v)
+        n = self.size()
         A = np.zeros((k, n))
         b = np.zeros(k)
         for ci, c in enumerate(self.halfspaces):
             for i, a in zip(c.indices, c.coefficients):
-                A[ci, v[i]] = a
+                A[ci, i] = a
             b[ci] = c.b
+            if c.is_open:
+                b[ci] = np.nextafter(c.b, c.b - 1)
         return A, b
 
     @property
@@ -133,9 +130,16 @@ class HalfspacePolytope(Constraint):
             for i, a in zip(c.indices, c.coefficients):
                 A[ci, v[i]] = a
             b[ci] = c.b
+            if c.is_open:
+                b[ci] = np.nextafter(c.b, c.b - 1)
         obj = np.zeros(n)
         try:
-            result = linprog(obj, A_ub=A, b_ub=b, bounds=(None, None),)
+            result = linprog(
+                obj,
+                A_ub=A,
+                b_ub=b,
+                bounds=(None, None),
+            )
         except ValueError as e:
             if "The problem is (trivially) infeasible" in e.args[0]:
                 return False
@@ -159,7 +163,10 @@ class HalfspacePolytope(Constraint):
         x_flat = np.concatenate([x_.flatten() for x_ in x])
         for hs in self.halfspaces:
             t = sum(c * x_flat[i] for c, i in zip(hs.coefficients, hs.indices))
-            if (t - hs.b) > threshold:
+            b = hs.b
+            if hs.is_open:
+                b = np.nextafter(hs.b, hs.b - 1)
+            if (t - b) > threshold:
                 return False
         return True
 
@@ -360,7 +367,8 @@ class IOPolytopeProperty(Property):
                 return new_op
 
         prefix_transformer = PrefixTransformer(
-            self.input_constraint.lower_bounds, self.input_constraint.upper_bounds,
+            self.input_constraint.lower_bounds,
+            self.input_constraint.upper_bounds,
         )
         prefixed_op_graph = OperationGraph(suffixed_op_graph.walk(prefix_transformer))
         return (

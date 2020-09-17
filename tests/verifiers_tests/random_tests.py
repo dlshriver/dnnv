@@ -12,6 +12,7 @@ from dnnv.verifiers.eran import ERAN
 from dnnv.verifiers.marabou import Marabou
 from dnnv.verifiers.mipverify import MIPVerify
 from dnnv.verifiers.neurify import Neurify
+from dnnv.verifiers.nnenum import Nnenum
 from dnnv.verifiers.planet import Planet
 from dnnv.verifiers.reluplex import Reluplex
 from dnnv.verifiers.verinet import VeriNet
@@ -26,6 +27,7 @@ VERIFIERS = {
     "marabou": Marabou,
     "mipverify": MIPVerify,
     "neurify": Neurify,
+    "nnenum": Nnenum,
     "planet": Planet,
     "reluplex": Reluplex,
     "verinet": VeriNet,
@@ -120,7 +122,11 @@ class RandomTests(unittest.TestCase):
 
     def test_random_conv_0(self):
         os.environ["OUTPUT_LAYER"] = "-1"
-        excluded_verifiers = {"reluplex", "marabou"}
+        excluded_verifiers = {
+            "reluplex",
+            "marabou",
+            "nnenum",
+        }  # TODO: remove nnenum after implementing convs in onnx converter
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
             for i in range(RUNS_PER_PROP):
@@ -140,7 +146,11 @@ class RandomTests(unittest.TestCase):
 
     def test_random_conv_1(self):
         os.environ["OUTPUT_LAYER"] = "-1"
-        excluded_verifiers = {"reluplex", "marabou"}
+        excluded_verifiers = {
+            "reluplex",
+            "marabou",
+            "nnenum",
+        }  # TODO: remove nnenum after implementing convs in onnx converter
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
             for i in range(RUNS_PER_PROP):
@@ -163,7 +173,11 @@ class RandomTests(unittest.TestCase):
 
     def test_random_conv_2(self):
         os.environ["OUTPUT_LAYER"] = "-1"
-        excluded_verifiers = {"reluplex", "marabou"}
+        excluded_verifiers = {
+            "reluplex",
+            "marabou",
+            "nnenum",
+        }  # TODO: remove nnenum after implementing convs in onnx converter
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
             for i in range(RUNS_PER_PROP):

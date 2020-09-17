@@ -3,6 +3,7 @@ import os
 import tempfile
 
 from abc import ABC, abstractmethod
+from contextlib import contextmanager
 from functools import partial
 from typing import Any, Dict, Generator, List, Optional, Tuple, Type, Union
 
@@ -50,7 +51,7 @@ class Verifier(ABC):
         self.logger = logging.getLogger(
             f"{type(self).__module__}.{type(self).__qualname__}"
         )
-        self.property = dnn_property
+        self.property = dnn_property.propagate_constants()
         for key, value in kwargs.items():
             if key not in self.__class__.parameters:
                 raise self.verifier_error(f"Unknown parameter: {key}")
@@ -68,15 +69,20 @@ class Verifier(ABC):
                 return True
         return False
 
+    @contextmanager
+    def contextmanager(self):
+        yield
+
     @classmethod
     def verify(cls, phi: Expression, **kwargs) -> PropertyCheckResult:
         return cls(phi, **kwargs).run()
 
     def check(self, prop: Property) -> Tuple[PropertyCheckResult, Optional[Any]]:
-        executor_inputs = self.build_inputs(prop)
-        results = self.executor(
-            *executor_inputs, verifier_error=self.verifier_error
-        ).run()
+        with self.contextmanager():
+            executor_inputs = self.build_inputs(prop)
+            results = self.executor(
+                *executor_inputs, verifier_error=self.verifier_error
+            ).run()
         return self.parse_results(prop, results)
 
     def reduce_property(self) -> Generator[Property, None, None]:
@@ -86,6 +92,11 @@ class Verifier(ABC):
             yield subproperty
 
     def run(self) -> PropertyCheckResult:
+        if self.property.is_concrete:
+            if self.property.value == True:
+                return UNSAT
+            else:
+                return SAT
         orig_tempdir = tempfile.tempdir
         try:
             with tempfile.TemporaryDirectory() as tempdir:

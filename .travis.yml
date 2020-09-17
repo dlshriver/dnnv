@@ -5,16 +5,16 @@ dist: focal
 services:
   - docker
 
-cache:
-  directories:
-    - docker_images
+# cache:
+#   directories:
+#     - docker_images
 
-before_cache:
-  - docker rmi $(docker images --filter "dangling=true" -q)
-  - docker save $(docker images -a -q) | gzip -3 > docker_images/images.tar.gz
+# before_cache:
+#   - docker rmi $(docker images --filter "dangling=true" -q)
+#   - docker save $(docker images -a -q) | gzip -3 > docker_images/images.tar.gz
 
-before_install:
-  - docker load -i docker_images/images.tar.gz || true
+# before_install:
+#   - docker load -i docker_images/images.tar.gz || true
 
 install:
   - docker build -t dlshriver/dnnv .
