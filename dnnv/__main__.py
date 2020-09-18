@@ -52,7 +52,7 @@ def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
             result = f"{type(e).__name__}({e})"
             logger.debug("Verifier Error traceback:", exc_info=True)
         end_t = time.time()
-        print(f"{verifier.__name__}")
+        print(f"{verifier.__module__}")
         print(f"  result: {result}")
         print(f"  time: {(end_t - start_t):.4f}")
 

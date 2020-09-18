@@ -108,10 +108,11 @@ def parse_args():
     from ..utils import get_subclasses
 
     for verifier in sorted(
-        get_subclasses(verifiers.Verifier), key=lambda v: v.__name__.lower()
+        get_subclasses(verifiers.Verifier),
+        key=lambda v: v.__module__.split(".")[-1],
     ):
         if verifier.is_installed():
-            vname = verifier.__name__.lower()
+            vname = verifier.__module__.split(".")[-1]
             verifier_group.add_argument(
                 f"--{vname}",
                 dest="verifiers",
