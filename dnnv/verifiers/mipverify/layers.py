@@ -37,5 +37,15 @@ class MaxPoolLayer(_MIPVerifyLayerBase):
             )
         return cls(op.kernel_shape, op.strides, op.pads)
 
+    def as_julia(self, name, shape, translator_error=MIPVerifyTranslatorError):
+        if any(p != 0 for p in self.pads):
+            raise translator_error("Padded max pooling is not supported.")
+        if any(k != s for k, s in zip(self.kernel_shape, self.strides)):
+            raise translator_error("Max pool stride must be equal to kernel size.")
+        s_h, s_w = self.strides
+        shape[1] = shape[1] // s_h
+        shape[2] = shape[2] // s_w
+        yield f"{name} = MaxPool((1, {s_h}, {s_w}, 1))"
+
 
 MIPVERIFY_LAYER_TYPES = [MaxPoolLayer]

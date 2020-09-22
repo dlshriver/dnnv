@@ -5,6 +5,8 @@ import torch.onnx
 from contextlib import contextmanager
 from typing import Any, Dict, List, Optional
 
+from dnnv.nn import operations
+from dnnv.nn.visitors import EnsureSupportVisitor
 from dnnv.verifiers.common.base import Parameter, Verifier
 from dnnv.verifiers.common.results import SAT, UNSAT, UNKNOWN
 
@@ -30,6 +32,24 @@ class VeriNet(Verifier):
             mode="w+", suffix=".onnx", delete=False
         ) as onnx_model_file:
             op_graph = prop.suffixed_op_graph()
+            supported_operations = [
+                operations.Concat,
+                operations.Conv,
+                operations.Flatten,
+                operations.Gather,
+                operations.Gemm,
+                operations.Input,
+                operations.Relu,
+                operations.Reshape,
+                operations.Shape,
+                operations.Sigmoid,
+                operations.Tanh,
+                operations.Transpose,
+                operations.Unsqueeze,
+            ]
+            op_graph.walk(
+                EnsureSupportVisitor(supported_operations, self.translator_error)
+            )
             op_graph.output_operations[0].b = np.hstack(
                 [
                     op_graph.output_operations[0].b,
