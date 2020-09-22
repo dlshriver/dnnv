@@ -244,6 +244,29 @@ class PytorchConverter(OperationVisitor):
 
         return PytorchOperation(opname, None, [], [opname])
 
+    def visit_MaxPool(self, operation: operations.MaxPool) -> PytorchOperation:
+        opname = self._get_name(operation)
+
+        x = operation.x
+        if isinstance(x, Operation):
+            x = self.visit(x)
+
+        assert (
+            operation.storage_order == operations.MaxPool.ROW_MAJOR_STORAGE
+        ), "Only row major storage is currently supported for max pool operations"
+        module: nn.Module = nn.MaxPool2d(
+            tuple(operation.kernel_shape),
+            stride=tuple(operation.strides),
+            ceil_mode=operation.ceil_mode,
+            dilation=tuple(operation.dilations),
+        )
+        if any(p != 0 for p in operation.pads):
+            module = nn.Sequential(nn.ZeroPad2d(operation.pads), module)
+
+        op = PytorchOperation(opname, module, inputs=[x.name], outputs=[opname])
+
+        return op
+
     def visit_Relu(self, operation: operations.Relu) -> PytorchOperation:
         opname = self._get_name(operation)
 

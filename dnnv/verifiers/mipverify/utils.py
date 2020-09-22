@@ -117,8 +117,11 @@ def as_mipverify(
                     f"{layer.activation} activation is currently unsupported"
                 )
         elif hasattr(layer, "as_julia"):
-            for line in layer.as_julia(layers):
+            for line in layer.as_julia(
+                layer_name, shape, translator_error=translator_error
+            ):
                 yield line
+            layer_names.append(layer_name)
         else:
             raise translator_error(f"Unsupported layer type: {type(layer).__name__}")
     yield "nn = Sequential(["

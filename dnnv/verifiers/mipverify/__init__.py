@@ -21,7 +21,11 @@ class MIPVerify(Verifier):
         for path in os.environ["PATH"].split(os.pathsep):
             exe = os.path.join(path, verifier)
             if os.path.isfile(exe) and os.access(exe, os.X_OK):
-                proc = sp.run(["julia", "-e", "using MIPVerify"])
+                proc = sp.run(
+                    ["julia", "-e", "using MIPVerify"],
+                    stdout=sp.DEVNULL,
+                    stderr=sp.DEVNULL,
+                )
                 return proc.returncode == 0
         return False
 

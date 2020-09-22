@@ -134,12 +134,7 @@ class HalfspacePolytope(Constraint):
                 b[ci] = np.nextafter(c.b, c.b - 1)
         obj = np.zeros(n)
         try:
-            result = linprog(
-                obj,
-                A_ub=A,
-                b_ub=b,
-                bounds=(None, None),
-            )
+            result = linprog(obj, A_ub=A, b_ub=b, bounds=(None, None),)
         except ValueError as e:
             if "The problem is (trivially) infeasible" in e.args[0]:
                 return False
@@ -357,8 +352,16 @@ class IOPolytopeProperty(Property):
                     w = w * r.reshape((c, 1, 1, 1))
                     new_op = operations.Conv(operation, w, b)
                     test_op_graph = OperationGraph([new_op])
-                    self.final_lbs.append((self.lbs[self._input_count] - b) / r)
-                    self.final_ubs.append((self.ubs[self._input_count] - b) / r)
+                    tile_shape = list(self.lbs[self._input_count].shape)
+                    tile_shape[1] = 1
+                    tiled_b = np.tile(b.reshape((1, -1, 1, 1)), tile_shape)
+                    tiled_r = np.tile(r.reshape((1, -1, 1, 1)), tile_shape)
+                    self.final_lbs.append(
+                        (self.lbs[self._input_count] - tiled_b) / tiled_r
+                    )
+                    self.final_ubs.append(
+                        (self.ubs[self._input_count] - tiled_b) / tiled_r
+                    )
                 else:
                     raise NotImplementedError(
                         f"Cannot prefix network with input shape {mins.shape}"
@@ -367,8 +370,7 @@ class IOPolytopeProperty(Property):
                 return new_op
 
         prefix_transformer = PrefixTransformer(
-            self.input_constraint.lower_bounds,
-            self.input_constraint.upper_bounds,
+            self.input_constraint.lower_bounds, self.input_constraint.upper_bounds,
         )
         prefixed_op_graph = OperationGraph(suffixed_op_graph.walk(prefix_transformer))
         return (
