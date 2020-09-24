@@ -109,7 +109,6 @@ class Verifier(ABC):
                         self.logger.debug("SAT! Validating counter example.")
                         if cex is not None:
                             self.validate_counter_example(subproperty, cex)
-                    if result == SAT or result == UNKNOWN:
                         break
         finally:
             tempfile.tempdir = orig_tempdir

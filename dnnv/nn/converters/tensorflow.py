@@ -153,16 +153,26 @@ class TensorflowConverter(OperationVisitor):
             variance = operation.variance
             epsilon = operation.epsilon
 
-            x = tf.transpose(x, (0, 2, 3, 1))
-            result = tf.nn.batch_normalization(
-                x,
-                mean=mean,
-                variance=variance,
-                offset=bias,
-                scale=scale,
-                variance_epsilon=epsilon,
-            )
-            result = tf.transpose(result, (0, 3, 1, 2))
+            if len(x.shape) == 4:
+                x = tf.transpose(x, (0, 2, 3, 1))
+                result = tf.nn.batch_normalization(
+                    x,
+                    mean=mean,
+                    variance=variance,
+                    offset=bias,
+                    scale=scale,
+                    variance_epsilon=epsilon,
+                )
+                result = tf.transpose(result, (0, 3, 1, 2))
+            else:
+                result = tf.nn.batch_normalization(
+                    x,
+                    mean=mean,
+                    variance=variance,
+                    offset=bias,
+                    scale=scale,
+                    variance_epsilon=epsilon,
+                )
             return result
 
         return batchnorm_func

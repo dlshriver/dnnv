@@ -132,6 +132,28 @@ class ConvertBatchNorm(Simplifier):
             input_op.w = weights
             input_op.b = bias
             return input_op
+        elif (
+            isinstance(input_op, operations.Gemm)
+            and not self.analysis["is_split"][input_op]
+        ):
+            std = np.sqrt(operation.variance + operation.epsilon)
+            a = operation.scale / std
+            b = operation.bias - operation.scale * operation.mean / std
+
+            if isinstance(input_op.a, np.ndarray):
+                if input_op.transpose_a:
+                    input_op.a = np.diag(a) @ input_op.a
+                else:
+                    input_op.a = input_op.a @ np.diag(a)
+            elif isinstance(input_op.b, np.ndarray):
+                if input_op.transpose_b:
+                    input_op.b = np.diag(a) @ input_op.b
+                else:
+                    input_op.b = input_op.b @ np.diag(a)
+            else:
+                raise NotImplementedError()
+            input_op.c = a * input_op.c + b
+            return input_op
         elif isinstance(input_op, operations.Input):
             c = operation.mean.shape[0]
             std = np.sqrt(operation.variance + operation.epsilon)
