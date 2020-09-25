@@ -16,6 +16,9 @@ class Nnenum(Verifier):
     EXE = "nnenum.py"
     translator_error = NnenumTranslatorError
     verifier_error = NnenumError
+    parameters = {
+        "num_processes": Parameter(int, help="Maximum number of processes to use."),
+    }
 
     @contextmanager
     def contextmanager(self):
@@ -71,6 +74,12 @@ class Nnenum(Verifier):
             "-o",
             self._tmp_output_file.name,
         )
+        if (
+            "num_processes" in self.parameters
+            and self.parameters["num_processes"] is not None
+        ):
+            value = self.parameters["num_processes"]
+            args += (f"--num_processes={value}",)
         return args
 
     def parse_results(self, prop, results):
