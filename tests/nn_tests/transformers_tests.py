@@ -9,6 +9,29 @@ from ..utils import network_artifact_dir as artifact_dir
 THRESHOLD = 1e-6
 
 
+class AssertCloseMixin:
+    def assert_close(
+        self,
+        model1,
+        model2,
+        threshold=THRESHOLD,
+        input_shape=(1, 3, 224, 224),
+        loc=0.0,
+        scale=1.0,
+    ):
+        for i in range(5):
+            tf.compat.v1.reset_default_graph()
+            x = np.random.normal(loc=loc, scale=scale, size=input_shape).astype(
+                np.float32
+            )
+            y_1 = model1(x)
+            y_2 = model2(x)
+            self.assertTrue(
+                (np.abs(y_1 - y_2) < threshold).all(),
+                f"{np.abs(y_1 - y_2).max()} >= {threshold}",
+            )
+
+
 class DropPrefixTests(unittest.TestCase):
     def test_sum_gt_one(self):
         op_graph = parse(artifact_dir / "sum_gt_one.onnx")
@@ -57,28 +80,7 @@ class DropPrefixTests(unittest.TestCase):
         self.assertTrue(np.all(~(a_gt_b ^ y_0_gt_1)))
 
 
-class SimplifyTests(unittest.TestCase):
-    def assert_close(
-        self,
-        model1,
-        model2,
-        threshold=THRESHOLD,
-        input_shape=(1, 3, 224, 224),
-        loc=0.0,
-        scale=1.0,
-    ):
-        for i in range(5):
-            tf.compat.v1.reset_default_graph()
-            x = np.random.normal(loc=loc, scale=scale, size=input_shape).astype(
-                np.float32
-            )
-            y_1 = model1(x)
-            y_2 = model2(x)
-            self.assertTrue(
-                (np.abs(y_1 - y_2) < threshold).all(),
-                f"{np.abs(y_1 - y_2).max()} >= {threshold}",
-            )
-
+class SimplifyTests(AssertCloseMixin, unittest.TestCase):
     def test_a_gt_b(self):
         op_graph = parse(artifact_dir / "a_gt_b.onnx")
         simplified_op_graph = op_graph[:].simplify()
@@ -115,6 +117,8 @@ class SimplifyTests(unittest.TestCase):
         simplified_op_graph = op_graph.simplify()
         self.assert_close(op_graph, simplified_op_graph)
 
+
+class SimplifierTests(AssertCloseMixin, unittest.TestCase):
     def test_SqueezeConvs_1(self):
         from dnnv.nn.transformers.simplifiers import SqueezeConvs
 
@@ -227,21 +231,85 @@ class SimplifyTests(unittest.TestCase):
         )
         self.assert_close(op_graph, simplified_op_graph, input_shape=(1, 3, 3, 3))
 
+    def test_ConvertBatchNorm_1(self):
+        from dnnv.nn.transformers.simplifiers import ConvertBatchNorm
 
-class SlicerTests(unittest.TestCase):
-    def assert_close(
-        self, model1, model2, threshold=THRESHOLD, input_shape=(1, 3, 224, 224)
-    ):
-        for i in range(5):
-            tf.compat.v1.reset_default_graph()
-            x = np.random.normal(size=input_shape).astype(np.float32)
-            y_1 = model1(x)
-            y_2 = model2(x)
-            self.assertTrue(
-                (np.abs(y_1 - y_2) < threshold).all(),
-                f"{np.abs(y_1 - y_2).max()} >= {threshold}",
-            )
+        input_op = operations.Input((1, 3, 3, 3), np.float32)
+        w = np.zeros((3, 3, 1, 1))
+        for i in range(3):
+            w[i, i] = 1
+        b = np.array([0.1, 0.5, 1.0])
+        conv_op1 = operations.Conv(input_op, w, b)
+        scale = np.random.randn(3)
+        bias = np.random.randn(3)
+        mean = np.random.randn(3)
+        variance = np.random.random()
+        bn_op1 = operations.BatchNormalization(conv_op1, scale, bias, mean, variance)
 
+        op_graph = OperationGraph([bn_op1])
+        op_graph_copy = op_graph[:]
+        simplified_op_graph = OperationGraph(
+            op_graph_copy.walk(ConvertBatchNorm(op_graph_copy))
+        )
+        self.assertNotEqual(
+            type(op_graph.output_operations[0]),
+            type(simplified_op_graph.output_operations[0]),
+        )
+        self.assert_close(
+            op_graph,
+            simplified_op_graph,
+            input_shape=(1, 3, 3, 3),
+            threshold=10 * THRESHOLD,
+        )
+
+    def test_ConvertBatchNorm_2(self):
+        from dnnv.nn.transformers.simplifiers import ConvertBatchNorm
+
+        input_op = operations.Input((1, 10), np.float32)
+        w = np.random.random(size=(10, 20))
+        b = np.random.random(size=(20,))
+        gemm_op1 = operations.Gemm(input_op, w, b)
+        scale = np.random.randn(20)
+        bias = np.random.randn(20)
+        mean = np.random.randn(20)
+        variance = np.random.random()
+        bn_op1 = operations.BatchNormalization(gemm_op1, scale, bias, mean, variance)
+
+        op_graph = OperationGraph([bn_op1])
+        op_graph_copy = op_graph[:]
+        simplified_op_graph = OperationGraph(
+            op_graph_copy.walk(ConvertBatchNorm(op_graph_copy))
+        )
+        self.assertNotEqual(
+            type(op_graph.output_operations[0]),
+            type(simplified_op_graph.output_operations[0]),
+        )
+        self.assert_close(
+            op_graph, simplified_op_graph, input_shape=(1, 10), threshold=10 * THRESHOLD
+        )
+
+        gemm_op1 = operations.Gemm(input_op, w.T, b, transpose_b=True)
+        scale = np.random.randn(20)
+        bias = np.random.randn(20)
+        mean = np.random.randn(20)
+        variance = np.random.random()
+        bn_op1 = operations.BatchNormalization(gemm_op1, scale, bias, mean, variance)
+
+        op_graph = OperationGraph([bn_op1])
+        op_graph_copy = op_graph[:]
+        simplified_op_graph = OperationGraph(
+            op_graph_copy.walk(ConvertBatchNorm(op_graph_copy))
+        )
+        self.assertNotEqual(
+            type(op_graph.output_operations[0]),
+            type(simplified_op_graph.output_operations[0]),
+        )
+        self.assert_close(
+            op_graph, simplified_op_graph, input_shape=(1, 10), threshold=10 * THRESHOLD
+        )
+
+
+class SlicerTests(AssertCloseMixin, unittest.TestCase):
     def assert_composition_equals(
         self, model, slices, threshold=THRESHOLD, input_shape=(1, 3, 224, 224)
     ):
