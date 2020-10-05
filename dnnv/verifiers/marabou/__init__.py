@@ -1,49 +1,59 @@
 import numpy as np
+import tempfile
 
 from dnnv.verifiers.common.base import Parameter, Verifier
 from dnnv.verifiers.common.results import SAT, UNSAT, UNKNOWN
-from dnnv.verifiers.common.utils import as_layers
-from dnnv.verifiers.reluplex.utils import to_nnet_file
 
 from .errors import MarabouError, MarabouTranslatorError
-from .utils import get_marabou_properties
 
 class Marabou(Verifier):
+    EXE = "marabou.py"
     translator_error = MarabouTranslatorError
     verifier_error = MarabouError
 
     def build_inputs(self, prop):
         if prop.input_constraint.num_variables > 1:
-            raise MarabouTranslatorError(
+            raise self.translator_error(
                 "Unsupported network: More than 1 input variable"
             )
-        layers = as_layers(
-            prop.suffixed_op_graph(),
-            translator_error=self.translator_error,
+
+        with tempfile.NamedTemporaryFile(
+            mode="w+", suffix=".onnx", delete=False
+        ) as onnx_model_file:
+            # prop.suffixed_op_graph().export_onnx(onnx_model_file.name)
+            prop.op_graph.export_onnx(onnx_model_file.name)
+
+        lb = prop.input_constraint.lower_bounds[0].copy()
+        ub = prop.input_constraint.upper_bounds[0].copy()
+
+        with tempfile.NamedTemporaryFile(
+            mode="w+", suffix=".npy", delete=False
+        ) as constraint_file:
+            A, b = prop.output_constraint.as_matrix_inequality()
+            np.save(
+                constraint_file.name,
+                (lb, ub, A, b)
+            )
+
+        with tempfile.NamedTemporaryFile(
+            mode="w+", suffix=".npy", delete=False
+        ) as output_file:
+            self._tmp_output_file = output_file
+        args = (
+            "marabou.py",
+            onnx_model_file.name,
+            constraint_file.name,
+            "-o",
+            self._tmp_output_file.name,
         )
-        nnet_file_name = to_nnet_file(
-            prop.input_constraint,
-            layers,
-            # dirname=dirname,
-            translator_error=self.translator_error,
-        )
-        properties = get_marabou_properties()
-        return "marabou", nnet_file_name, properties
+        return args
 
     def parse_results(self, prop, results):
-        stdout, stderr = results
-        for line in stdout:
-            if line.startswith("sat"):
-                shape, dtype = prop.op_graph.input_details[0]
-                cex = np.zeros(np.product(shape), dtype)
-                found = False
-                for line in stdout:
-                    if found and line.startswith("x"):
-                        index = int(line.split("x")[1].split(" =")[0])
-                        cex[index] = float(line.split(" = ")[1])
-                    if line.startswith("sat"):
-                        found = True
-                return SAT, cex.reshape(shape)
-            elif line.startswith("unsat"):
-                return UNSAT, None
-        raise self.verifier_error(f"No verification result found")
+        result_str, cinput = np.load(self._tmp_output_file.name, allow_pickle=True)
+        if result_str == False:
+            return UNSAT, None
+        elif result_str == True:
+            input_shape, input_dtype = prop.op_graph.input_details[0]
+            cex = cinput.reshape(input_shape).astype(input_dtype)
+            return SAT, cex
+        raise self.translator_error(f"Unknown verification result: {result_str}")
