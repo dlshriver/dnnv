@@ -102,7 +102,7 @@ class HalfspacePolytope(Constraint):
         super().__init__(variable)
         self.halfspaces: List[Halfspace] = []
 
-    def as_matrix_inequality(self):
+    def as_matrix_inequality(self, b_step=None):
         k = len(self.halfspaces)
         n = self.size()
         A = np.zeros((k, n))
@@ -112,7 +112,10 @@ class HalfspacePolytope(Constraint):
                 A[ci, i] = a
             b[ci] = c.b
             if c.is_open:
-                b[ci] = np.nextafter(c.b, c.b - 1)
+                if b_step is None:
+                    b[ci] = np.nextafter(c.b, c.b - 1)
+                else:
+                    b[ci] = c.b - b_step
         return A, b
 
     @property
@@ -160,7 +163,7 @@ class HalfspacePolytope(Constraint):
             t = sum(c * x_flat[i] for c, i in zip(hs.coefficients, hs.indices))
             b = hs.b
             if hs.is_open:
-                b = np.nextafter(hs.b, hs.b - 1)
+                b = np.nextafter(b, b - 1)
             if (t - b) > threshold:
                 return False
         return True

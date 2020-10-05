@@ -47,21 +47,16 @@ class Nnenum(Verifier):
         with tempfile.NamedTemporaryFile(
             mode="w+", suffix=".onnx", delete=False
         ) as onnx_model_file:
-            # prop.suffixed_op_graph().export_onnx(onnx_model_file.name)
             prop.op_graph.export_onnx(onnx_model_file.name)
 
-        lb = prop.input_constraint.lower_bounds[0].flatten().copy()
-        ub = prop.input_constraint.upper_bounds[0].flatten().copy()
+        lb = prop.input_constraint.lower_bounds[0].copy()
+        ub = prop.input_constraint.upper_bounds[0].copy()
 
         with tempfile.NamedTemporaryFile(
             mode="w+", suffix=".npy", delete=False
         ) as constraint_file:
-            init_box = np.array(list(zip(lb, ub)), dtype=np.float32)
             A, b = prop.output_constraint.as_matrix_inequality()
-            np.save(
-                constraint_file.name,
-                (init_box, A, b),
-            )
+            np.save(constraint_file.name, (lb, ub, (A, b)))
 
         with tempfile.NamedTemporaryFile(
             mode="w+", suffix=".npy", delete=False
@@ -83,11 +78,9 @@ class Nnenum(Verifier):
         return args
 
     def parse_results(self, prop, results):
-        result_str, cinput = np.load(self._tmp_output_file.name, allow_pickle=True)
+        result_str, cex = np.load(self._tmp_output_file.name, allow_pickle=True)
         if result_str == "safe":
             return UNSAT, None
         elif result_str == "unsafe":
-            input_shape, input_dtype = prop.op_graph.input_details[0]
-            cex = cinput.reshape(input_shape).astype(input_dtype)
             return SAT, cex
         raise self.translator_error(f"Unknown verification result: {result_str}")

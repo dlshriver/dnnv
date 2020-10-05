@@ -9,6 +9,7 @@ ensure_cmake
 
 cd $PROJECT_DIR/bin
 git clone https://github.com/NeuralNetworkVerification/Marabou
+git checkout 8bea650
 cd Marabou
 mkdir build 
 cd build
@@ -16,4 +17,4 @@ cmake ..
 cmake --build .
 cp Marabou $PROJECT_DIR/bin/marabou
 
-cp $PROJECT_DIR/tools/verifier_runners/marabou.py $PROJECT_DIR/bin/Marabou.py
+cp $PROJECT_DIR/tools/verifier_runners/marabou.py $PROJECT_DIR/bin/marabou.py

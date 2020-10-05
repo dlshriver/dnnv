@@ -38,11 +38,7 @@ class OnnxConverter(OperationVisitor):
 
         nodes = [n for n in self.visited.values() if isinstance(n, onnx.NodeProto)]
         graph_def = onnx.helper.make_graph(
-            nodes,
-            name,
-            self.inputs,
-            self.outputs,
-            initializer=self.initializer,
+            nodes, name, self.inputs, self.outputs, initializer=self.initializer,
         )
         model_def = onnx.helper.make_model(graph_def, producer_name="dnnv")
         model_def = onnx.shape_inference.infer_shapes(model_def)
@@ -73,6 +69,62 @@ class OnnxConverter(OperationVisitor):
             self.initializer.append(tensor_proto)
             return tensor_proto
         raise ValueError(f"Unknown type for operand of {opname}: {type(value)}")
+
+    def visit_Conv(self, operation: operations.Conv) -> onnx.NodeProto:
+        idx = self.op_counts["Conv"] = self.op_counts["Conv"] + 1
+        opname = f"Conv_{idx}"
+
+        x = self._to_onnx_proto(operation.x, f"{opname}.x")
+        w = self._to_onnx_proto(operation.w, f"{opname}.w")
+        b = self._to_onnx_proto(operation.b, f"{opname}.b")
+
+        node = onnx.helper.make_node(
+            "Conv",
+            inputs=[x.name, w.name, b.name],
+            outputs=[opname],
+            kernel_shape=list(operation.kernel_shape),
+            strides=list(operation.strides),
+            dilations=list(operation.dilations),
+            group=operation.group,
+            pads=list(operation.pads),
+            name=opname,
+        )
+
+        return node
+
+    def visit_Concat(self, operation: operations.Concat) -> onnx.NodeProto:
+        idx = self.op_counts["Concat"] = self.op_counts["Concat"] + 1
+        opname = f"Concat_{idx}"
+
+        inputs = [
+            self._to_onnx_proto(x, f"{opname}.x{i}") for i, x in enumerate(operation.x)
+        ]
+
+        node = onnx.helper.make_node(
+            "Concat",
+            inputs=[x.name for x in inputs],
+            outputs=[opname],
+            axis=operation.axis,
+            name=opname,
+        )
+
+        return node
+
+    def visit_Flatten(self, operation: operations.Flatten) -> onnx.NodeProto:
+        idx = self.op_counts["Flatten"] = self.op_counts["Flatten"] + 1
+        opname = f"Flatten_{idx}"
+
+        x = self._to_onnx_proto(operation.x, f"{opname}.x")
+
+        node = onnx.helper.make_node(
+            "Flatten",
+            inputs=[x.name],
+            outputs=[opname],
+            axis=operation.axis,
+            name=opname,
+        )
+
+        return node
 
     def visit_Gemm(self, operation: operations.Gemm) -> onnx.NodeProto:
         idx = self.op_counts["Gemm"] = self.op_counts["Gemm"] + 1
@@ -129,23 +181,7 @@ class OnnxConverter(OperationVisitor):
         shape = self._to_onnx_proto(operation.shape, f"{opname}.shape")
 
         node = onnx.helper.make_node(
-            "Reshape", inputs=[x.name, shape.name], 
-            outputs=[opname], 
-            name=opname
-        )
-
-        return node
-
-    def visit_Flatten(self, operation: operations.Flatten) -> onnx.NodeProto:
-        idx = self.op_counts["Flatten"] = self.op_counts["Flatten"] + 1
-        opname = f"Flatten_{idx}"
-
-        x = self._to_onnx_proto(operation.x, f"{opname}.x")
-
-        node = onnx.helper.make_node(
-            "Flatten", inputs=[x.name], 
-            outputs=[opname], 
-            name=opname
+            "Reshape", inputs=[x.name, shape.name], outputs=[opname], name=opname
         )
 
         return node
@@ -155,35 +191,13 @@ class OnnxConverter(OperationVisitor):
         opname = f"Transpose_{idx}"
 
         x = self._to_onnx_proto(operation.x, f"{opname}.x")
-        
-        node = onnx.helper.make_node(
-            "Transpose", 
-            inputs=[x.name], 
-            outputs=[opname], 
-            name=opname,
-            perm=list(operation.permutation)
-        )
-
-        return node
-
-    def visit_Conv(self, operation: operations.Conv) -> onnx.NodeProto:
-        idx = self.op_counts["Conv"] = self.op_counts["Conv"] + 1
-        opname = f"Conv_{idx}"
-
-        x = self._to_onnx_proto(operation.x, f"{opname}.x")
-        w = self._to_onnx_proto(operation.w, f"{opname}.w")
-        b = self._to_onnx_proto(operation.b, f"{opname}.b")
 
         node = onnx.helper.make_node(
-            'Conv',
-            inputs=[x.name, w.name, b.name],
+            "Transpose",
+            inputs=[x.name],
             outputs=[opname],
-            kernel_shape=list(operation.kernel_shape),
-            strides=list(operation.strides),
-            dilations=list(operation.dilations),
-            group=operation.group,
-            pads=list(operation.pads),
-            name=opname
+            name=opname,
+            perm=list(operation.permutation),
         )
 
         return node

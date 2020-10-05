@@ -24,7 +24,7 @@ def parse_args():
 
 def main(args):
 
-    lb, ub, A, b = np.load(args.constraints, allow_pickle=True)
+    lb, ub, (A, b) = np.load(args.constraints, allow_pickle=True)
     network = Marabou.read_onnx(args.model)
 
     inputVars = network.inputVars[0]
@@ -40,15 +40,17 @@ def main(args):
     result = network.solve()
 
     if args.output is not None:
-        result_str = bool(result[0])
-        cex = np.array(list(result[0].values())[:len(inputVars)]) if result is not None else None
-        print(cex)
+        is_unsafe = bool(result[0])
+        print("UNSAFE" if is_unsafe else "SAFE")
+        cex = None
+        if is_unsafe:
+            cex = np.zeros_like(lb)
+            for flat_index, multi_index in enumerate(np.ndindex(cex.shape)):
+                cex[multi_index] = result[0][flat_index]
+            print(cex)
         np.save(
-            args.output,
-            (result_str, cex),
+            args.output, (is_unsafe, cex),
         )
-
-    print(result.result_str)
 
     return
 

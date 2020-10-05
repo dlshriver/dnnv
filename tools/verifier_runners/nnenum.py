@@ -30,21 +30,25 @@ def main(args):
     Settings.PRINT_PROGRESS = False
     Settings.NUM_PROCESSES = args.num_processes
 
-    init_box, A, b = np.load(args.constraints, allow_pickle=True)
+    lb, ub, (A, b) = np.load(args.constraints, allow_pickle=True)
     network = load_onnx_network(args.model)
 
+    init_box = np.array(list(zip(lb.flatten("F"), ub.flatten("F"))), dtype=np.float32)
     spec = Specification(A, b)
 
     result = enumerate_network(init_box, network, spec)
 
-    if args.output is not None:
-        cex = np.array(list(result.cinput)) if result.cinput is not None else None
-        np.save(
-            args.output,
-            (result.result_str, cex),
-        )
-
     print(result.result_str)
+    if args.output is not None:
+        cex = None
+        if result.cinput is not None:
+            cex = (
+                np.array(list(result.cinput))
+                .astype(np.float32)
+                .reshape(network.get_input_shape(), order="F")
+            )
+            print(cex)
+        np.save(args.output, (result.result_str, cex))
 
     return
 
