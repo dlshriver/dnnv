@@ -15,3 +15,5 @@ cd build
 cmake ..
 cmake --build .
 cp Marabou $PROJECT_DIR/bin/marabou
+
+cp $PROJECT_DIR/tools/verifier_runners/marabou.py $PROJECT_DIR/bin/Marabou.py
