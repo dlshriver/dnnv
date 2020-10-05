@@ -39,7 +39,6 @@ class Marabou(Verifier):
             mode="w+", suffix=".npy", delete=False
         ) as output_file:
             self._tmp_output_file = output_file
-            print(onnx_model_file.name)
         args = (
             "marabou.py",
             onnx_model_file.name,
