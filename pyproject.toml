@@ -16,16 +16,13 @@ requires = [
     "tensorflow >=1.15,<2.3",
     "keras >=2.3,<2.4",
     "simpleparse >=2.2,<2.3",
+    "torch >=1.5,<1.7",
+    "torchvision >=0.6,<0.8"
 ]
 requires-python = ">=3.7"
 
 [tool.flit.metadata.requires-extra]
-test = [
-    "toml >=0.10,<0.11",
-    "coverage >=5.0,<5.3",
-    "torch >=1.5,<1.7",
-    "torchvision >=0.6,<0.8"
-]
+test = ["toml >=0.10,<0.11", "coverage >=5.0,<5.3"]
 doc = ["sphinx"]
 dev = ["black", "mypy"]
 
