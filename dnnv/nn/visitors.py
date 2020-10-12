@@ -139,7 +139,15 @@ class PrintVisitor(OperationVisitor):
     def visit_Conv(self, operation: operations.Conv) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print("Conv(%s)" % self.get_op_id(operation.x))
+        print(
+            "Conv(%s, kernel_shape=%s, strides=%s, pads=%s)"
+            % (
+                self.get_op_id(operation.x),
+                operation.kernel_shape,
+                operation.strides,
+                operation.pads,
+            )
+        )
 
     def visit_Dropout(self, operation: operations.Dropout) -> None:
         self.generic_visit(operation)
