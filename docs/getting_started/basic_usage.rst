@@ -15,30 +15,73 @@ option will list the available options:
 .. code-block:: console
 
   $ python -m dnnv -h
-  usage: dnnv [-h] [-V] [--seed SEED] [-v | -q] [--eran] [--mipverify]
-              [--neurify] [--planet] [--reluplex]
-              network property
+  usage: dnnv [-h] [-V] [--seed SEED] [-v | -q] [-N NAME NETWORK] [--vnnlib]
+            [--bab] [--bab.reluify_maxpools RELUIFY_MAXPOOLS]
+            [--bab.smart_branching SMART_BRANCHING] [--eran]
+            [--eran.domain {deepzono,deeppoly,refinezono,refinepoly}]
+            [--eran.timeout_lp TIMEOUT_LP] [--eran.timeout_milp TIMEOUT_MILP]
+            [--eran.use_area_heuristic USE_AREA_HEURISTIC] [--marabou]
+            [--mipverify] [--neurify] [--neurify.max_depth MAX_DEPTH]
+            [--neurify.max_thread MAX_THREAD] [--nnenum]
+            [--nnenum.num_processes NUM_PROCESSES] [--planet] [--reluplex]
+            [--verinet] [--verinet.max_proc MAX_PROC]
+            [--verinet.no_split NO_SPLIT]
+            property
 
   dnnv - deep neural network verification
 
   positional arguments:
-    network
     property
 
   optional arguments:
-    -h, --help     show this help message and exit
-    -V, --version  show program's version number and exit
-    --seed SEED    the random seed to use
-    -v, --verbose  show messages with finer-grained information
-    -q, --quiet    suppress non-essential messages
+    -h, --help            show this help message and exit
+    -V, --version         show program's version number and exit
+    --seed SEED           the random seed to use
+    -v, --verbose         show messages with finer-grained information
+    -q, --quiet           suppress non-essential messages
+    -N, --network NAME NETWORK
+    --vnnlib              use the vnnlib property format
 
   verifiers:
+    --bab
     --eran
+    --marabou
     --mipverify
     --neurify
+    --nnenum
     --planet
     --reluplex
-    --marabou
+    --verinet
+
+  bab parameters:
+    --bab.reluify_maxpools RELUIFY_MAXPOOLS
+    --bab.smart_branching SMART_BRANCHING
+
+  eran parameters:
+    --eran.domain {deepzono,deeppoly,refinezono,refinepoly}
+                          The abstract domain to use.
+    --eran.timeout_lp TIMEOUT_LP
+                          Time limit for the LP solver.
+    --eran.timeout_milp TIMEOUT_MILP
+                          Time limit for the MILP solver.
+    --eran.use_area_heuristic USE_AREA_HEURISTIC
+                          Whether or not to use the ERAN area heuristic.
+
+  neurify parameters:
+    --neurify.max_depth MAX_DEPTH
+                          Maximum search depth for neurify.
+    --neurify.max_thread MAX_THREAD
+                          Maximum number of threads to use.
+
+  nnenum parameters:
+    --nnenum.num_processes NUM_PROCESSES
+                          Maximum number of processes to use.
+
+  verinet parameters:
+    --verinet.max_proc MAX_PROC
+                          Maximum number of processes to use.
+    --verinet.no_split NO_SPLIT
+                          Whether or not to do splitting.
 
 DNNV requires a network and property be specified, and accepts
 an optional list of verifiers to be run to check the network and
@@ -66,7 +109,7 @@ and are converted to the ONNX and property DSL formats required by DNNV.
 To check a property for a network, using the `ERAN`_ verifier, DNNV
 can be run as::
 
-  python -m dnnv --eran onnx/pyt/ffnnRELU__Point_6_500.onnx properties/pyt_property_7.py
+  python -m dnnv --eran properties/pyt_property_7.py --network N onnx/pyt/ffnnRELU__Point_6_500.onnx
 
 This will check whether ``pyt_property_7``---a local robustness
 property---holds for the network ``ffnnRELU__Point_6_500.onnx``---a 6 layer,

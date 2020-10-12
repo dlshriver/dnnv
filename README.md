@@ -62,13 +62,13 @@ Forall(
 To check whether property holds for some network using the ERAN verifier, run:
 
 ```bash
-$ python -m dnnv network.onnx property.prop --eran
+$ python -m dnnv property.prop --network N network.onnx --eran
 ```
 
 Additionally, if the property defines parameters, using the `Parameter` keyword, they can be specified on the command line using the option `--prop.PARAMETER_NAME`, where `PARAMETER_NAME` is the name of the parameter. For the property defined above, a value for `epsilon` can be provided with a command line option as follows:
 
 ```bash
-$ python -m dnnv network.onnx property.prop --eran --prop.epsilon=2.0
+$ python -m dnnv property.prop --network network.onnx --eran --prop.epsilon=2.0
 ```
 
 A set of example networks and properties that can be run with DNNV are available [here](http://cs.virginia.edu/~dls2fc/eranmnist_benchmark.tar.gz).

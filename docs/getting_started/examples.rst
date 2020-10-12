@@ -74,30 +74,18 @@ network input, ``x``.
 
   from dnnv.properties import *
   import numpy as np
-
-  # Setup Input Bounds
-  x_mean = np.array([[19791.091, 0.0, 0.0, 650.0, 600.0]])
-  x_range = np.array([[60261.0, 6.283, 6.283, 1100.0, 1200.0]])
-
-  x_min = np.array([[12000, 0.7, -3.141592, 100, 0]])
-  x_max = np.array([[62000, 3.141592, -3.136592, 1200, 1200]])
-  x_min_1 = (x_min - x_mean) / x_range
-  x_max_1 = (x_max - x_mean) / x_range
-
-  x_min = np.array([[12000, -3.141592, -3.141592, 100, 0]])
-  x_max = np.array([[62000, -0.7, -3.136592, 1200, 1200]])
-  x_min_2 = (x_min - x_mean) / x_range
-  x_max_2 = (x_max - x_mean) / x_range
-
-  # Specify Property
-  N = Network("ACAS")
+  
+  N = Network("N")
+  # x: $\rho$, $\theta$, $\psi$, $v_{own}$, $v_{int}$
+  x_min = np.array([[1500.0, -0.06, 3.10, 980.0, 960.0]])
+  x_max = np.array([[1800.0, 0.06, 3.141593, 1200.0, 1200.0]])
+  
+  x_mean = np.array([[1.9791091e04, 0.0, 0.0, 650.0, 600.0]])
+  x_range = np.array([[60261.0, 6.28318530718, 6.28318530718, 1100.0, 1200.0]])
+  
+  x_min_normalized = (x_min - x_mean) / x_range
+  x_max_normalized = (x_max - x_mean) / x_range
+  
   Forall(
-      x,
-      Implies(
-          Or(
-              x_min_1 <= x <= x_max_1,
-              x_min_2 <= x <= x_max_2
-          ),
-          np.argmin(N(x)) == 0
-      )
+      x, Implies(x_min_normalized <= x <= x_max_normalized, argmin(N(x)) != 0),
   )

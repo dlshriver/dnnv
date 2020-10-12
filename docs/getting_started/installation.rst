@@ -12,12 +12,12 @@ From Source
 
 Requirements:
 
-* Python 3.6+
+* Python 3.7+
 
 Currently, the easiest way to use DNNV is to clone the
 github repository, and use the provided ``manage.sh`` script
 to initiallize a python virtual environment and install
-verifiers. This requires Python 3.6 or above to be installed,
+verifiers. This requires Python 3.7 or above to be installed,
 as well as the venv module, which may need to be installed
 separately (e.g., ``sudo apt-get install python3-venv``).
 
