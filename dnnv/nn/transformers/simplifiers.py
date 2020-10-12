@@ -42,8 +42,11 @@ class Simplifier(OperationTransformer):
         self._cache: Dict[Operation, Operation] = {}
         self._modified_graph = False
         self.dnn = dnn
+        self.run_analyses()
+
+    def run_analyses(self):
         self.analysis: Dict[str, Analysis] = {
-            name: analysis(dnn) for name, analysis in self.ANALYSES.items()
+            name: analysis(self.dnn) for name, analysis in self.ANALYSES.items()
         }
 
     def visit(self, operation: Operation) -> Operation:
@@ -70,6 +73,9 @@ class Compose(Simplifier):
                 simplifier._cache = {}
                 operation = simplifier.visit(operation)
                 modified_graph |= simplifier._modified_graph
+                if modified_graph:
+                    for simplifier in self.simplifiers:
+                        simplifier.run_analyses()
             self._modified_graph |= modified_graph
         return operation
 
