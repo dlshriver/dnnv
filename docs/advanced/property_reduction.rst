@@ -39,10 +39,7 @@ The property states that for all inputs, if the probability of collision is no g
 To enable the application of many verifiers, we can reduce the property to a set of verification problems with robustness properties.
 This particular example is reduced to two verification problems with robustness properties.
 Each of the problems produced pair a robustness property (i.e., :math:`\forall x. (x \in [0,1]^40000) \rightarrow (\mathcal{N}_0 > \mathcal{N}_1)`) with a modified version of the original DNN. 
-The new DNN is created through two key transformations. 
-First, incorporating a prefix network to reduce the input domain to a unit-hypercube.
-This modification ensures that the properties for reduced problems can all use the same pre-condition.
-Second, incorporating a suffix network that takes in the inputs and outputs of the original DNN and classifies whether they constitute a violation of the original property. 
+The new DNN is created by incorporating a suffix network that takes in the outputs of the original DNN and classifies whether they constitute a violation of the original property. 
 This suffix transforms the network into a classifier for which violations of a robustness property correspond to violations of the original property.
 
 Reduction
