@@ -96,7 +96,7 @@ Running DNNV
 DNNV can be used to check whether a given property holds
 for a network. It accepts networks specified in the ONNX format,
 and properties specified in our property DSL (which is explained
-in more detail :doc:`here <../going_further/specifying_properties>`).
+in more detail :doc:`here <../usage/specifying_properties>`).
 Networks can be converted to ONNX format by using native export
 utilities, such as ``torch.onnx.export`` in `PyTorch`_, or by
 using an external conversion tool, such as `MMDNN`_.
@@ -109,7 +109,7 @@ and are converted to the ONNX and property DSL formats required by DNNV.
 To check a property for a network, using the `ERAN`_ verifier, DNNV
 can be run as::
 
-  python -m dnnv --eran properties/pyt_property_7.py --network N onnx/pyt/ffnnRELU__Point_6_500.onnx
+  python -m dnnv --eran --network N onnx/pyt/ffnnRELU__Point_6_500.onnx properties/pyt_property_7.py
 
 This will check whether ``pyt_property_7``---a local robustness
 property---holds for the network ``ffnnRELU__Point_6_500.onnx``---a 6 layer,
@@ -123,7 +123,7 @@ above should resemble the output below:
 
 .. code-block:: console
 
-  $ python -m dnnv --eran onnx/pyt/ffnnRELU__Point_6_500.onnx properties/pyt_property_7.py
+  $ python -m dnnv --eran --network N onnx/pyt/ffnnRELU__Point_6_500.onnx properties/pyt_property_7.py
   Input_0                         : Input([ 1  1 28 28], dtype=float32)
   Reshape_0                       : Reshape(Input_0, ndarray_0)
   Gemm_0                          : Gemm(Reshape_0, ndarray_1, ndarray_2)

@@ -27,10 +27,21 @@ This facilitates both verifier comparison, and artifact re-use.
 
 .. toctree::
    :maxdepth: 1
-   :caption: Going Further
+   :caption: Usage
 
-   going_further/specifying_properties
-   going_further/new_verifier
+   usage/specifying_properties
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Advanced
+
+   advanced/property_reduction
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Developers
+
+   developers/new_verifier
 
 .. Indices and tables
 .. ==================
