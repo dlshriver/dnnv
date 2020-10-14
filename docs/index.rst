@@ -36,6 +36,7 @@ This facilitates both verifier comparison, and artifact re-use.
    :caption: Advanced
 
    advanced/property_reduction
+   advanced/dnn_simplification
 
 .. toctree::
    :maxdepth: 1
