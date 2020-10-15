@@ -51,7 +51,11 @@ DNNV supports the following verifiers:
 * `BaB`_
 * `MIPVerify.jl`_
 * `Neurify`_
-* `ERAN`_
+* `ERAN`_ (deepzono, deeppoly, refinezono, refinepoly)
+* `PLNN`_ (bab, babsb)
+* `marabou`_
+* `nnenum`_
+* `VeriNet`_
 
 .. _Reluplex: https://github.com/guykatzz/ReluplexCav2017
 .. _planet: https://github.com/progirep/planet
@@ -59,6 +63,10 @@ DNNV supports the following verifiers:
 .. _MIPVerify.jl: https://github.com/vtjeng/MIPVerify.jl
 .. _Neurify: https://github.com/tcwangshiqi-columbia/Neurify
 .. _ERAN: https://github.com/eth-sri/eran
+.. _PLNN: https://github.com/oval-group/PLNN-verification
+.. _marabou: https://github.com/NeuralNetworkVerification/Marabou
+.. _nnenum: https://github.com/stanleybak/nnenum
+.. _verinet: https://vas.doc.ic.ac.uk/software/neural/
 
 DNNV can also be installed into an existing virtual environment.
 To do so, we require the module ``flit`` be installed.
