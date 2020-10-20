@@ -139,7 +139,7 @@ def as_mipverify(
             f", pp=MIPVerify.LInfNormBoundedPerturbationFamily({linf}), norm_order=Inf"
         )
     # class 1 (1-indexed) if property is FALSE
-    yield f"d = MIPVerify.find_adversarial_example(nn, input, 1, GurobiSolver(){perturbation}, solve_if_predicted_in_targeted=false, cache_model=false, rebuild=true)"
+    yield f"d = MIPVerify.find_adversarial_example(nn, input, 1, Gurobi.Optimizer, Dict(){perturbation}, solve_if_predicted_in_targeted=false)"
     yield 'print((d[:PredictedIndex] == 2) ? d[:SolveStatus] : "TRIVIAL", "\\n")'
 
     scipy.io.savemat(weights_file.name, layer_parameters)
