@@ -74,7 +74,9 @@ class Verifier(ABC):
         yield
 
     @classmethod
-    def verify(cls, phi: Expression, **kwargs) -> PropertyCheckResult:
+    def verify(
+        cls, phi: Expression, **kwargs
+    ) -> Tuple[PropertyCheckResult, Optional[Any]]:
         return cls(phi, **kwargs).run()
 
     def check(self, prop: Property) -> Tuple[PropertyCheckResult, Optional[Any]]:
@@ -91,12 +93,14 @@ class Verifier(ABC):
         ).reduce_property(~self.property):
             yield subproperty
 
-    def run(self) -> PropertyCheckResult:
+    def run(self) -> Tuple[PropertyCheckResult, Optional[Any]]:
         if self.property.is_concrete:
             if self.property.value == True:
-                return UNSAT
+                self.logger.warning("Property is trivially UNSAT.")
+                return UNSAT, None
             else:
-                return SAT
+                self.logger.warning("Property is trivially SAT.")
+                return SAT, None
         orig_tempdir = tempfile.tempdir
         try:
             with tempfile.TemporaryDirectory() as tempdir:
@@ -109,10 +113,10 @@ class Verifier(ABC):
                         self.logger.debug("SAT! Validating counter example.")
                         if cex is not None:
                             self.validate_counter_example(subproperty, cex)
-                        break
+                        return result, cex
         finally:
             tempfile.tempdir = orig_tempdir
-        return result
+        return result, None
 
     def validate_counter_example(self, prop: Property, cex: Any) -> bool:
         is_valid, err_msg = prop.validate_counter_example(cex)

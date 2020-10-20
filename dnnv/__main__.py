@@ -1,6 +1,7 @@
 """
 """
 import argparse
+import numpy as np
 import time
 
 from typing import List, Optional
@@ -10,7 +11,7 @@ from . import logging
 from . import nn
 from . import properties
 from . import utils
-from .verifiers.common import VerifierError, VerifierTranslatorError
+from .verifiers.common import VerifierError, VerifierTranslatorError, SAT
 
 
 def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
@@ -25,7 +26,8 @@ def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
     if extra_args is not None and len(extra_args) > 0:
         logger.error("Unused arguments: %r", extra_args)
         unknown_args = " ".join(extra_args)
-        raise ValueError(f"Unknown arguments: {unknown_args}")
+        print(f"ERROR: Unknown arguments: {unknown_args}")
+        return 1
 
     if args.networks:
         print("Verifying Networks:")
@@ -40,26 +42,34 @@ def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
 
         phi.concretize(**networks)
 
-    for verifier in args.verifiers:
-        start_t = time.time()
-        try:
-            params = args.verifier_parameters.get(verifier.__name__.lower(), {})
-            result = verifier.verify(phi, **params)
-        except VerifierTranslatorError as e:
-            result = f"{type(e).__name__}({e})"
-            logger.debug("Translation Error traceback:", exc_info=True)
-        except VerifierError as e:
-            result = f"{type(e).__name__}({e})"
-            logger.debug("Verifier Error traceback:", exc_info=True)
-        end_t = time.time()
-        print(f"{verifier.__module__}")
-        print(f"  result: {result}")
-        print(f"  time: {(end_t - start_t):.4f}")
+    if len(args.verifiers) > 1:
+        verifier_names = [v.__module__ for v in args.verifiers]
+        logger.error("More than 1 verifier specified: %r", verifier_names)
+        print(f"ERROR: More than 1 verifier specified: {verifier_names}")
+        return 1
+
+    verifier = args.verifiers[0]
+    start_t = time.time()
+    try:
+        params = args.verifier_parameters.get(verifier.__name__.lower(), {})
+        result, cex = verifier.verify(phi, **params)
+    except VerifierTranslatorError as e:
+        result = f"{type(e).__name__}({e})"
+        logger.debug("Translation Error traceback:", exc_info=True)
+    except VerifierError as e:
+        result = f"{type(e).__name__}({e})"
+        logger.debug("Verifier Error traceback:", exc_info=True)
+    end_t = time.time()
+    if result == SAT and args.save_violation is not None and cex is not None:
+        np.save(args.save_violation, cex)
+    print(f"{verifier.__module__}")
+    print(f"  result: {result}")
+    print(f"  time: {(end_t - start_t):.4f}")
 
 
 def _main():
-    main(*cli.parse_args())
+    return main(*cli.parse_args())
 
 
 if __name__ == "__main__":
-    _main()
+    exit(_main())
