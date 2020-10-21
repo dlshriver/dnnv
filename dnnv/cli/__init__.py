@@ -54,9 +54,7 @@ class AppendNetwork(argparse.Action):
 
 class SetVerifierParameter(argparse.Action):
     def __init__(
-        self,
-        *args,
-        **kwargs,
+        self, *args, **kwargs,
     ):
         super().__init__(*args, **kwargs)
         self.verifier_parameters = {}
@@ -85,10 +83,19 @@ def parse_args():
     parser.add_argument(
         "-N",
         "--network",
-        metavar=("NAME", "NETWORK"),
+        metavar=("NAME", "PATH"),
         action=AppendNetwork,
         nargs=2,
         dest="networks",
+        help="a network to verify",
+    )
+
+    parser.add_argument(
+        "--save-violation",
+        metavar="PATH",
+        type=Path,
+        default=None,
+        help="the path to save a found violation",
     )
 
     prop_format_group = parser.add_mutually_exclusive_group()
@@ -108,16 +115,12 @@ def parse_args():
     from ..utils import get_subclasses
 
     for verifier in sorted(
-        get_subclasses(verifiers.Verifier),
-        key=lambda v: v.__module__.split(".")[-1],
+        get_subclasses(verifiers.Verifier), key=lambda v: v.__module__.split(".")[-1],
     ):
         if verifier.is_installed():
             vname = verifier.__module__.split(".")[-1]
             verifier_group.add_argument(
-                f"--{vname}",
-                dest="verifiers",
-                action="append_const",
-                const=verifier,
+                f"--{vname}", dest="verifiers", action="append_const", const=verifier,
             )
             verifier_parameters_group = parser.add_argument_group(f"{vname} parameters")
             for pname, pinfo in verifier.parameters.items():
