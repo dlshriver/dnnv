@@ -1,8 +1,10 @@
 import numpy as np
 
 from dnnv.verifiers.common.base import Parameter, Verifier
+from dnnv.verifiers.common.reductions import IOPolytopeReduction, HalfspacePolytope
 from dnnv.verifiers.common.results import SAT, UNSAT, UNKNOWN
 from dnnv.verifiers.common.utils import as_layers
+from functools import partial
 
 from .errors import PlanetError, PlanetTranslatorError
 from .layers import PLANET_LAYER_TYPES
@@ -10,6 +12,7 @@ from .utils import to_rlv_file
 
 
 class Planet(Verifier):
+    reduction = partial(IOPolytopeReduction, HalfspacePolytope, HalfspacePolytope)
     translator_error = PlanetTranslatorError
     verifier_error = PlanetError
 
