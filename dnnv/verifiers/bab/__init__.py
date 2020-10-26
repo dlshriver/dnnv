@@ -2,9 +2,11 @@ import numpy as np
 
 from dnnv.verifiers.common.base import Parameter, Verifier
 from dnnv.verifiers.common.executors import VerifierExecutor
+from dnnv.verifiers.common.reductions import IOPolytopeReduction, HalfspacePolytope
 from dnnv.verifiers.common.results import SAT, UNSAT, UNKNOWN
 from dnnv.verifiers.common.utils import as_layers
 from dnnv.verifiers.planet.utils import to_rlv_file
+from functools import partial
 
 from .errors import BabError, BabTranslatorError
 
@@ -41,6 +43,7 @@ class BaBExecutor(VerifierExecutor):
 
 
 class BaB(Verifier):
+    reduction = partial(IOPolytopeReduction, HalfspacePolytope, HalfspacePolytope)
     translator_error = BabTranslatorError
     verifier_error = BabError
     parameters = {
@@ -68,8 +71,7 @@ class BaB(Verifier):
                 "Unsupported network: More than 1 input variable"
             )
         layers = as_layers(
-            prop.suffixed_op_graph(),
-            translator_error=self.translator_error,
+            prop.suffixed_op_graph(), translator_error=self.translator_error,
         )
         rlv_file_path = to_rlv_file(
             prop.input_constraint,
