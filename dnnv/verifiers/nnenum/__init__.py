@@ -3,10 +3,11 @@ import os
 import tempfile
 
 from contextlib import contextmanager
+from functools import partial
 from typing import Any, Dict, List, Optional
 
 from dnnv.verifiers.common.base import Parameter, Verifier
-from dnnv.verifiers.common.executors import VerifierExecutor
+from dnnv.verifiers.common.reductions import IOPolytopeReduction, HalfspacePolytope
 from dnnv.verifiers.common.results import SAT, UNSAT, UNKNOWN
 
 from .errors import NnenumError, NnenumTranslatorError
@@ -14,6 +15,7 @@ from .errors import NnenumError, NnenumTranslatorError
 
 class Nnenum(Verifier):
     EXE = "nnenum.py"
+    reduction = partial(IOPolytopeReduction, HalfspacePolytope, HalfspacePolytope)
     translator_error = NnenumTranslatorError
     verifier_error = NnenumError
     parameters = {
@@ -49,14 +51,16 @@ class Nnenum(Verifier):
         ) as onnx_model_file:
             prop.op_graph.export_onnx(onnx_model_file.name)
 
-        lb = prop.input_constraint.lower_bounds[0].copy()
-        ub = prop.input_constraint.upper_bounds[0].copy()
+        lb, ub = prop.input_constraint.as_bounds()
+        A_in, b_in = prop.input_constraint.as_matrix_inequality()
+        A_out, b_out = prop.output_constraint.as_matrix_inequality()
 
         with tempfile.NamedTemporaryFile(
             mode="w+", suffix=".npy", delete=False
         ) as constraint_file:
-            A, b = prop.output_constraint.as_matrix_inequality()
-            np.save(constraint_file.name, (lb, ub, (A, b)))
+            # A, b = prop.output_constraint.as_matrix_inequality()
+            # np.save(constraint_file.name, (lb, ub, (A, b)))
+            np.save(constraint_file.name, ((lb, ub), (A_in, b_in), (A_out, b_out)))
 
         with tempfile.NamedTemporaryFile(
             mode="w+", suffix=".npy", delete=False

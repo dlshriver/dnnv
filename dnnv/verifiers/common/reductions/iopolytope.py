@@ -101,8 +101,11 @@ class HalfspacePolytope(Constraint):
     def __init__(self, variable):
         super().__init__(variable)
         self.halfspaces: List[Halfspace] = []
+        self._matrix_ineq = None
 
-    def as_matrix_inequality(self, b_step=None):
+    def as_matrix_inequality(self, tol=None):
+        if self._matrix_ineq is not None:
+            return self._matrix_ineq
         k = len(self.halfspaces)
         n = self.size()
         A = np.zeros((k, n))
@@ -112,30 +115,34 @@ class HalfspacePolytope(Constraint):
                 A[ci, i] = a
             b[ci] = c.b
             if c.is_open:
-                if b_step is None:
+                if tol is None:
                     b[ci] = np.nextafter(c.b, c.b - 1)
                 else:
-                    b[ci] = c.b - b_step
+                    b[ci] = c.b - tol
+        self._matrix_ineq = (A, b)
         return A, b
+
+    def as_bounds(self, tol=None):
+        A, b = self.as_matrix_inequality(tol=tol)
+        n = A.shape[1]
+        lbs = []
+        ubs = []
+        for i in range(n):
+            obj = np.zeros(n)
+            obj[i] = 1
+            result = linprog(obj, A_ub=A, b_ub=b, bounds=(None, None))
+            assert result.status == 0
+            lbs.append(result.x[i])
+            obj[i] = -1
+            result = linprog(obj, A_ub=A, b_ub=b, bounds=(None, None))
+            assert result.status == 0
+            ubs.append(result.x[i])
+        return np.array(lbs), np.array(ubs)
 
     @property
     def is_consistent(self):
-        k = len(self.halfspaces)
-        v = {}
-        for c in self.halfspaces:
-            for i in c.indices:
-                if i not in v:
-                    v[i] = len(v)
-        n = len(v)
-        A = np.zeros((k, n))
-        b = np.zeros(k)
-        for ci, c in enumerate(self.halfspaces):
-            for i, a in zip(c.indices, c.coefficients):
-                A[ci, v[i]] = a
-            b[ci] = c.b
-            if c.is_open:
-                b[ci] = np.nextafter(c.b, c.b - 1)
-        obj = np.zeros(n)
+        A, b = self.as_matrix_inequality()
+        obj = np.zeros(A.shape[1])
         try:
             result = linprog(obj, A_ub=A, b_ub=b, bounds=(None, None),)
         except ValueError as e:
@@ -151,6 +158,7 @@ class HalfspacePolytope(Constraint):
         return None  # unknown
 
     def update_constraint(self, variables, indices, coefficients, b, is_open=False):
+        self._matrix_ineq = None
         flat_indices = [
             self.variables[var] + np.ravel_multi_index(idx, var.shape)
             for var, idx in zip(variables, indices)
