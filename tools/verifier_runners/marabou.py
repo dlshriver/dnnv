@@ -41,12 +41,13 @@ def main(args):
     options._numWorkers = args.num_workers
     result = network.solve(options=options)
 
+    is_unsafe = bool(result[0])
+    print("UNSAFE" if is_unsafe else "SAFE")
+
     if args.output is not None:
-        is_unsafe = bool(result[0])
-        print("UNSAFE" if is_unsafe else "SAFE")
         cex = None
         if is_unsafe:
-            cex = np.zeros_like(inputVars)
+            cex = np.zeros_like(inputVars, dtype=np.float32)
             for flat_index, multi_index in enumerate(np.ndindex(cex.shape)):
                 cex[multi_index] = result[0][flat_index]
             print(cex)
