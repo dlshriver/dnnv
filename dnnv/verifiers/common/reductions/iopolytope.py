@@ -101,43 +101,17 @@ class HalfspacePolytope(Constraint):
     def __init__(self, variable):
         super().__init__(variable)
         self.halfspaces: List[Halfspace] = []
-        self._matrix_ineq = None
+        self._A = None
+        self._b = None
+        self._lower_bound = np.zeros(self.size()) - np.inf
+        self._upper_bound = np.zeros(self.size()) + np.inf
 
     def as_matrix_inequality(self, tol=None):
-        if self._matrix_ineq is not None:
-            return self._matrix_ineq
-        k = len(self.halfspaces)
-        n = self.size()
-        A = np.zeros((k, n))
-        b = np.zeros(k)
-        for ci, c in enumerate(self.halfspaces):
-            for i, a in zip(c.indices, c.coefficients):
-                A[ci, i] = a
-            b[ci] = c.b
-            if c.is_open:
-                if tol is None:
-                    b[ci] = np.nextafter(c.b, c.b - 1)
-                else:
-                    b[ci] = c.b - tol
-        self._matrix_ineq = (A, b)
-        return A, b
+        assert tol is None
+        return self._A, self._b
 
     def as_bounds(self, tol=None):
-        A, b = self.as_matrix_inequality(tol=tol)
-        n = A.shape[1]
-        lbs = []
-        ubs = []
-        for i in range(n):
-            obj = np.zeros(n)
-            obj[i] = 1
-            result = linprog(obj, A_ub=A, b_ub=b, bounds=(None, None))
-            assert result.status == 0
-            lbs.append(result.x[i])
-            obj[i] = -1
-            result = linprog(obj, A_ub=A, b_ub=b, bounds=(None, None))
-            assert result.status == 0
-            ubs.append(result.x[i])
-        return np.array(lbs), np.array(ubs)
+        return self._lower_bound, self._upper_bound
 
     @property
     def is_consistent(self):
@@ -157,13 +131,61 @@ class HalfspacePolytope(Constraint):
             return True
         return None  # unknown
 
+    def _update_bounds(self, indices, coefficients, b, is_open=False):
+        n = self.size()
+        if self._lower_bound is None:
+            self._lower_bound = np.zeros((n,)) - np.inf
+        if self._upper_bound is None:
+            self._upper_bound = np.zeros((n,)) + np.inf
+
+        if len(indices) == 1:
+            index = indices[0]
+            coef_sign = np.sign(coefficients[0])
+            value = b / coefficients[0]
+            if coef_sign < 0:
+                if is_open:
+                    value = np.nextafter(value, value + 1)
+                self._lower_bound[index] = max(value, self._lower_bound[index])
+            elif coef_sign > 0:
+                if is_open:
+                    value = np.nextafter(value, value - 1)
+                self._upper_bound[index] = min(value, self._upper_bound[index])
+        else:
+            for i in indices:
+                obj = np.zeros(n)
+                obj[i] = 1
+                result = linprog(obj, A_ub=self._A, b_ub=self._b, bounds=(None, None))
+                if result.status == 0:
+                    self._lower_bound[i] = result.x[i]
+                obj[i] = -1
+                result = linprog(obj, A_ub=self._A, b_ub=self._b, bounds=(None, None))
+                if result.status == 0:
+                    self._upper_bound[i] = result.x[i]
+
     def update_constraint(self, variables, indices, coefficients, b, is_open=False):
-        self._matrix_ineq = None
         flat_indices = [
             self.variables[var] + np.ravel_multi_index(idx, var.shape)
             for var, idx in zip(variables, indices)
         ]
-        self.halfspaces.append(Halfspace(flat_indices, coefficients, b, is_open))
+        halfspace = Halfspace(flat_indices, coefficients, b, is_open)
+        self.halfspaces.append(halfspace)
+
+        n = self.size()
+        _A = np.zeros((1, n))
+        _b = np.zeros((1,))
+        for i, a in zip(flat_indices, coefficients):
+            _A[0, i] = a
+        _b[0] = b
+        if is_open:
+            _b[0] = np.nextafter(b, b - 1)
+        if self._A is None:
+            self._A = _A
+            self._b = _b
+        else:
+            self._A = np.vstack([self._A, _A])
+            self._b = np.hstack([self._b, _b])
+
+        self._update_bounds(flat_indices, coefficients, b, is_open=is_open)
 
     def validate(self, *x, threshold=1e-6):
         x_flat = np.concatenate([x_.flatten() for x_ in x])
@@ -191,11 +213,6 @@ class HalfspacePolytope(Constraint):
 
 
 class HyperRectangle(HalfspacePolytope):
-    def __init__(self, variable):
-        super().__init__(variable)
-        self._lower_bound = np.zeros(self.size()) - np.inf
-        self._upper_bound = np.zeros(self.size()) + np.inf
-
     @property
     def is_consistent(self):
         if (self._lower_bound > self._upper_bound).any():
@@ -232,6 +249,9 @@ class HyperRectangle(HalfspacePolytope):
         self._lower_bound = np.concatenate([self._lower_bound, np.zeros(size) - np.inf])
         self._upper_bound = np.concatenate([self._upper_bound, np.zeros(size) + np.inf])
         return self
+
+    def _update_bounds(self, *args, **kwargs):
+        pass
 
     def update_constraint(self, variables, indices, coefficients, b, is_open=False):
         if len(indices) > 1:

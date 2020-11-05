@@ -169,6 +169,7 @@ def to_neurify_inputs(
         input_file.write(",".join(f"{x:.12f}" for x in lb.flatten()) + "\n")
         input_file.write(",".join(f"{x:.12f}" for x in ub.flatten()) + "\n")
         neurify_inputs["input_interval_path"] = input_file.name
+
     with tempfile.NamedTemporaryFile(
         mode="w+", dir=dirname, suffix=".hpoly", delete=False
     ) as input_file:
