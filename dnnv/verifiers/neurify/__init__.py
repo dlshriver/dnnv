@@ -1,14 +1,17 @@
 import numpy as np
 
 from dnnv.verifiers.common.base import Parameter, Verifier
+from dnnv.verifiers.common.reductions import IOPolytopeReduction, HalfspacePolytope
 from dnnv.verifiers.common.results import SAT, UNSAT, UNKNOWN
 from dnnv.verifiers.common.utils import as_layers
+from functools import partial
 
 from .errors import NeurifyError, NeurifyTranslatorError
 from .utils import to_neurify_inputs
 
 
 class Neurify(Verifier):
+    reduction = partial(IOPolytopeReduction, HalfspacePolytope, HalfspacePolytope)
     translator_error = NeurifyTranslatorError
     verifier_error = NeurifyError
     parameters = {
@@ -41,6 +44,8 @@ class Neurify(Verifier):
             "0.0000000000001",  # TODO: remove magic number
             "-I",
             neurify_inputs["input_interval_path"],
+            "-H",
+            neurify_inputs["input_hpoly_path"],
             "-v",
         ) + tuple(f"--{k}={v}" for k, v in self.parameters.items() if v is not None)
 
@@ -65,8 +70,9 @@ class Neurify(Verifier):
                     cex_found = True
             else:
                 # counter example was found in first pass, not printed
-                lb = prop.input_constraint.lower_bounds[0]
-                ub = prop.input_constraint.upper_bounds[0]
+                lb, ub = prop.input_constraint.as_bounds()
+                lb = lb.reshape(input_shape)
+                ub = ub.reshape(input_shape)
                 cex = ((lb + ub) / 2).astype(input_dtype)
             return SAT, cex
         elif result == "Unknown.":
