@@ -5,7 +5,7 @@ from typing import Dict, Iterable, List, Optional, Type, Union
 
 from dnnv.nn.layers import Convolutional, FullyConnected, InputLayer, Layer
 from dnnv.verifiers.common.errors import VerifierTranslatorError
-from dnnv.verifiers.common.reductions import HyperRectangle
+from dnnv.verifiers.common.reductions import HalfspacePolytope
 
 
 def as_neurify_nnet(
@@ -154,15 +154,14 @@ def as_neurify_nnet(
 
 
 def to_neurify_inputs(
-    input_interval: HyperRectangle,
+    input_constraint: HalfspacePolytope,
     layers: List[Layer],
     dirname: Optional[str] = None,
     translator_error: Type[VerifierTranslatorError] = VerifierTranslatorError,
 ) -> Dict[str, str]:
     neurify_inputs = {}
 
-    lb = input_interval.lower_bounds[0]
-    ub = input_interval.upper_bounds[0]
+    lb, ub = input_constraint.as_bounds()
     sample_input = (lb + ub) / 2
     with tempfile.NamedTemporaryFile(
         mode="w+", dir=dirname, suffix=".interval", delete=False
@@ -170,6 +169,18 @@ def to_neurify_inputs(
         input_file.write(",".join(f"{x:.12f}" for x in lb.flatten()) + "\n")
         input_file.write(",".join(f"{x:.12f}" for x in ub.flatten()) + "\n")
         neurify_inputs["input_interval_path"] = input_file.name
+
+    with tempfile.NamedTemporaryFile(
+        mode="w+", dir=dirname, suffix=".hpoly", delete=False
+    ) as input_file:
+        A, b = input_constraint.as_matrix_inequality()
+        input_file.write(f"{A.shape[0]},\n")
+        for row in A:
+            row_str = ",".join(f"{value:.12f}" for value in row)
+            input_file.write(f"{row_str},\n")
+        for value in b:
+            input_file.write(f"{value:.12f},\n")
+        neurify_inputs["input_hpoly_path"] = input_file.name
 
     with tempfile.NamedTemporaryFile(
         mode="w+", dir=dirname, suffix=".input", delete=False
