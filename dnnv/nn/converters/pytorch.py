@@ -298,6 +298,28 @@ class PytorchConverter(OperationVisitor):
 
         return op
 
+    def visit_Sigmoid(self, operation: operations.Sigmoid) -> PytorchOperation:
+        opname = self._get_name(operation)
+
+        x = operation.x
+        if isinstance(x, Operation):
+            x = self.visit(x)
+
+        op = PytorchOperation(opname, nn.Sigmoid(), inputs=[x.name], outputs=[opname])
+
+        return op
+
+    def visit_Tanh(self, operation: operations.Tanh) -> PytorchOperation:
+        opname = self._get_name(operation)
+
+        x = operation.x
+        if isinstance(x, Operation):
+            x = self.visit(x)
+
+        op = PytorchOperation(opname, nn.Tanh(), inputs=[x.name], outputs=[opname])
+
+        return op
+
     def visit_Transpose(self, operation: operations.Transpose) -> PytorchOperation:
         opname = self._get_name(operation)
 
