@@ -58,8 +58,6 @@ class Nnenum(Verifier):
         with tempfile.NamedTemporaryFile(
             mode="w+", suffix=".npy", delete=False
         ) as constraint_file:
-            # A, b = prop.output_constraint.as_matrix_inequality()
-            # np.save(constraint_file.name, (lb, ub, (A, b)))
             np.save(constraint_file.name, ((lb, ub), (A_in, b_in), (A_out, b_out)))
 
         with tempfile.NamedTemporaryFile(
