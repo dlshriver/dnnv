@@ -30,7 +30,7 @@ else
 fi
 
 # gurobi paths
-set_var GUROBI_HOME $PROJECT_DIR/bin/gurobi810/linux64
+set_var GUROBI_HOME $PROJECT_DIR/bin/gurobi902/linux64
 append_path $GUROBI_HOME/bin PATH
 append_path $GUROBI_HOME/lib LD_LIBRARY_PATH
 

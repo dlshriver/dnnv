@@ -8,7 +8,7 @@ source $PROJECT_DIR/scripts/install_common.sh
 
 ensure_julia
 ensure_gurobi
-ensure_libz
+ensure_zlib
 
 julia -e 'using Pkg; Pkg.add("Gurobi")'
 julia -e 'using Pkg; Pkg.add("MAT")'
