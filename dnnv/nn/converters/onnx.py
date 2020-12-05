@@ -151,7 +151,7 @@ class OnnxConverter(OperationVisitor):
         idx = self.op_counts["Input"] = self.op_counts["Input"] + 1
         opname = f"Input_{idx}"
 
-        shape = list(operation.shape)
+        shape = np.asarray(operation.shape).tolist()
         if shape[0] < 0:
             shape[0] = 1
         dtype = NUMPY_TO_ONNX_DTYPE[operation.dtype]
