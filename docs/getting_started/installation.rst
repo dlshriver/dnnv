@@ -13,6 +13,10 @@ From Source
 Requirements:
 
 * Python 3.7+
+.. * make
+.. * gcc/g++
+.. * gfortran
+.. * lapack
 
 Currently, the easiest way to use DNNV is to clone the
 github repository, and use the provided ``manage.sh`` script

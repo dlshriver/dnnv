@@ -6,9 +6,11 @@ PROJECT_DIR=${PROJECT_DIR:-$(
 )}
 source $PROJECT_DIR/scripts/install_common.sh
 
+ensure_cmake
 ensure_openblas
 ensure_lpsolve
 ensure_suitesparse
+ensure_m4
 ensure_gmp
 
 ensure_libtool

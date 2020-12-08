@@ -126,6 +126,25 @@ ensure_julia() {
     rm julia-1.0.4-linux-x86_64.tar.gz
 }
 
+ensure_lapack() {
+    cd $PROJECT_DIR/lib
+    if [ -e $PROJECT_DIR/lib/liblapack.a ]; then
+        echo "lapack is already installed"
+        return
+    fi
+
+    wget -q https://github.com/Reference-LAPACK/lapack/archive/v3.9.0.tar.gz
+    tar xf v3.9.0.tar.gz
+    cd lapack-3.9.0
+    mkdir build
+    cd build
+    cmake ..
+    cmake --build . -j
+    cp lib/*.a $PROJECT_DIR/lib/
+    cd ../..
+    rm v3.9.0.tar.gz
+}
+
 ensure_libtool() {
     cd $PROJECT_DIR/bin
     if [ -e $PROJECT_DIR/lib/libltdl.so ]; then
