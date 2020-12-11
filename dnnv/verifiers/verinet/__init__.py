@@ -90,7 +90,7 @@ class VeriNet(Verifier):
         )
         if "max_proc" in self.parameters and self.parameters["max_proc"] is not None:
             value = self.parameters["max_proc"]
-            args += (f"--max_proc={value}",)
+            args += (f"--max_procs={value}",)
         if "no_split" in self.parameters and self.parameters["no_split"]:
             args += ("--no_split",)
         return args
