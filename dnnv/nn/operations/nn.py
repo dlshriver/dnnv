@@ -73,7 +73,7 @@ class Conv(Operation):
         w,
         b=None,
         *,
-        dilations=1,
+        dilations=(1, 1),
         group=1,
         kernel_shape=None,
         pads=0,
@@ -82,7 +82,7 @@ class Conv(Operation):
         self.x = x
         self.w = w
         self.b = b
-        self.dilations = dilations
+        self.dilations = np.asarray(dilations)
         self.group = group
         if kernel_shape is not None:
             self.kernel_shape = kernel_shape
@@ -100,7 +100,7 @@ class Conv(Operation):
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):
         attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
-        dilations = attributes.get("dilations", np.array([1, 1]))
+        dilations = attributes.get("dilations", (1, 1))
         group = attributes.get("group", 1)
         kernel_shape = attributes.get("kernel_shape")
         pads = attributes.get("pads", 0)
@@ -146,14 +146,14 @@ class MaxPool(Operation):
         kernel_shape,
         *,
         ceil_mode=False,
-        dilations=1,
+        dilations=(1, 1),
         pads=0,
         storage_order=ROW_MAJOR_STORAGE,
         strides=1
     ):
         self.x = x
         self.ceil_mode = ceil_mode
-        self.dilations = dilations
+        self.dilations = np.asarray(dilations)
         self.kernel_shape = kernel_shape
         self.storage_order = storage_order
         if isinstance(pads, Iterable):
@@ -169,7 +169,7 @@ class MaxPool(Operation):
     def from_onnx(cls, onnx_node, *inputs):
         attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
         ceil_mode = bool(attributes.get("ceil_mode", False))
-        dilations = attributes.get("dilations", 1)
+        dilations = attributes.get("dilations", (1, 1))
         kernel_shape = attributes.get("kernel_shape")
         pads = attributes.get("pads", 0)
         storage_order = attributes.get("storage_order", MaxPool.ROW_MAJOR_STORAGE)
@@ -183,4 +183,3 @@ class MaxPool(Operation):
             storage_order=storage_order,
             strides=strides
         )
-

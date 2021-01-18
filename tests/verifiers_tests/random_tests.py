@@ -5,19 +5,33 @@ from dnnv import nn
 from dnnv import properties
 from dnnv.properties import Symbol
 from dnnv.properties.context import get_context
-from dnnv.verifiers.common import SAT, UNSAT, UNKNOWN
-from dnnv.verifiers import neurify, planet, reluplex
 
-from tests.verifiers_tests.utils import has_verifier
+from dnnv.verifiers import SAT, UNSAT, UNKNOWN
+from dnnv.verifiers.bab import BaB
+from dnnv.verifiers.eran import ERAN
+from dnnv.verifiers.marabou import Marabou
+from dnnv.verifiers.mipverify import MIPVerify
+from dnnv.verifiers.neurify import Neurify
+from dnnv.verifiers.nnenum import Nnenum
+from dnnv.verifiers.planet import Planet
+from dnnv.verifiers.reluplex import Reluplex
+from dnnv.verifiers.verinet import VeriNet
+
 from tests.utils import network_artifact_dir, property_artifact_dir
 
-bab, eran = None, None
-if has_verifier("bab"):
-    import dnnv.verifiers.bab as bab
-if has_verifier("eran"):
-    import dnnv.verifiers.eran as eran
-
 RUNS_PER_PROP = int(os.environ.get("_DNNV_TEST_RUNS_PER_PROP", "1"))
+
+VERIFIERS = {
+    "bab": BaB,
+    "eran": ERAN,
+    "marabou": Marabou,
+    "mipverify": MIPVerify,
+    "neurify": Neurify,
+    "nnenum": Nnenum,
+    "planet": Planet,
+    "reluplex": Reluplex,
+    "verinet": VeriNet,
+}
 
 
 class RandomTests(unittest.TestCase):
@@ -48,58 +62,150 @@ class RandomTests(unittest.TestCase):
 
     def test_random_fc_0(self):
         os.environ["OUTPUT_LAYER"] = "-1"
-        verifiers = {
-            "bab": bab,
-            "eran": eran,
-            "neurify": neurify,
-            "planet": planet,
-            "reluplex": reluplex,
-        }
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
             for i in range(RUNS_PER_PROP):
                 os.environ["SEED"] = str(i)
                 results = []
-                for name, verifier in verifiers.items():
-                    if not has_verifier(name):
+                for name, verifier in VERIFIERS.items():
+                    if name == "marabou" and epsilon >= 0.5:
+                        # numerical inconsistencies # TODO : address these
+                        continue
+                    if name == "verinet" and epsilon == 0.5:
+                        # too slow
+                        continue
+                    if not verifier.is_installed():
                         continue
                     self.reset_property_context()
                     dnn = nn.parse(network_artifact_dir / "random_fc_0.onnx")
                     phi = properties.parse(property_artifact_dir / "localrobustness.py")
-                    result = verifier.verify(dnn, phi)
+                    phi.concretize(N=dnn)
+                    result, _ = verifier.verify(phi)
                     self.check_results(result, results)
 
     def test_random_fc_1(self):
         os.environ["OUTPUT_LAYER"] = "-1"
-        verifiers = {
-            "bab": bab,
-            "eran": eran,
-            "neurify": neurify,
-            "planet": planet,
-            "reluplex": reluplex,
-        }
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
             for i in range(RUNS_PER_PROP):
                 os.environ["SEED"] = str(i)
                 results = []
-                for name, verifier in verifiers.items():
-                    if not has_verifier(name):
+                for name, verifier in VERIFIERS.items():
+                    if name == "verinet" and (epsilon == 0.5 or epsilon == 1.0):
+                        # too slow
+                        continue
+                    if not verifier.is_installed():
                         continue
                     self.reset_property_context()
                     dnn = nn.parse(network_artifact_dir / "random_fc_1.onnx")
                     phi = properties.parse(property_artifact_dir / "localrobustness.py")
-                    result = verifier.verify(dnn, phi)
+                    phi.concretize(N=dnn)
+                    result, _ = verifier.verify(phi)
                     self.check_results(result, results)
 
     def test_random_fc_2(self):
         os.environ["OUTPUT_LAYER"] = "-1"
+        for epsilon in [0.01, 0.1, 0.5, 1.0]:
+            os.environ["EPSILON"] = str(epsilon)
+            for i in range(RUNS_PER_PROP):
+                os.environ["SEED"] = str(i)
+                results = []
+                for name, verifier in VERIFIERS.items():
+                    if name == "verinet" and epsilon == 0.5:
+                        # too slow
+                        continue
+                    if not verifier.is_installed():
+                        continue
+                    self.reset_property_context()
+                    dnn = nn.parse(network_artifact_dir / "random_fc_2.onnx")
+                    phi = properties.parse(property_artifact_dir / "localrobustness.py")
+                    phi.concretize(N=dnn)
+                    result, _ = verifier.verify(phi)
+                    self.check_results(result, results)
+
+    def test_random_conv_0(self):
+        os.environ["OUTPUT_LAYER"] = "-1"
+        excluded_verifiers = {
+            "reluplex",
+        }
+        for epsilon in [0.01, 0.1, 0.5, 1.0]:
+            os.environ["EPSILON"] = str(epsilon)
+            for i in range(RUNS_PER_PROP):
+                os.environ["SEED"] = str(i)
+                results = []
+                for name, verifier in VERIFIERS.items():
+                    if name in excluded_verifiers:
+                        continue
+                    if not verifier.is_installed():
+                        continue
+                    self.reset_property_context()
+                    dnn = nn.parse(
+                        network_artifact_dir / "random_conv_0.onnx"
+                    ).simplify()
+                    phi = properties.parse(property_artifact_dir / "localrobustness.py")
+                    phi.concretize(N=dnn)
+                    result, _ = verifier.verify(phi)
+                    self.check_results(result, results)
+
+    def test_random_conv_1(self):
+        os.environ["OUTPUT_LAYER"] = "-1"
+        excluded_verifiers = {
+            "reluplex",
+        }
+        for epsilon in [0.01, 0.1, 0.5, 1.0]:
+            os.environ["EPSILON"] = str(epsilon)
+            for i in range(RUNS_PER_PROP):
+                os.environ["SEED"] = str(i)
+                results = []
+                for name, verifier in VERIFIERS.items():
+                    if name == "verinet" and epsilon == 0.01:
+                        # too slow
+                        continue
+                    if name in excluded_verifiers:
+                        continue
+                    if not verifier.is_installed():
+                        continue
+                    self.reset_property_context()
+                    dnn = nn.parse(
+                        network_artifact_dir / "random_conv_1.onnx"
+                    ).simplify()
+                    phi = properties.parse(property_artifact_dir / "localrobustness.py")
+                    phi.concretize(N=dnn)
+                    result, _ = verifier.verify(phi)
+                    self.check_results(result, results)
+
+    def test_random_conv_2(self):
+        os.environ["OUTPUT_LAYER"] = "-1"
+        excluded_verifiers = {
+            "reluplex",
+        }
+        for epsilon in [0.01, 0.1, 0.5, 1.0]:
+            os.environ["EPSILON"] = str(epsilon)
+            for i in range(RUNS_PER_PROP):
+                os.environ["SEED"] = str(i)
+                results = []
+                for name, verifier in VERIFIERS.items():
+                    if name == "marabou" and (epsilon == 0.5 or epsilon == 1.0):
+                        # numerical inconsistencies # TODO : address these
+                        continue
+                    if name in excluded_verifiers:
+                        continue
+                    if not verifier.is_installed():
+                        continue
+                    self.reset_property_context()
+                    dnn = nn.parse(
+                        network_artifact_dir / "random_conv_2.onnx"
+                    ).simplify()
+                    phi = properties.parse(property_artifact_dir / "localrobustness.py")
+                    phi.concretize(N=dnn)
+                    result, _ = verifier.verify(phi)
+                    self.check_results(result, results)
+
+    def test_random_residual_0(self):
+        os.environ["OUTPUT_LAYER"] = "-1"
         verifiers = {
-            "bab": bab,
-            "eran": eran,
-            "neurify": neurify,
-            "planet": planet,
-            "reluplex": reluplex,
+            "eran": ERAN,
+            "planet": Planet,
         }
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
@@ -107,83 +213,13 @@ class RandomTests(unittest.TestCase):
                 os.environ["SEED"] = str(i)
                 results = []
                 for name, verifier in verifiers.items():
-                    if not has_verifier(name):
-                        continue
-                    self.reset_property_context()
-                    dnn = nn.parse(network_artifact_dir / "random_fc_2.onnx")
-                    phi = properties.parse(property_artifact_dir / "localrobustness.py")
-                    result = verifier.verify(dnn, phi)
-                    self.check_results(result, results)
-
-    def test_random_conv_0(self):
-        os.environ["OUTPUT_LAYER"] = "-1"
-        verifiers = {"bab": bab, "eran": eran, "neurify": neurify, "planet": planet}
-        for epsilon in [0.01, 0.1, 0.5, 1.0]:
-            os.environ["EPSILON"] = str(epsilon)
-            for i in range(RUNS_PER_PROP):
-                os.environ["SEED"] = str(i)
-                results = []
-                for name, verifier in verifiers.items():
-                    if not has_verifier(name):
-                        continue
-                    self.reset_property_context()
-                    dnn = nn.parse(network_artifact_dir / "random_conv_0.onnx")
-                    phi = properties.parse(property_artifact_dir / "localrobustness.py")
-                    result = verifier.verify(dnn, phi)
-                    self.check_results(result, results)
-
-    def test_random_conv_1(self):
-        os.environ["OUTPUT_LAYER"] = "-1"
-        verifiers = {"bab": bab, "eran": eran, "neurify": neurify, "planet": planet}
-        for epsilon in [0.01, 0.1, 0.5, 1.0]:
-            os.environ["EPSILON"] = str(epsilon)
-            for i in range(RUNS_PER_PROP):
-                os.environ["SEED"] = str(i)
-                results = []
-                for name, verifier in verifiers.items():
-                    if not has_verifier(name):
-                        continue
-                    self.reset_property_context()
-                    dnn = nn.parse(network_artifact_dir / "random_conv_1.onnx")
-                    phi = properties.parse(property_artifact_dir / "localrobustness.py")
-                    result = verifier.verify(dnn, phi)
-                    self.check_results(result, results)
-
-    def test_random_conv_2(self):
-        os.environ["OUTPUT_LAYER"] = "-1"
-        verifiers = {"bab": bab, "eran": eran, "neurify": neurify, "planet": planet}
-        for epsilon in [0.01, 0.1, 0.5, 1.0]:
-            os.environ["EPSILON"] = str(epsilon)
-            for i in range(RUNS_PER_PROP):
-                os.environ["SEED"] = str(i)
-                results = []
-                for name, verifier in verifiers.items():
-                    if not has_verifier(name):
-                        continue
-                    self.reset_property_context()
-                    dnn = nn.parse(network_artifact_dir / "random_conv_2.onnx")
-                    phi = properties.parse(property_artifact_dir / "localrobustness.py")
-                    result = verifier.verify(dnn, phi)
-                    self.check_results(result, results)
-
-    def test_random_residual_0(self):
-        os.environ["OUTPUT_LAYER"] = "-1"
-        verifiers = {"eran": eran, "planet": planet}
-        for epsilon in [0.01, 0.1, 0.5, 1.0]:
-            os.environ["EPSILON"] = str(epsilon)
-            for i in range(RUNS_PER_PROP):
-                os.environ["SEED"] = str(i)
-                results = []
-                for name, verifier in verifiers.items():
-                    if not has_verifier(name):
+                    if not verifier.is_installed():
                         continue
                     self.reset_property_context()
                     dnn = nn.parse(network_artifact_dir / "random_residual_0.onnx")
                     phi = properties.parse(property_artifact_dir / "localrobustness.py")
-                    if name == "eran":
-                        result = verifier.verify(dnn, phi, domain="refinezono")
-                    else:
-                        result = verifier.verify(dnn, phi)
+                    phi.concretize(N=dnn)
+                    result, _ = verifier.verify(phi)
                     self.check_results(result, results)
 
 

@@ -6,6 +6,7 @@ from typing import Optional, Set, Type, TypeVar
 
 T = TypeVar("T")
 
+
 def get_subclasses(cls: Type[T]) -> Set[Type[T]]:
     c = list(cls.__subclasses__())
     for sub in c:

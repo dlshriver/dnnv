@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 
 set -x
+mkdir -p bin
+mkdir -p include
+mkdir -p lib
+mkdir -p share
 
 PROJECT_DIR=${PROJECT_DIR:-$(
     cd $(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/..
@@ -14,8 +18,8 @@ ensure_cddlib() {
         return
     fi
 
-    wget https://github.com/cddlib/cddlib/releases/download/0.94j/cddlib-0.94j.tar.gz
-    tar -xvf cddlib-0.94j.tar.gz
+    wget -q https://github.com/cddlib/cddlib/releases/download/0.94j/cddlib-0.94j.tar.gz
+    tar xf cddlib-0.94j.tar.gz
     cd cddlib-0.94j
     ./configure --prefix=$PROJECT_DIR
     make
@@ -26,16 +30,19 @@ ensure_cddlib() {
 
 ensure_cmake() {
     cd $PROJECT_DIR/bin
-    if [ -e cmake ]; then
+    if [ $(command -v cmake) ]; then
         echo "CMAKE is already installed"
         return
     fi
 
-    wget https://github.com/Kitware/CMake/releases/download/v3.17.1/cmake-3.17.1-Linux-x86_64.sh
-    chmod u+x cmake-3.17.1-Linux-x86_64.sh
-    yes | ./cmake-3.17.1-Linux-x86_64.sh
-    cp -r cmake-3.17.1-Linux-x86_64/bin/* .
-    cp -r cmake-3.17.1-Linux-x86_64/share/* $PROJECT_DIR/share/
+    wget -q https://github.com/Kitware/CMake/releases/download/v3.18.2/cmake-3.18.2.tar.gz
+    tar xf cmake-3.18.2.tar.gz
+    cd cmake-3.18.2/
+    ./bootstrap --prefix=$PROJECT_DIR
+    make
+    make install
+    cd $PROJECT_DIR/bin
+    rm cmake-3.18.2.tar.gz
 }
 
 ensure_elina() {
@@ -61,7 +68,7 @@ ensure_glpk() {
         return
     fi
 
-    wget http://ftp.gnu.org/gnu/glpk/glpk-4.65.tar.gz
+    wget -q https://ftp.gnu.org/gnu/glpk/glpk-4.65.tar.gz
     tar xf glpk-4.65.tar.gz
     cd glpk-4.65
     ./configure --prefix=$PROJECT_DIR
@@ -78,8 +85,8 @@ ensure_gmp() {
         return
     fi
 
-    wget https://gmplib.org/download/gmp/gmp-6.1.2.tar.xz
-    tar -xvf gmp-6.1.2.tar.xz
+    wget -q https://gmplib.org/download/gmp/gmp-6.1.2.tar.xz
+    tar xf gmp-6.1.2.tar.xz
     cd gmp-6.1.2
     ./configure --enable-cxx --prefix=$PROJECT_DIR
     make
@@ -95,9 +102,10 @@ ensure_gurobi() {
         return
     fi
 
-    wget https://packages.gurobi.com/9.0/gurobi9.0.2_linux64.tar.gz
-    tar -xvf gurobi9.0.2_linux64.tar.gz
+    wget -q https://packages.gurobi.com/9.0/gurobi9.0.2_linux64.tar.gz
+    tar xf gurobi9.0.2_linux64.tar.gz
     cd gurobi902/linux64
+    cp bin/* $PROJECT_DIR/bin/
     cp lib/libgurobi90.so $PROJECT_DIR/lib
     python3 setup.py install
     cd ../../
@@ -113,19 +121,38 @@ ensure_julia() {
         return
     fi
 
-    wget https://julialang-s3.julialang.org/bin/linux/x64/1.0/julia-1.0.4-linux-x86_64.tar.gz
-    tar -xvf julia-1.0.4-linux-x86_64.tar.gz
+    wget -q https://julialang-s3.julialang.org/bin/linux/x64/1.0/julia-1.0.4-linux-x86_64.tar.gz
+    tar xf julia-1.0.4-linux-x86_64.tar.gz
     rm julia-1.0.4-linux-x86_64.tar.gz
+}
+
+ensure_lapack() {
+    cd $PROJECT_DIR/lib
+    if [ -e $PROJECT_DIR/lib/liblapack.a ]; then
+        echo "lapack is already installed"
+        return
+    fi
+
+    wget -q https://github.com/Reference-LAPACK/lapack/archive/v3.9.0.tar.gz
+    tar xf v3.9.0.tar.gz
+    cd lapack-3.9.0
+    mkdir build
+    cd build
+    cmake ..
+    cmake --build . -j
+    cp lib/*.a $PROJECT_DIR/lib/
+    cd ../..
+    rm v3.9.0.tar.gz
 }
 
 ensure_libtool() {
     cd $PROJECT_DIR/bin
-    if [ -e libtool ]; then
+    if [ -e $PROJECT_DIR/lib/libltdl.so ]; then
         echo "libtool is already installed"
         return
     fi
 
-    wget http://gnu.mirror.constant.com/libtool/libtool-2.4.tar.xz
+    wget -q http://gnu.mirror.constant.com/libtool/libtool-2.4.tar.xz
     tar xf libtool-2.4.tar.xz
     cd libtool-2.4
     ./configure --prefix=$PROJECT_DIR
@@ -143,8 +170,8 @@ ensure_lpsolve() {
     fi
 
     cd $PROJECT_DIR/lib
-    wget https://downloads.sourceforge.net/project/lpsolve/lpsolve/5.5.2.5/lp_solve_5.5.2.5_dev_ux64.tar.gz
-    tar -xzf lp_solve_5.5.2.5_dev_ux64.tar.gz
+    wget -q https://downloads.sourceforge.net/project/lpsolve/lpsolve/5.5.2.5/lp_solve_5.5.2.5_dev_ux64.tar.gz
+    tar xf lp_solve_5.5.2.5_dev_ux64.tar.gz
     rm lp_solve_5.5.2.5_dev_ux64.tar.gz
     mkdir $PROJECT_DIR/include/lpsolve/
     cp lp_*.h $PROJECT_DIR/include/lpsolve/
@@ -157,8 +184,8 @@ ensure_m4() {
         return
     fi
 
-    wget ftp://ftp.gnu.org/gnu/m4/m4-1.4.1.tar.gz
-    tar -xvzf m4-1.4.1.tar.gz
+    wget -q https://ftp.gnu.org/gnu/m4/m4-1.4.1.tar.gz
+    tar xf m4-1.4.1.tar.gz
     cd m4-1.4.1
     ./configure --prefix=$PROJECT_DIR
     make
@@ -174,8 +201,8 @@ ensure_mpfr() {
         return
     fi
 
-    wget https://www.mpfr.org/mpfr-current/mpfr-4.1.0.tar.xz
-    tar -xvf mpfr-4.1.0.tar.xz
+    wget -q https://www.mpfr.org/mpfr-current/mpfr-4.1.0.tar.xz
+    tar xf mpfr-4.1.0.tar.xz
     cd mpfr-4.1.0
     CFLAGS="$CFLAGS -I$PROJECT_DIR/include" CXXFLAGS="$CXXFLAGS -I$PROJECT_DIR/include" LDFLAGS="$LDFLAGS -L$PROJECT_DIR/lib" ./configure --prefix=$PROJECT_DIR
     make
@@ -191,8 +218,8 @@ ensure_openblas() {
         return
     fi
 
-    wget http://github.com/xianyi/OpenBLAS/archive/v0.3.6.tar.gz
-    tar -xzf v0.3.6.tar.gz
+    wget -q https://github.com/xianyi/OpenBLAS/archive/v0.3.6.tar.gz
+    tar xf v0.3.6.tar.gz
     cd OpenBLAS-0.3.6
     make
     make PREFIX=$PROJECT_DIR install
@@ -208,8 +235,8 @@ ensure_suitesparse() {
     fi
 
     cd $PROJECT_DIR/lib
-    wget https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v5.6.0.tar.gz
-    tar -xzf v5.6.0.tar.gz
+    wget -q https://github.com/DrTimothyAldenDavis/SuiteSparse/archive/v5.6.0.tar.gz
+    tar xf v5.6.0.tar.gz
     cd SuiteSparse-5.6.0
     make library BLAS="-L$PROJECT_DIR/lib -lopenblas"
     cp lib/* $PROJECT_DIR/lib
@@ -221,12 +248,12 @@ ensure_suitesparse() {
 
 ensure_valgrind() {
     cd $PROJECT_DIR/bin
-    if [ -e valgrind ]; then
-        echo "zlib is already installed"
+    if [ -e $PROJECT_DIR/include/valgrind/callgrind.h ]; then
+        echo "valgrind is already installed"
         return
     fi
 
-    wget https://sourceware.org/pub/valgrind/valgrind-3.15.0.tar.bz2
+    wget -q https://sourceware.org/pub/valgrind/valgrind-3.15.0.tar.bz2
     tar xf valgrind-3.15.0.tar.bz2
     cd valgrind-3.15.0
     ./configure --prefix=$PROJECT_DIR
@@ -241,7 +268,7 @@ ensure_zlib() {
         return
     fi
 
-    wget https://www.zlib.net/zlib-1.2.11.tar.xz
+    wget -q https://www.zlib.net/zlib-1.2.11.tar.xz
     tar xf zlib-1.2.11.tar.xz
     cd zlib-1.2.11
     ./configure --prefix=$PROJECT_DIR

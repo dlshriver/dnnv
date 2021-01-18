@@ -1,11 +1,12 @@
 #!/bin/bash
 
-deactivate
+if [ -n "${VIRTUAL_ENV:x}" ]; then
+    . $PROJECT_DIR/.venv/bin/activate
+    deactivate
+fi
 
-export LD_LIBRARY_PATH=$ENV_OLD_LD_LIBRARY_PATH
-export PATH=$ENV_OLD_PATH
-export PYTHONPATH=$ENV_OLD_PYTHONPATH
-
-unset ENV_OLD_LD_LIBRARY_PATH
-unset ENV_OLD_PATH
-unset ENV_OLD_PYTHONPATH
+if [ -n "${PROJECT_ENV:x}" ]; then
+    envdir=$(dirname "${BASH_SOURCE[0]}")
+    . $envdir/env.sh
+    clear_vars
+fi

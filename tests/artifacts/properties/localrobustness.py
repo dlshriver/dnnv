@@ -19,4 +19,3 @@ epsilon = eval(os.environ.get("EPSILON", "0.01"))
 Forall(
     x_, Implies(x - epsilon <= x_ <= x + epsilon, np.argmax(N(x_)) == np.argmax(N(x)))
 )
-

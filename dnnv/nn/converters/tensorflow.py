@@ -1,13 +1,15 @@
 import numpy as np
 import tensorflow.compat.v1 as tf
 
-from ... import Operation, OperationVisitor
+from ..graph import OperationGraph
+from ..operations import Operation
+from ..visitors import OperationVisitor
 
 
-def convert(operations):
+def convert(op_graph: OperationGraph):
     converter = TensorflowConverter()
     output_funcs = []
-    for op in operations:
+    for op in op_graph.output_operations:
         output_funcs.append(converter.visit(op))
 
     def func(*inputs, squeeze=True):
@@ -151,16 +153,26 @@ class TensorflowConverter(OperationVisitor):
             variance = operation.variance
             epsilon = operation.epsilon
 
-            x = tf.transpose(x, (0, 2, 3, 1))
-            result = tf.nn.batch_normalization(
-                x,
-                mean=mean,
-                variance=variance,
-                offset=bias,
-                scale=scale,
-                variance_epsilon=epsilon,
-            )
-            result = tf.transpose(result, (0, 3, 1, 2))
+            if len(x.shape) == 4:
+                x = tf.transpose(x, (0, 2, 3, 1))
+                result = tf.nn.batch_normalization(
+                    x,
+                    mean=mean,
+                    variance=variance,
+                    offset=bias,
+                    scale=scale,
+                    variance_epsilon=epsilon,
+                )
+                result = tf.transpose(result, (0, 3, 1, 2))
+            else:
+                result = tf.nn.batch_normalization(
+                    x,
+                    mean=mean,
+                    variance=variance,
+                    offset=bias,
+                    scale=scale,
+                    variance_epsilon=epsilon,
+                )
             return result
 
         return batchnorm_func

@@ -29,7 +29,7 @@ class OperationGraph:
     def simplify(self):
         from .transformers import simplify
 
-        return simplify(self)
+        return simplify(self.copy())
 
     def pprint(self):
         from .visitors import PrintVisitor
@@ -98,10 +98,25 @@ class OperationGraph:
         result = linearity_visitor.result
         return result
 
+    def export_onnx(self, filename):
+        import onnx
+
+        onnx.save(self.as_onnx(), filename)
+
+    def as_onnx(self):
+        from .converters.onnx import convert as onnx_convert
+
+        return onnx_convert(self)
+
+    def as_pytorch(self):
+        from .converters.pytorch import convert as pytorch_convert
+
+        return pytorch_convert(self)
+
     def as_tf(self):
         from .converters.tensorflow import convert as tf_convert
 
-        return tf_convert(self.output_operations)
+        return tf_convert(self)
 
     def __call__(self, *x, **kwargs):
         tf_func = self.as_tf()

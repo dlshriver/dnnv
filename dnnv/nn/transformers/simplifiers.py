@@ -42,8 +42,11 @@ class Simplifier(OperationTransformer):
         self._cache: Dict[Operation, Operation] = {}
         self._modified_graph = False
         self.dnn = dnn
+        self.run_analyses()
+
+    def run_analyses(self):
         self.analysis: Dict[str, Analysis] = {
-            name: analysis(dnn) for name, analysis in self.ANALYSES.items()
+            name: analysis(self.dnn) for name, analysis in self.ANALYSES.items()
         }
 
     def visit(self, operation: Operation) -> Operation:
@@ -70,6 +73,9 @@ class Compose(Simplifier):
                 simplifier._cache = {}
                 operation = simplifier.visit(operation)
                 modified_graph |= simplifier._modified_graph
+                if modified_graph:
+                    for simplifier in self.simplifiers:
+                        simplifier.run_analyses()
             self._modified_graph |= modified_graph
         return operation
 
@@ -131,6 +137,28 @@ class ConvertBatchNorm(Simplifier):
 
             input_op.w = weights
             input_op.b = bias
+            return input_op
+        elif (
+            isinstance(input_op, operations.Gemm)
+            and not self.analysis["is_split"][input_op]
+        ):
+            std = np.sqrt(operation.variance + operation.epsilon)
+            a = operation.scale / std
+            b = operation.bias - operation.scale * operation.mean / std
+
+            if isinstance(input_op.a, np.ndarray):
+                if input_op.transpose_a:
+                    input_op.a = np.diag(a) @ input_op.a
+                else:
+                    input_op.a = input_op.a @ np.diag(a)
+            elif isinstance(input_op.b, np.ndarray):
+                if input_op.transpose_b:
+                    input_op.b = np.diag(a) @ input_op.b
+                else:
+                    input_op.b = input_op.b @ np.diag(a)
+            else:
+                raise NotImplementedError()
+            input_op.c = a * input_op.c + b
             return input_op
         elif isinstance(input_op, operations.Input):
             c = operation.mean.shape[0]
@@ -248,6 +276,7 @@ class SqueezeConvs(Simplifier):
             isinstance(operation.x, operations.Conv)
             and operation.x.w.shape[2] == 1
             and operation.x.w.shape[3] == 1
+            and all(p == 0 for p in operation.pads)
             and all(s == 1 for s in operation.x.strides)
             and all(p == 0 for p in operation.x.pads)
             and all(d == 1 for d in operation.x.dilations)
@@ -268,6 +297,7 @@ class SqueezeConvs(Simplifier):
             op.x = operation.x.x
             op.w = weights
             op.b = bias
+
             return op
         return operation
 

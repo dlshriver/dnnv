@@ -1,33 +1,22 @@
 #!/bin/bash
 
-PROJECT_DIR=$(
-    cd $(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)/..
-    pwd
-)
 mkdir -p bin
 mkdir -p include
 mkdir -p lib
 mkdir -p share
 
 if [ "$1" == "init" ]; then
-    python3.7 -m venv .venv
-    . .venv/bin/activate
-    python -m pip install --upgrade pip setuptools flit
-    flit install -s
+    . .env.d/initenv.sh
 fi
 
 if [ "$1" == "update" ]; then
-    if [ ! -d .venv ]; then
-        echo "Environment does not exist. Try:" >&2
-        echo " ./manage.sh init"
-        exit 1
-    fi
-    . .venv/bin/activate
+    . .env.d/openenv.sh
     python -m pip install --upgrade pip setuptools flit
     flit install -s
 fi
 
 if [ "$1" == "install" ]; then
+    . .env.d/openenv.sh
     shift
     for pkg in "$@"; do
         if [ "$pkg" == "bab" ]; then
@@ -36,15 +25,15 @@ if [ "$1" == "install" ]; then
         elif [ "$pkg" == "eran" ]; then
             echo "Installing ERAN..."
             ./scripts/install_eran.sh
-        elif [ "$pkg" == "gurobi" ]; then
-            echo "Installing Gurobi..."
-            ./scripts/install_gurobi.sh
         elif [ "$pkg" == "mipverify" ]; then
             echo "Installing MIPVerify..."
             ./scripts/install_mipverify.sh
         elif [ "$pkg" == "neurify" ]; then
             echo "Installing Neurify..."
             ./scripts/install_neurify.sh
+        elif [ "$pkg" == "nnenum" ]; then
+            echo "Installing nnenum..."
+            ./scripts/install_nnenum.sh
         elif [ "$pkg" == "planet" ]; then
             echo "Installing Planet..."
             ./scripts/install_planet.sh
@@ -54,6 +43,12 @@ if [ "$1" == "install" ]; then
         elif [ "$pkg" == "reluplex" ]; then
             echo "Installing Reluplex..."
             ./scripts/install_reluplex.sh
+        elif [ "$pkg" == "marabou" ]; then
+            echo "Installing Marabou..."
+            ./scripts/install_marabou.sh
+        elif [ "$pkg" == "verinet" ]; then
+            echo "Installing VeriNet..."
+            ./scripts/install_verinet.sh
         else
             echo "Unknown package: $pkg"
         fi

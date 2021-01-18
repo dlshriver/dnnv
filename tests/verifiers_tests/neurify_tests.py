@@ -1,15 +1,15 @@
 import os
 import unittest
 
-import dnnv.verifiers.neurify as neurify
+from dnnv.verifiers.neurify import Neurify
 
-from tests.verifiers_tests.utils import VerifierTests, has_verifier
+from tests.verifiers_tests.utils import VerifierTests
 
 
-@unittest.skipIf(not has_verifier("neurify"), "Neurify is not installed")
+@unittest.skipIf(not Neurify.is_installed(), "Neurify is not installed")
 class NeurifyVerifierTests(VerifierTests, unittest.TestCase):
     def initialize(self):
-        self.verifier = neurify
+        self.verifier = Neurify
         self.is_complete = False
 
 
