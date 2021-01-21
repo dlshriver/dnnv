@@ -64,6 +64,7 @@ jobs:
           export TF_CPP_MIN_LOG_LEVEL=3
           source .env.d/openenv.sh
           coverage run
+          coverage combine
 
       - name: Upload Coverage to Codecov
         uses: codecov/codecov-action@v1
