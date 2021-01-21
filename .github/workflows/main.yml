@@ -54,9 +54,14 @@ jobs:
 #       - name: "Install Verifier: nnenum"
 #         run: ./manage.sh install nnenum
       
+      - name: Prepare Test Artifacts
+        run: |
+          source .env.d/openenv.sh
+          python tests/artifacts/build_artifacts.py
+      
       - name: Run DNNV Test Suite
         run: |
-          set -x
+          export TF_CPP_MIN_LOG_LEVEL=3
           source .env.d/openenv.sh
           coverage run
 
