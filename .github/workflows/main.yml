@@ -65,6 +65,7 @@ jobs:
           source .env.d/openenv.sh
           coverage run
           coverage combine
+          coverage xml
 
       - name: Upload Coverage to Codecov
         uses: codecov/codecov-action@v1
