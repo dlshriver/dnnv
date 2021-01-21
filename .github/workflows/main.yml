@@ -55,11 +55,8 @@ jobs:
 #         run: ./manage.sh install nnenum
       
       - name: Run DNNV Test Suite
-        run: |
-          pwd
-          ls
-          source .env.d/openenv.sh
-          python -m coverage run
+        shell: bash --noprofile --norc -eo pipefail --init-file $GITHUB_WORKSPACE/.env.d/openenv.sh {0}
+        run: coverage run
 
       - name: Upload Coverage to Codecov
         uses: codecov/codecov-action@v1
