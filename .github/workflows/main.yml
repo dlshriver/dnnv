@@ -36,23 +36,23 @@ jobs:
       - name: Install DNNV
         run: ./manage.sh init
       
-#       - name: "Install Verifier: Reluplex"
-#         run: ./manage.sh install reluplex
+      - name: "Install Verifier: Reluplex"
+        run: ./manage.sh install reluplex
       
-#       - name: "Install Verifier: Planet"
-#         run: ./manage.sh install planet
+      - name: "Install Verifier: Planet"
+        run: ./manage.sh install planet
       
-#       - name: "Install Verifier: Neurify"
-#         run: ./manage.sh install neurify
+      - name: "Install Verifier: Neurify"
+        run: ./manage.sh install neurify
       
-#       - name: "Install Verifier: ERAN"
-#         run: ./manage.sh install eran
+      - name: "Install Verifier: ERAN"
+        run: ./manage.sh install eran
       
-#       - name: "Install Verifier: Marabou"
-#         run: ./manage.sh install marabou
+      - name: "Install Verifier: Marabou"
+        run: ./manage.sh install marabou
       
-#       - name: "Install Verifier: nnenum"
-#         run: ./manage.sh install nnenum
+      - name: "Install Verifier: nnenum"
+        run: ./manage.sh install nnenum
       
       - name: Prepare Test Artifacts
         run: |
