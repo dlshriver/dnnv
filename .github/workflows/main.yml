@@ -56,6 +56,7 @@ jobs:
       
       - name: Run DNNV Test Suite
         run: |
+          set -x
           ls -l .env.d/
           ! source -h
           .env.d/openenv.sh
