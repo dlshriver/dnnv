@@ -17,8 +17,8 @@ function set_var() {
     val=$2
     old_var="__${PROJECT_ENV}_OLD_${var}"
     old_val=${!var}
-    result=$(echo ${!PROJECT_ENVVARS} | egrep ":$var:|^$var:")
-    if [ $? -eq 1 ]; then
+    result=$(echo ${!PROJECT_ENVVARS} | egrep ":$var:|^$var:" || echo "$")
+    if [ "$result" == "$" ]; then
         export $PROJECT_ENVVARS=$var:${!PROJECT_ENVVARS}
         export $old_var=$old_val
     else
@@ -32,8 +32,8 @@ function append_path() {
     val=$1
     old_var="__${PROJECT_ENV}_OLD_${var}"
     old_val=${!var}
-    result=$(echo ${!PROJECT_ENVVARS} | egrep ":$var:|^$var:")
-    if [ $? -eq 1 ]; then
+    result=$(echo ${!PROJECT_ENVVARS} | egrep ":$var:|^$var:" || echo "$")
+    if [ "$result" == "$" ]; then
         export "$PROJECT_ENVVARS=$var:${!PROJECT_ENVVARS}"
         export "$old_var=$old_val"
     fi
