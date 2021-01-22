@@ -7,6 +7,8 @@ PROJECT_DIR=${PROJECT_DIR:-$(
 source $PROJECT_DIR/scripts/install_common.sh
 ensure_cmake
 
+pip install onnxruntime
+
 cd $PROJECT_DIR/bin
 git clone https://github.com/NeuralNetworkVerification/Marabou
 cd Marabou
