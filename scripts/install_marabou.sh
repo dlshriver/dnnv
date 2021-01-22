@@ -9,8 +9,8 @@ ensure_cmake
 
 cd $PROJECT_DIR/bin
 git clone https://github.com/NeuralNetworkVerification/Marabou
-git checkout 8bea650
 cd Marabou
+git checkout 8bea650
 mkdir build 
 cd build
 cmake ..
