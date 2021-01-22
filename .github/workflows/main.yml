@@ -54,8 +54,18 @@ jobs:
       - name: "Install Verifier: nnenum"
         run: ./manage.sh install nnenum
       
+      - name: Prepare Test Artifacts
+        run: |
+          source .env.d/openenv.sh
+          python tests/artifacts/build_artifacts.py
+      
       - name: Run DNNV Test Suite
-        run: source .env.d/openenv.sh; coverage run
+        run: |
+          export TF_CPP_MIN_LOG_LEVEL=3
+          source .env.d/openenv.sh
+          coverage run
+          coverage combine
+          coverage xml
 
       - name: Upload Coverage to Codecov
         uses: codecov/codecov-action@v1
