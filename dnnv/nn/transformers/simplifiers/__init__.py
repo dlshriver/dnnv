@@ -3,81 +3,13 @@ import numpy as np
 from copy import copy
 from typing import Any, Dict, List, Optional, Set, Type, Union
 
-from .. import operations
-from ..graph import OperationGraph
-from ..operations import Operation
-from ...utils import get_subclasses
+from ... import operations
+from ...analyzers import Analysis, SplitAnalysis
+from ...graph import OperationGraph
+from ...operations import Operation
+from ....utils import get_subclasses
 
-from .base import OperationTransformer, OperationVisitor
-
-
-class Analysis(OperationVisitor):
-    def __init__(self, dnn: OperationGraph):
-        self.results: Dict[Operation, Any] = {}
-        dnn.walk(self)
-
-    def __getitem__(self, index):
-        return self.results[index]
-
-
-class SplitAnalysis(Analysis):
-    def __init__(self, dnn: OperationGraph):
-        self._cache: Set[Operation] = set()
-        super().__init__(dnn)
-
-    def visit(self, operation: Operation):
-        if operation not in self._cache:
-            self._cache.add(operation)
-            super().visit(operation)
-            self.results[operation] = False
-        else:
-            self.results[operation] = True
-        return self
-
-
-class Simplifier(OperationTransformer):
-    ANALYSES: Dict[str, Type[Analysis]] = {}
-
-    def __init__(self, dnn: OperationGraph):
-        self._cache: Dict[Operation, Operation] = {}
-        self._modified_graph = False
-        self.dnn = dnn
-        self.run_analyses()
-
-    def run_analyses(self):
-        self.analysis: Dict[str, Analysis] = {
-            name: analysis(self.dnn) for name, analysis in self.ANALYSES.items()
-        }
-
-    def visit(self, operation: Operation) -> Operation:
-        if operation not in self._cache:
-            operation = super().generic_visit(operation)
-            result = super().visit(operation)
-            if result is not operation:
-                self._modified_graph = True
-            self._cache[operation] = result
-        return self._cache[operation]
-
-
-class Compose(Simplifier):
-    def __init__(self, dnn: OperationGraph, *simplifiers: Type[Simplifier]):
-        super().__init__(dnn)
-        self.simplifiers = [simplifier(dnn) for simplifier in simplifiers]
-
-    def visit(self, operation: Operation) -> Operation:
-        modified_graph = True
-        while modified_graph:
-            modified_graph = False
-            for simplifier in self.simplifiers:
-                simplifier._modified_graph = False
-                simplifier._cache = {}
-                operation = simplifier.visit(operation)
-                modified_graph |= simplifier._modified_graph
-                if modified_graph:
-                    for simplifier in self.simplifiers:
-                        simplifier.run_analyses()
-            self._modified_graph |= modified_graph
-        return operation
+from .base import ComposeSimplifiers, Simplifier
 
 
 class BundlePadding(Simplifier):
@@ -372,7 +304,7 @@ def simplify(
     dnn: OperationGraph, simplifier: Optional[Simplifier] = None
 ) -> OperationGraph:
     if simplifier is None:
-        simplifier = Compose(dnn, *[c for c in get_subclasses(Simplifier)])
+        simplifier = ComposeSimplifiers(dnn, *[c for c in get_subclasses(Simplifier)])
     simplified_graph = OperationGraph(dnn.walk(simplifier))
     return simplified_graph
 

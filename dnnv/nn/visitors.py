@@ -38,9 +38,7 @@ class GetInputDetails(OperationVisitor):
 
     def visit_Input(self, operation: operations.Input):
         self.input_details.append(
-            TensorDetails(
-                tuple((i if i > 0 else 1) for i in operation.shape), operation.dtype
-            )
+            TensorDetails(tuple(int(i) for i in operation.shape), operation.dtype)
         )
 
 

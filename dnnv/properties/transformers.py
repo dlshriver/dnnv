@@ -388,8 +388,8 @@ class PropagateConstants(ExpressionTransformer):
             if len(expressions) == 1:
                 return expressions[0]
             return Add(*expressions)
-        constant_value = 0
-        for expr in constant_expressions:
+        constant_value = constant_expressions[0].value
+        for expr in constant_expressions[1:]:
             constant_value += expr.value
         if len(expressions) == 0:
             return Constant(constant_value)
