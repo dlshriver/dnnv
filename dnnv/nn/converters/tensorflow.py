@@ -272,6 +272,20 @@ class TensorflowConverter(OperationVisitor):
 
         return elu_func
 
+    def visit_Expand(self, operation):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+
+        @self._cached
+        def expand_func(*inputs):
+            x = _concretize([x_], inputs)
+            shape = operation.shape
+            result = x * tf.ones(shape, x.dtype)
+            return result
+
+        return expand_func
+
     def visit_Flatten(self, operation):
         x_ = operation.x
         if isinstance(x_, Operation):
@@ -576,6 +590,20 @@ class TensorflowConverter(OperationVisitor):
             return result
 
         return sub_func
+
+    def visit_Tile(self, operation):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+
+        @self._cached
+        def tile_func(*inputs):
+            x = _concretize([x_], inputs)
+            repeats = operation.repeats
+            result = tf.tile(x, repeats)
+            return result
+
+        return tile_func
 
     def visit_Transpose(self, operation):
         x_ = operation.x
