@@ -227,6 +227,22 @@ class TensorflowConverter(OperationVisitor):
 
         return conv_func
 
+    def visit_Div(self, operation):
+        a_ = operation.a
+        if isinstance(a_, Operation):
+            a_ = self.visit(a_)
+        b_ = operation.b
+        if isinstance(b_, Operation):
+            b_ = self.visit(b_)
+
+        @self._cached
+        def div_func(*inputs):
+            a, b = _concretize([a_, b_], inputs)
+            result = tf.divide(a, b)
+            return result
+
+        return div_func
+
     def visit_Dropout(self, operation):
         x_ = operation.x
         if isinstance(x_, Operation):
@@ -255,6 +271,20 @@ class TensorflowConverter(OperationVisitor):
             return result
 
         return elu_func
+
+    def visit_Expand(self, operation):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+
+        @self._cached
+        def expand_func(*inputs):
+            x = _concretize([x_], inputs)
+            shape = operation.shape
+            result = x * tf.ones(shape, x.dtype)
+            return result
+
+        return expand_func
 
     def visit_Flatten(self, operation):
         x_ = operation.x
@@ -544,6 +574,36 @@ class TensorflowConverter(OperationVisitor):
             return result
 
         return softmax_func
+
+    def visit_Sub(self, operation):
+        a_ = operation.a
+        if isinstance(a_, Operation):
+            a_ = self.visit(a_)
+        b_ = operation.b
+        if isinstance(b_, Operation):
+            b_ = self.visit(b_)
+
+        @self._cached
+        def sub_func(*inputs):
+            a, b = _concretize([a_, b_], inputs)
+            result = tf.subtract(a, b)
+            return result
+
+        return sub_func
+
+    def visit_Tile(self, operation):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+
+        @self._cached
+        def tile_func(*inputs):
+            x = _concretize([x_], inputs)
+            repeats = operation.repeats
+            result = tf.tile(x, repeats)
+            return result
+
+        return tile_func
 
     def visit_Transpose(self, operation):
         x_ = operation.x

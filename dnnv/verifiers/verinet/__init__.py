@@ -62,7 +62,10 @@ class VeriNet(Verifier):
 
             torch.onnx.export(
                 op_graph.as_pytorch(),
-                tuple(torch.ones(shape) for shape in op_graph.input_shape),
+                tuple(
+                    torch.ones(tuple((d if d > 0 else 1) for d in shape))
+                    for shape in op_graph.input_shape
+                ),
                 onnx_model_file.name,
             )
 

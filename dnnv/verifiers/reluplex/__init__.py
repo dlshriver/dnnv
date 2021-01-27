@@ -18,8 +18,7 @@ class Reluplex(Verifier):
                 "Unsupported network: More than 1 input variable"
             )
         layers = as_layers(
-            prop.suffixed_op_graph(),
-            translator_error=self.translator_error,
+            prop.suffixed_op_graph(), translator_error=self.translator_error,
         )
         nnet_file_name = to_nnet_file(
             prop.input_constraint,
@@ -34,7 +33,7 @@ class Reluplex(Verifier):
         for line in stdout:
             if line.startswith("Solution found!"):
                 shape, dtype = prop.op_graph.input_details[0]
-                cex = np.zeros(np.product(shape), dtype)
+                cex = np.zeros(np.product([d if d > 0 else 1 for d in shape]), dtype)
                 found = False
                 for line in stdout:
                     if found and line.startswith("input"):

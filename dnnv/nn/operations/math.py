@@ -21,6 +21,16 @@ class Atan(Operation):
         return cls(*inputs)
 
 
+class Div(Operation):
+    def __init__(self, a, b):
+        self.a = a
+        self.b = b
+
+    @classmethod
+    def from_onnx(cls, onnx_node, *inputs):
+        return cls(*inputs)
+
+
 class Elu(Operation):
     def __init__(self, x, *, alpha=1.0):
         self.x = x
@@ -117,6 +127,16 @@ class Softmax(Operation):
         attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
         axis = attributes.get("axis", 1)
         return cls(*inputs, axis=axis)
+
+
+class Sub(Operation):
+    def __init__(self, a, b):
+        self.a = a
+        self.b = b
+
+    @classmethod
+    def from_onnx(cls, onnx_node, *inputs):
+        return cls(*inputs)
 
 
 class Tanh(Operation):

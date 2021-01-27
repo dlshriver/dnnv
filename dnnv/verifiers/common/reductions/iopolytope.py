@@ -559,11 +559,18 @@ class IOPolytopeReduction(Reduction):
                 )
             for arg, d in zip(expression.args, input_details):
                 if arg in self._network_input_shapes:
-                    if self._network_input_shapes[arg] != tuple(d.shape):
+                    if any(
+                        i1 != i2 and i2 > 0
+                        for i1, i2 in zip(
+                            self._network_input_shapes[arg], tuple(d.shape)
+                        )
+                    ):
                         raise self.reduction_error(
                             f"Invalid property: variable with multiple shapes: '{arg}'"
                         )
-                self._network_input_shapes[arg] = tuple(d.shape)
+                self._network_input_shapes[arg] = tuple(
+                    i if i > 0 else 1 for i in d.shape
+                )
                 self.visit(arg)
             shape = self._network_output_shapes[expression.function]
             self.variables[expression] = self.variables[expression.function]

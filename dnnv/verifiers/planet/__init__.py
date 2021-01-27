@@ -40,7 +40,7 @@ class Planet(Verifier):
             raise self.verifier_error(f"Running planet produced no output.")
         if stdout[-1] == "SAT":
             shape, dtype = prop.op_graph.input_details[0]
-            cex = np.zeros(shape, dtype)
+            cex = np.zeros((1,) + shape[1:], dtype)
             found = False
             for line in stdout:
                 if line.startswith("SAT"):

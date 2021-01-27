@@ -16,6 +16,16 @@ class Concat(Operation):
         return cls(inputs, axis=axis)
 
 
+class Expand(Operation):
+    def __init__(self, x, shape):
+        self.x = x
+        self.shape = shape
+
+    @classmethod
+    def from_onnx(cls, onnx_node, *inputs):
+        return cls(*inputs)
+
+
 class Flatten(Operation):
     def __init__(self, x, *, axis=1):
         self.x = x
@@ -79,6 +89,16 @@ class Reshape(Operation):
 class Shape(Operation):
     def __init__(self, x):
         self.x = x
+
+    @classmethod
+    def from_onnx(cls, onnx_node, *inputs):
+        return cls(*inputs)
+
+
+class Tile(Operation):
+    def __init__(self, x, repeats):
+        self.x = x
+        self.repeats = repeats
 
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):
