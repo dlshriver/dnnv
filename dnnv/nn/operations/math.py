@@ -117,6 +117,15 @@ class Sigmoid(Operation):
         return cls(*inputs)
 
 
+class Sign(Operation):
+    def __init__(self, x):
+        self.x = x
+
+    @classmethod
+    def from_onnx(cls, onnx_node, *inputs):
+        return cls(*inputs)
+
+
 class Softmax(Operation):
     def __init__(self, x, *, axis=1):
         self.x = x
