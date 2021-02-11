@@ -3,6 +3,7 @@ import tensorflow.compat.v1 as tf
 
 from ..graph import OperationGraph
 from ..operations import Operation
+from ..utils import ONNX_TO_TENSORFLOW_DTYPE
 from ..visitors import OperationVisitor
 
 
@@ -176,6 +177,19 @@ class TensorflowConverter(OperationVisitor):
             return result
 
         return batchnorm_func
+
+    def visit_Cast(self, operation):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+
+        @self._cached
+        def cast_func(*inputs):
+            x = _concretize([x_], inputs)
+            result = tf.cast(x, ONNX_TO_TENSORFLOW_DTYPE[operation.to])
+            return result
+
+        return cast_func
 
     def visit_Concat(self, operation):
         tensors_ = []

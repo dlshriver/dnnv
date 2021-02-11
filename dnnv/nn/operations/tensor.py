@@ -4,6 +4,18 @@ from .base import Operation
 from ..utils import as_numpy
 
 
+class Cast(Operation):
+    def __init__(self, x, to):
+        self.x = x
+        self.to = to
+
+    @classmethod
+    def from_onnx(cls, onnx_node, *inputs):
+        attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
+        axis = attributes.get("to")
+        return cls(inputs, axis=axis)
+
+
 class Concat(Operation):
     def __init__(self, x, axis):
         self.x = x
