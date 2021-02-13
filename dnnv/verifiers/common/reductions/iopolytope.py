@@ -153,14 +153,32 @@ class HalfspacePolytope(Constraint):
         else:
             for i in indices:
                 obj = np.zeros(n)
-                obj[i] = 1
-                result = linprog(obj, A_ub=self._A, b_ub=self._b, bounds=(None, None))
-                if result.status == 0:
-                    self._lower_bound[i] = result.x[i]
-                obj[i] = -1
-                result = linprog(obj, A_ub=self._A, b_ub=self._b, bounds=(None, None))
-                if result.status == 0:
-                    self._upper_bound[i] = result.x[i]
+                try:
+                    obj[i] = 1
+                    result = linprog(
+                        obj, A_ub=self._A, b_ub=self._b, bounds=(None, None)
+                    )
+                    if result.status == 0:
+                        self._lower_bound[i] = result.x[i]
+                except ValueError as e:
+                    if (
+                        e.args[0]
+                        != "The algorithm terminated successfully and determined that the problem is infeasible."
+                    ):
+                        raise e
+                try:
+                    obj[i] = -1
+                    result = linprog(
+                        obj, A_ub=self._A, b_ub=self._b, bounds=(None, None)
+                    )
+                    if result.status == 0:
+                        self._upper_bound[i] = result.x[i]
+                except ValueError as e:
+                    if (
+                        e.args[0]
+                        != "The algorithm terminated successfully and determined that the problem is infeasible."
+                    ):
+                        raise e
 
     def update_constraint(self, variables, indices, coefficients, b, is_open=False):
         flat_indices = [
