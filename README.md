@@ -4,7 +4,7 @@ A framework for verification and analysis of deep neural networks.
 
 ## Getting Started
 
-For more detailed instructions, see our [documentation](https://dnnv.readthedocs.io/en/v1_refactor/).
+For more detailed instructions, see our [documentation](https://dnnv.readthedocs.io/en/stable/).
 
 ### Installation
 
