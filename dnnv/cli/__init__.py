@@ -53,19 +53,12 @@ class AppendNetwork(argparse.Action):
 
 
 class SetVerifierParameter(argparse.Action):
-    def __init__(
-        self, *args, **kwargs,
-    ):
-        super().__init__(*args, **kwargs)
-        self.verifier_parameters = {}
-
     def __call__(self, parser, namespace, values, option_string=None):
         verifier, parameter = option_string.strip("-").split(".", maxsplit=1)
-        if verifier not in self.verifier_parameters:
-            self.verifier_parameters[verifier] = {}
-        self.verifier_parameters[verifier][parameter] = values
         params = (getattr(namespace, self.dest) or {}).copy()
-        params.update(self.verifier_parameters)
+        if verifier not in params:
+            params[verifier] = {}
+        params[verifier][parameter] = values
         setattr(namespace, self.dest, params)
 
 
@@ -119,9 +112,20 @@ def parse_args():
     ):
         if verifier.is_installed():
             vname = verifier.__module__.split(".")[-1]
-            verifier_group.add_argument(
-                f"--{vname}", dest="verifiers", action="append_const", const=verifier,
-            )
+            if vname == "convert":
+                parser.add_argument(
+                    f"--{vname}",
+                    dest="verifiers",
+                    action="append_const",
+                    const=verifier,
+                )
+            else:
+                verifier_group.add_argument(
+                    f"--{vname}",
+                    dest="verifiers",
+                    action="append_const",
+                    const=verifier,
+                )
             verifier_parameters_group = parser.add_argument_group(f"{vname} parameters")
             for pname, pinfo in verifier.parameters.items():
                 metavar = None if pinfo.choices is not None else pname.upper()

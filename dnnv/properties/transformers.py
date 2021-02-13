@@ -227,6 +227,12 @@ class Canonical(ExpressionTransformer):
             raise RuntimeError("Expected expression of type 'Add'")
         return expr
 
+    def visit_Attribute(self, expression: Attribute) -> Attribute:
+        expr1 = self.visit(expression.expr1)
+        expr2 = self.visit(expression.expr2)
+        expr = Attribute(expr1, expr2)
+        return expr
+
     def visit_Constant(self, expression: Constant) -> Constant:
         return expression
 

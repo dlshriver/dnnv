@@ -258,7 +258,7 @@ class CachedExpression(Expression):
     @hidesignature
     @classmethod
     @abstractmethod
-    def build_identifier(cls, *args, **kwargs):
+    def build_identifier(cls, *args, **kwargs) -> str:
         raise NotImplementedError()
 
 

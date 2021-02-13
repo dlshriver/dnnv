@@ -395,7 +395,7 @@ class IOPolytopeProperty(Property):
                     )
                 else:
                     raise NotImplementedError(
-                        f"Cannot prefix network with input shape {mins.shape}"
+                        f"Cannot prefix network with input shape {input_shape}"
                     )
                 self._input_count += 1
                 return new_op
@@ -743,7 +743,6 @@ class IOPolytopeReduction(Reduction):
         if not isinstance(expression.index, Constant):
             raise self.reduction_error("Unsupported property: Symbolic subscript index")
         index = expression.index.value
-        expr = expression.expr
         self.visit(expression.expr)
         self.variables[expression] = self.variables[expression.expr]
         self.indices[expression] = self.indices[expression.expr][index]
