@@ -1,4 +1,4 @@
-from dnnv.verifiers.common import VerifierError, VerifierTranslatorError
+from dnnv.verifiers.common.errors import VerifierError, VerifierTranslatorError
 
 
 class ERANError(VerifierError):

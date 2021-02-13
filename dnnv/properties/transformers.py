@@ -227,6 +227,12 @@ class Canonical(ExpressionTransformer):
             raise RuntimeError("Expected expression of type 'Add'")
         return expr
 
+    def visit_Attribute(self, expression: Attribute) -> Attribute:
+        expr1 = self.visit(expression.expr1)
+        expr2 = self.visit(expression.expr2)
+        expr = Attribute(expr1, expr2)
+        return expr
+
     def visit_Constant(self, expression: Constant) -> Constant:
         return expression
 
@@ -388,8 +394,8 @@ class PropagateConstants(ExpressionTransformer):
             if len(expressions) == 1:
                 return expressions[0]
             return Add(*expressions)
-        constant_value = 0
-        for expr in constant_expressions:
+        constant_value = constant_expressions[0].value
+        for expr in constant_expressions[1:]:
             constant_value += expr.value
         if len(expressions) == 0:
             return Constant(constant_value)

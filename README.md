@@ -1,11 +1,10 @@
-# Deep Neural Network Verification Toolbox
+# Deep Neural Network Verification
 
-Tools for verification and analysis of deep neural networks. 
-Watch our [demo video](https://youtu.be/M5G_OWfCF2o) for a quick description!
+A framework for verification and analysis of deep neural networks.
 
 ## Getting Started
 
-For more detailed instructions, see our [documentation](https://dnnv.readthedocs.io/en/latest/).
+For more detailed instructions, see our [documentation](https://dnnv.readthedocs.io/en/v1_refactor/).
 
 ### Installation
 
@@ -27,10 +26,10 @@ To activate the virtual environment and set environment variables correctly for 
 $ . .env.d/openenv.sh
 ```
 
-Install any of the supported verifiers ([Reluplex](https://github.com/guykatzz/ReluplexCav2017), [planet](https://github.com/progirep/planet), [MIPVerify.jl](https://github.com/vtjeng/MIPVerify.jl), [Neurify](https://github.com/tcwangshiqi-columbia/Neurify), [ERAN](https://github.com/eth-sri/eran)):
+Install any of the supported verifiers ([Reluplex](https://github.com/guykatzz/ReluplexCav2017), [planet](https://github.com/progirep/planet), [MIPVerify.jl](https://github.com/vtjeng/MIPVerify.jl), [Neurify](https://github.com/tcwangshiqi-columbia/Neurify), [ERAN](https://github.com/eth-sri/eran), [PLNN](https://github.com/oval-group/PLNN-verification), [marabou](https://github.com/NeuralNetworkVerification/Marabou), [nnenum](https://github.com/stanleybak/nnenum), [verinet](https://vas.doc.ic.ac.uk/software/neural/)):
 
 ```bash
-$ ./manage.sh install reluplex planet mipverify neurify eran
+$ ./manage.sh install reluplex planet mipverify neurify eran plnn marabou nnenum verinet
 ```
 
 **Make sure that the project environment is activated** when installing verifiers with the `manage.sh` script. Otherwise some tools may not install correctly.
@@ -62,13 +61,13 @@ Forall(
 To check whether property holds for some network using the ERAN verifier, run:
 
 ```bash
-$ python -m dnnv network.onnx property.prop --eran
+$ python -m dnnv property.prop --network N network.onnx --eran
 ```
 
 Additionally, if the property defines parameters, using the `Parameter` keyword, they can be specified on the command line using the option `--prop.PARAMETER_NAME`, where `PARAMETER_NAME` is the name of the parameter. For the property defined above, a value for `epsilon` can be provided with a command line option as follows:
 
 ```bash
-$ python -m dnnv network.onnx property.prop --eran --prop.epsilon=2.0
+$ python -m dnnv property.prop --network network.onnx --eran --prop.epsilon=2.0
 ```
 
 A set of example networks and properties that can be run with DNNV are available [here](http://cs.virginia.edu/~dls2fc/eranmnist_benchmark.tar.gz).
@@ -76,4 +75,4 @@ A set of example networks and properties that can be run with DNNV are available
 
 ## Acknowledgements
 
-This material is based in part upon work supported by the National Science Foundation under grant number 1900676.
+This material is based in part upon work supported by the National Science Foundation under grant number 1900676 and 2019239.

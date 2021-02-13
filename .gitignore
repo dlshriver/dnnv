@@ -116,3 +116,7 @@ ENV/
 /data/
 /artifacts/
 /tests/artifacts/networks/*.onnx
+!/tests/artifacts/networks/dave.onnx
+!/tests/artifacts/networks/dronet.onnx
+!/tests/artifacts/networks/convSmallRELU__Point.onnx
+!/tests/artifacts/networks/mnist_relu_3_50.onnx

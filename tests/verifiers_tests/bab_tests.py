@@ -1,19 +1,16 @@
 import os
 import unittest
 
-from tests.verifiers_tests.utils import VerifierTests, has_verifier
-
+from tests.verifiers_tests.utils import VerifierTests
 from tests.utils import network_artifact_dir, property_artifact_dir
 
-bab = None
-if has_verifier("bab"):
-    import dnnv.verifiers.bab as bab
+from dnnv.verifiers.bab import BaB
 
 
-@unittest.skipIf(not has_verifier("bab"), "BaB is not installed")
+@unittest.skipIf(not BaB.is_installed(), "BaB is not installed")
 class BabVerifierTests(VerifierTests, unittest.TestCase):
     def initialize(self):
-        self.verifier = bab
+        self.verifier = BaB
         self.is_complete = False
 
 

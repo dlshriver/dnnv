@@ -5,11 +5,14 @@ from collections import namedtuple
 from typing import List
 
 from .operations import Input, Operation
+from .utils import TensorDetails
 
 
 class OperationGraph:
     def __init__(self, output_operations: List[Operation]):
         self.output_operations = tuple(output_operations)
+        self._input_details = None
+        self._output_details = None
 
     def walk(self, visitor):
         result = []
@@ -18,12 +21,15 @@ class OperationGraph:
         return result
 
     def copy(self):
-        return self[:]
+        clone = self[:]
+        clone._input_details = self._input_details
+        clone._output_details = self._output_details
+        return clone
 
     def simplify(self):
         from .transformers import simplify
 
-        return simplify(self)
+        return simplify(self.copy())
 
     def pprint(self):
         from .visitors import PrintVisitor
@@ -32,9 +38,13 @@ class OperationGraph:
 
     @property
     def input_details(self):
-        from .visitors import GetInputDetails
+        if self._input_details is None:
+            from .visitors import GetInputDetails
 
-        return tuple(itertools.chain.from_iterable(self.walk(GetInputDetails())))
+            self._input_details = tuple(
+                itertools.chain.from_iterable(self.walk(GetInputDetails()))
+            )
+        return self._input_details
 
     @property
     def input_shape(self):
@@ -42,15 +52,18 @@ class OperationGraph:
 
     @property
     def output_details(self):
-        OutputDetails = namedtuple("OutputDetails", ["shape", "dtype"])
-        output = self(
-            *[
-                np.ones([i if i >= 0 else 1 for i in d.shape], dtype=d.dtype)
-                for d in self.input_details
-            ],
-            squeeze=False,
-        )
-        return tuple(OutputDetails(o.shape, o.dtype) for o in output)
+        if self._output_details is None:
+            output = self(
+                *[
+                    np.ones([i if i >= 0 else 1 for i in d.shape], dtype=d.dtype)
+                    for d in self.input_details
+                ],
+                squeeze=False,
+            )
+            self._output_details = tuple(
+                TensorDetails(o.shape, o.dtype) for o in output
+            )
+        return self._output_details
 
     @property
     def output_shape(self):
@@ -85,10 +98,25 @@ class OperationGraph:
         result = linearity_visitor.result
         return result
 
+    def export_onnx(self, filename):
+        import onnx
+
+        onnx.save(self.as_onnx(), filename)
+
+    def as_onnx(self):
+        from .converters.onnx import convert as onnx_convert
+
+        return onnx_convert(self)
+
+    def as_pytorch(self):
+        from .converters.pytorch import convert as pytorch_convert
+
+        return pytorch_convert(self)
+
     def as_tf(self):
         from .converters.tensorflow import convert as tf_convert
 
-        return tf_convert(self.output_operations)
+        return tf_convert(self)
 
     def __call__(self, *x, **kwargs):
         tf_func = self.as_tf()

@@ -12,12 +12,16 @@ From Source
 
 Requirements:
 
-* Python 3.6+
+* Python 3.7+
+.. * make
+.. * gcc/g++
+.. * gfortran
+.. * lapack
 
 Currently, the easiest way to use DNNV is to clone the
 github repository, and use the provided ``manage.sh`` script
 to initiallize a python virtual environment and install
-verifiers. This requires Python 3.6 or above to be installed,
+verifiers. This requires Python 3.7 or above to be installed,
 as well as the venv module, which may need to be installed
 separately (e.g., ``sudo apt-get install python3-venv``).
 
@@ -51,7 +55,11 @@ DNNV supports the following verifiers:
 * `BaB`_
 * `MIPVerify.jl`_
 * `Neurify`_
-* `ERAN`_
+* `ERAN`_ (deepzono, deeppoly, refinezono, refinepoly)
+* `PLNN`_ (bab, babsb)
+* `marabou`_
+* `nnenum`_
+* `VeriNet`_
 
 .. _Reluplex: https://github.com/guykatzz/ReluplexCav2017
 .. _planet: https://github.com/progirep/planet
@@ -59,6 +67,10 @@ DNNV supports the following verifiers:
 .. _MIPVerify.jl: https://github.com/vtjeng/MIPVerify.jl
 .. _Neurify: https://github.com/tcwangshiqi-columbia/Neurify
 .. _ERAN: https://github.com/eth-sri/eran
+.. _PLNN: https://github.com/oval-group/PLNN-verification
+.. _marabou: https://github.com/NeuralNetworkVerification/Marabou
+.. _nnenum: https://github.com/stanleybak/nnenum
+.. _verinet: https://vas.doc.ic.ac.uk/software/neural/
 
 DNNV can also be installed into an existing virtual environment.
 To do so, we require the module ``flit`` be installed.

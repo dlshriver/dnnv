@@ -296,4 +296,3 @@ class Convolutional(Layer):
             strides=strides,
             pads=pads,
         )
-

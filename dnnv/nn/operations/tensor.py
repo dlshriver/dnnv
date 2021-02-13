@@ -4,6 +4,18 @@ from .base import Operation
 from ..utils import as_numpy
 
 
+class Cast(Operation):
+    def __init__(self, x, to):
+        self.x = x
+        self.to = to
+
+    @classmethod
+    def from_onnx(cls, onnx_node, *inputs):
+        attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
+        axis = attributes.get("to")
+        return cls(inputs, axis=axis)
+
+
 class Concat(Operation):
     def __init__(self, x, axis):
         self.x = x
@@ -14,6 +26,16 @@ class Concat(Operation):
         attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
         axis = attributes.get("axis")
         return cls(inputs, axis=axis)
+
+
+class Expand(Operation):
+    def __init__(self, x, shape):
+        self.x = x
+        self.shape = shape
+
+    @classmethod
+    def from_onnx(cls, onnx_node, *inputs):
+        return cls(*inputs)
 
 
 class Flatten(Operation):
@@ -79,6 +101,16 @@ class Reshape(Operation):
 class Shape(Operation):
     def __init__(self, x):
         self.x = x
+
+    @classmethod
+    def from_onnx(cls, onnx_node, *inputs):
+        return cls(*inputs)
+
+
+class Tile(Operation):
+    def __init__(self, x, repeats):
+        self.x = x
+        self.repeats = repeats
 
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):

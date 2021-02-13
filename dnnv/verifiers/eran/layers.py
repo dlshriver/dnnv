@@ -153,9 +153,7 @@ def conv_as_tf(conv_layer, x):
     else:
         assert (
             False
-        ), (
-            f"Unexpected stride configuration: {conv_layer.strides}"
-        )  # TODO: clean this up
+        ), f"Unexpected stride configuration: {conv_layer.strides}"  # TODO: clean this up
     if all(p == 0 for p in conv_layer.pads):
         padding = "VALID"
     else:

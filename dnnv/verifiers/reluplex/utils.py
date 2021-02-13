@@ -66,8 +66,6 @@ def to_nnet_file(
     dirname: Optional[str] = None,
     translator_error: Type[VerifierTranslatorError] = VerifierTranslatorError,
 ) -> str:
-    if dirname is None:
-        dirname = tempfile.tempdir
     with tempfile.NamedTemporaryFile(
         mode="w+", dir=dirname, suffix=".nnet", delete=False
     ) as nnet_file:

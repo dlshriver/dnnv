@@ -71,4 +71,3 @@ def _parse_onnx_model(onnx_model: onnx.ModelProto) -> OperationGraph:
 def parse(path: Path) -> OperationGraph:
     onnx_model = onnx.load(str(path))
     return _parse_onnx_model(onnx_model)
-

@@ -5,7 +5,7 @@ import numpy as np
 from abc import ABC, abstractmethod
 from collections import namedtuple
 from scipy.optimize import linprog
-from typing import Dict, Iterable, List, Optional, Tuple, Type, Union
+from typing import Dict, Generator, List, Optional, Tuple, Type, Union
 
 from dnnv.nn import OperationGraph, OperationTransformer
 from dnnv.properties import ExpressionVisitor
@@ -25,7 +25,8 @@ from dnnv.properties.base import (
     Symbol,
 )
 
-from .errors import VerifierTranslatorError
+from .base import Property, Reduction
+from ..errors import VerifierTranslatorError
 
 
 class Variable:
@@ -100,23 +101,22 @@ class HalfspacePolytope(Constraint):
     def __init__(self, variable):
         super().__init__(variable)
         self.halfspaces: List[Halfspace] = []
+        self._A = None
+        self._b = None
+        self._lower_bound = np.zeros(self.size()) - np.inf
+        self._upper_bound = np.zeros(self.size()) + np.inf
+
+    def as_matrix_inequality(self, tol=None):
+        assert tol is None
+        return self._A, self._b
+
+    def as_bounds(self, tol=None):
+        return self._lower_bound, self._upper_bound
 
     @property
     def is_consistent(self):
-        k = len(self.halfspaces)
-        v = {}
-        for c in self.halfspaces:
-            for i in c.indices:
-                if i not in v:
-                    v[i] = len(v)
-        n = len(v)
-        A = np.zeros((k, n))
-        b = np.zeros(k)
-        for ci, c in enumerate(self.halfspaces):
-            for i, a in zip(c.indices, c.coefficients):
-                A[ci, v[i]] = a
-            b[ci] = c.b
-        obj = np.zeros(n)
+        A, b = self.as_matrix_inequality()
+        obj = np.zeros(A.shape[1])
         try:
             result = linprog(obj, A_ub=A, b_ub=b, bounds=(None, None),)
         except ValueError as e:
@@ -131,18 +131,70 @@ class HalfspacePolytope(Constraint):
             return True
         return None  # unknown
 
+    def _update_bounds(self, indices, coefficients, b, is_open=False):
+        n = self.size()
+        if self._lower_bound is None:
+            self._lower_bound = np.zeros((n,)) - np.inf
+        if self._upper_bound is None:
+            self._upper_bound = np.zeros((n,)) + np.inf
+
+        if len(indices) == 1:
+            index = indices[0]
+            coef_sign = np.sign(coefficients[0])
+            value = b / coefficients[0]
+            if coef_sign < 0:
+                if is_open:
+                    value = np.nextafter(value, value + 1)
+                self._lower_bound[index] = max(value, self._lower_bound[index])
+            elif coef_sign > 0:
+                if is_open:
+                    value = np.nextafter(value, value - 1)
+                self._upper_bound[index] = min(value, self._upper_bound[index])
+        else:
+            for i in indices:
+                obj = np.zeros(n)
+                obj[i] = 1
+                result = linprog(obj, A_ub=self._A, b_ub=self._b, bounds=(None, None))
+                if result.status == 0:
+                    self._lower_bound[i] = result.x[i]
+                obj[i] = -1
+                result = linprog(obj, A_ub=self._A, b_ub=self._b, bounds=(None, None))
+                if result.status == 0:
+                    self._upper_bound[i] = result.x[i]
+
     def update_constraint(self, variables, indices, coefficients, b, is_open=False):
         flat_indices = [
             self.variables[var] + np.ravel_multi_index(idx, var.shape)
             for var, idx in zip(variables, indices)
         ]
-        self.halfspaces.append(Halfspace(flat_indices, coefficients, b, is_open))
+        halfspace = Halfspace(flat_indices, coefficients, b, is_open)
+        self.halfspaces.append(halfspace)
+
+        n = self.size()
+        _A = np.zeros((1, n))
+        _b = np.zeros((1,))
+        for i, a in zip(flat_indices, coefficients):
+            _A[0, i] = a
+        _b[0] = b
+        if is_open:
+            _b[0] = np.nextafter(b, b - 1)
+        if self._A is None:
+            self._A = _A
+            self._b = _b
+        else:
+            self._A = np.vstack([self._A, _A])
+            self._b = np.hstack([self._b, _b])
+
+        self._update_bounds(flat_indices, coefficients, b, is_open=is_open)
 
     def validate(self, *x, threshold=1e-6):
         x_flat = np.concatenate([x_.flatten() for x_ in x])
         for hs in self.halfspaces:
             t = sum(c * x_flat[i] for c, i in zip(hs.coefficients, hs.indices))
-            if (t - hs.b) > threshold:
+            b = hs.b
+            if hs.is_open:
+                b = np.nextafter(b, b - 1)
+            if (t - b) > threshold:
                 return False
         return True
 
@@ -161,11 +213,6 @@ class HalfspacePolytope(Constraint):
 
 
 class HyperRectangle(HalfspacePolytope):
-    def __init__(self, variable):
-        super().__init__(variable)
-        self._lower_bound = np.zeros(self.size()) - np.inf
-        self._upper_bound = np.zeros(self.size()) + np.inf
-
     @property
     def is_consistent(self):
         if (self._lower_bound > self._upper_bound).any():
@@ -203,6 +250,9 @@ class HyperRectangle(HalfspacePolytope):
         self._upper_bound = np.concatenate([self._upper_bound, np.zeros(size) + np.inf])
         return self
 
+    def _update_bounds(self, *args, **kwargs):
+        pass
+
     def update_constraint(self, variables, indices, coefficients, b, is_open=False):
         if len(indices) > 1:
             raise ValueError(
@@ -233,7 +283,7 @@ class HyperRectangle(HalfspacePolytope):
         return "\n".join(strs)
 
 
-class Property:
+class IOPolytopeProperty(Property):
     def __init__(
         self,
         networks: List[Network],
@@ -281,12 +331,90 @@ class Property:
         ]
         return "\n".join(strs)
 
+    def validate_counter_example(self, cex, threshold=1e-6):
+        if not self.input_constraint.validate(cex, threshold=threshold):
+            return False, "Invalid counter example found: input outside bounds."
+        output = self.op_graph(cex)
+        if not self.output_constraint.validate(output, threshold=threshold):
+            return False, "Invalid counter example found: output outside bounds."
+        return True, None
+
+    def prefixed_and_suffixed_op_graph(
+        self,
+    ) -> Tuple[OperationGraph, Tuple[List[np.ndarray], List[np.ndarray]]]:
+        import dnnv.nn.operations as operations
+
+        if not isinstance(self.input_constraint, HyperRectangle):
+            raise ValueError(
+                f"{type(self.input_constraint).__name__} input constraints are not yet supported"
+            )
+
+        suffixed_op_graph = self.suffixed_op_graph()
+
+        class PrefixTransformer(OperationTransformer):
+            def __init__(self, lbs, ubs):
+                super().__init__()
+                self.lbs = lbs
+                self.ubs = ubs
+                self._input_count = 0
+                self.final_lbs = []
+                self.final_ubs = []
+
+            def visit_Input(
+                self, operation: operations.Input
+            ) -> Union[operations.Conv, operations.Gemm]:
+                new_op: Union[operations.Conv, operations.Gemm]
+                input_shape = self.lbs[self._input_count].shape
+                if len(input_shape) == 2:
+                    ranges = self.ubs[self._input_count] - self.lbs[self._input_count]
+                    mins = self.lbs[self._input_count]
+                    new_op = operations.Gemm(
+                        operation, np.diag(ranges.flatten()), mins.flatten()
+                    )
+                    self.final_lbs.append(np.zeros(mins.shape))
+                    self.final_ubs.append(np.ones(mins.shape))
+                elif len(input_shape) == 4:
+                    b = self.lbs[self._input_count].min(axis=(0, 2, 3))
+                    r = self.ubs[self._input_count].max(axis=(0, 2, 3)) - b
+                    c = len(r)
+                    w = np.zeros((c, c, 1, 1))
+                    for i in range(c):
+                        w[i, i, 0, 0] = 1
+                    w = w * r.reshape((c, 1, 1, 1))
+                    new_op = operations.Conv(operation, w, b)
+                    test_op_graph = OperationGraph([new_op])
+                    tile_shape = list(self.lbs[self._input_count].shape)
+                    tile_shape[1] = 1
+                    tiled_b = np.tile(b.reshape((1, -1, 1, 1)), tile_shape)
+                    tiled_r = np.tile(r.reshape((1, -1, 1, 1)), tile_shape)
+                    self.final_lbs.append(
+                        (self.lbs[self._input_count] - tiled_b) / tiled_r
+                    )
+                    self.final_ubs.append(
+                        (self.ubs[self._input_count] - tiled_b) / tiled_r
+                    )
+                else:
+                    raise NotImplementedError(
+                        f"Cannot prefix network with input shape {input_shape}"
+                    )
+                self._input_count += 1
+                return new_op
+
+        prefix_transformer = PrefixTransformer(
+            self.input_constraint.lower_bounds, self.input_constraint.upper_bounds,
+        )
+        prefixed_op_graph = OperationGraph(suffixed_op_graph.walk(prefix_transformer))
+        return (
+            prefixed_op_graph.simplify(),
+            (prefix_transformer.final_lbs, prefix_transformer.final_ubs),
+        )
+
     def suffixed_op_graph(self) -> OperationGraph:
         import dnnv.nn.operations as operations
 
         if not isinstance(self.output_constraint, HalfspacePolytope):
             raise ValueError(
-                f"{type(self.output_constraint).__name__} constraints are not yet supported"
+                f"{type(self.output_constraint).__name__} output constraints are not yet supported"
             )
         if len(self.op_graph.output_operations) == 1:
             new_output_op = self.op_graph.output_operations[0]
@@ -316,40 +444,20 @@ class Property:
         return OperationGraph([new_output_op]).simplify()
 
 
-class PropertyExtractor(ExpressionVisitor):
-    def __init__(
-        self, extraction_error: Type[VerifierTranslatorError] = VerifierTranslatorError
-    ):
-        self.extraction_error = extraction_error
-
-    def extract_from(self, expression: Expression) -> Iterable[Property]:
-        raise NotImplementedError()
-
-    def visit(self, expression):
-        method_name = "visit_%s" % expression.__class__.__name__
-        visitor = getattr(self, method_name, None)
-        if visitor is None:
-            raise self.extraction_error(
-                "Unsupported property:"
-                f" expression type {type(expression).__name__!r} is not currently supported"
-            )
-        return visitor(expression)
-
-
-class HalfspacePolytopePropertyExtractor(PropertyExtractor):
+class IOPolytopeReduction(Reduction):
     def __init__(
         self,
-        input_constraint_type,
-        output_constraint_type,
-        extraction_error: Type[VerifierTranslatorError] = VerifierTranslatorError,
+        input_constraint_type: Type[Constraint] = HyperRectangle,
+        output_constraint_type: Type[Constraint] = HalfspacePolytope,
+        reduction_error: Type[VerifierTranslatorError] = VerifierTranslatorError,
     ):
-        super().__init__(extraction_error=extraction_error)
+        super().__init__(reduction_error=reduction_error)
         self.input_constraint_type = input_constraint_type
         self.output_constraint_type = output_constraint_type
         self.logger = logging.getLogger(__name__)
         self._stack: List[Expression] = []
-        self._network_input_shapes = {}
-        self._network_output_shapes = {}
+        self._network_input_shapes: Dict[Expression, Tuple[int, ...]] = {}
+        self._network_output_shapes: Dict[Network, Tuple[int, ...]] = {}
         self.initialize()
 
     def initialize(self):
@@ -362,12 +470,14 @@ class HalfspacePolytopePropertyExtractor(PropertyExtractor):
         self.coefs: Dict[Expression, np.ndarray] = {}
 
     def build_property(self):
-        return Property(self.networks, self.input_constraint, self.output_constraint)
+        return IOPolytopeProperty(
+            self.networks, self.input_constraint, self.output_constraint
+        )
 
-    def _extract(self, expression: And) -> Iterable[Property]:
+    def _reduce(self, expression: And) -> Generator[Property, None, None]:
         self.initialize()
         if len(expression.variables) != 1:
-            raise self.extraction_error("Exactly one network input is required")
+            raise self.reduction_error("Exactly one network input is required")
         self.visit(expression)
         prop = self.build_property()
         if prop.input_constraint.is_consistent == False:
@@ -382,7 +492,9 @@ class HalfspacePolytopePropertyExtractor(PropertyExtractor):
             return
         yield prop
 
-    def extract_from(self, expression: Expression) -> Iterable[Property]:
+    def reduce_property(
+        self, expression: Expression
+    ) -> Generator[Property, None, None]:
         if not isinstance(expression, Exists):
             raise NotImplementedError()  # TODO
         dnf_expression = Or(~(~expression).canonical())
@@ -390,16 +502,24 @@ class HalfspacePolytopePropertyExtractor(PropertyExtractor):
 
         for conjunction in dnf_expression:
             self.logger.info("CONJUNCTION: %s", conjunction)
-            yield from self._extract(conjunction)
+            yield from self._reduce(conjunction)
 
     def visit(self, expression):
         self._stack.append(type(expression))
-        super().visit(expression)
+        method_name = "visit_%s" % expression.__class__.__name__
+        visitor = getattr(self, method_name, None)
+        if visitor is None:
+            raise self.reduction_error(
+                "Unsupported property:"
+                f" expression type {type(expression).__name__!r} is not currently supported"
+            )
+        result = visitor(expression)
         self._stack.pop()
+        return result
 
     def visit_Add(self, expression: Add):
         if len(self._stack) > 3:
-            raise self.extraction_error(
+            raise self.reduction_error(
                 "Not Canonical:"
                 f" {type(expression).__name__!r} expression found below expected level"
             )
@@ -414,7 +534,7 @@ class HalfspacePolytopePropertyExtractor(PropertyExtractor):
 
     def visit_And(self, expression: And):
         if len(self._stack) != 1:
-            raise self.extraction_error(
+            raise self.reduction_error(
                 "Not Canonical: 'And' expression not at top level"
             )
         for expr in sorted(expression.expressions, key=lambda e: -len(e.networks)):
@@ -428,22 +548,29 @@ class HalfspacePolytopePropertyExtractor(PropertyExtractor):
             self.visit(expression.function)
             input_details = expression.function.value.input_details
             if len(expression.args) != len(input_details):
-                raise self.extraction_error(
+                raise self.reduction_error(
                     "Invalid property:"
                     f" Not enough inputs for network '{expression.function}'"
                 )
             if len(expression.kwargs) > 0:
-                raise self.extraction_error(
+                raise self.reduction_error(
                     "Unsupported property:"
                     f" Executing networks with keyword arguments is not currently supported"
                 )
             for arg, d in zip(expression.args, input_details):
                 if arg in self._network_input_shapes:
-                    if self._network_input_shapes[arg] != tuple(d.shape):
-                        raise self.extraction_error(
+                    if any(
+                        i1 != i2 and i2 > 0
+                        for i1, i2 in zip(
+                            self._network_input_shapes[arg], tuple(d.shape)
+                        )
+                    ):
+                        raise self.reduction_error(
                             f"Invalid property: variable with multiple shapes: '{arg}'"
                         )
-                self._network_input_shapes[arg] = tuple(d.shape)
+                self._network_input_shapes[arg] = tuple(
+                    i if i > 0 else 1 for i in d.shape
+                )
                 self.visit(arg)
             shape = self._network_output_shapes[expression.function]
             self.variables[expression] = self.variables[expression.function]
@@ -452,23 +579,23 @@ class HalfspacePolytopePropertyExtractor(PropertyExtractor):
             )
             self.coefs[expression] = np.ones(shape)
         else:
-            raise self.extraction_error(
+            raise self.reduction_error(
                 "Unsupported property:"
                 f" Function {expression.function} is not currently supported"
             )
 
     def _add_constraint(self, expression: Union[LessThan, LessThanOrEqual]):
         if len(self._stack) > 2:
-            raise self.extraction_error(
+            raise self.reduction_error(
                 f"Not Canonical: {type(expression).__name__!r} expression below expected level"
             )
         if not isinstance(expression.expr1, Add):
-            raise self.extraction_error(
+            raise self.reduction_error(
                 "Not Canonical:"
                 f" LHS of {type(expression).__name__!r} is not an 'Add' expression"
             )
         if not isinstance(expression.expr2, Constant):
-            raise self.extraction_error(
+            raise self.reduction_error(
                 "Not Canonical:"
                 f" RHS of {type(expression).__name__!r} is not a 'Constant' expression"
             )
@@ -486,20 +613,20 @@ class HalfspacePolytopePropertyExtractor(PropertyExtractor):
 
         c_shapes = set(c.shape for c in self.coefs.values())
         if len(c_shapes) > 1:
-            raise self.extraction_error(
+            raise self.reduction_error(
                 "Invalid property: Adding expressions with different shapes is not supported"
             )
         c_shape = c_shapes.pop()
         if rhs.shape != c_shape:
             rhs = np.zeros(c_shape) + rhs
         if rhs.shape != c_shape:
-            raise self.extraction_error(
+            raise self.reduction_error(
                 "Invalid property: Comparing expressions with different shapes is not supported"
             )
 
         constraints: List[
             Tuple[List[Tuple[Variable, Tuple[int, ...]]], List[float], float]
-        ] = ([])
+        ] = []
         for key, var, idx, coef in zip_dict_items(
             self.variables, self.indices, self.coefs
         ):
@@ -518,7 +645,7 @@ class HalfspacePolytopePropertyExtractor(PropertyExtractor):
             else:
                 shape = coef.shape
                 if c_shape is not None and c_shape != shape:
-                    raise self.extraction_error(
+                    raise self.reduction_error(
                         "Invalid property: Adding expressions with different shapes is not supported"
                     )
                 c_shape = shape
@@ -535,7 +662,7 @@ class HalfspacePolytopePropertyExtractor(PropertyExtractor):
                         for i in np.ndindex(rhs.shape)
                     ]
                 if not len(constraints) == new_shape[0]:
-                    raise self.extraction_error(
+                    raise self.reduction_error(
                         "Invalid property: Adding expressions with different shapes is not supported"
                     )
                 for c, idx_, coef_ in zip(
@@ -574,7 +701,7 @@ class HalfspacePolytopePropertyExtractor(PropertyExtractor):
             else:
                 symbols.append(expr)
         if len(symbols) > 1:
-            raise self.extraction_error(
+            raise self.reduction_error(
                 "Unsupported property: Multiplication of symbolic values"
             )
         self.variables[expression] = self.variables[symbols[0]]
@@ -598,7 +725,7 @@ class HalfspacePolytopePropertyExtractor(PropertyExtractor):
                 self._network_output_shapes[expression]
                 != expression.value.output_shape[0]
             ):
-                raise self.extraction_error(
+                raise self.reduction_error(
                     f"Invalid property: network with multiple shapes: '{expression}'"
                 )
             variable = Variable(
@@ -614,11 +741,8 @@ class HalfspacePolytopePropertyExtractor(PropertyExtractor):
 
     def visit_Subscript(self, expression: Subscript):
         if not isinstance(expression.index, Constant):
-            raise self.extraction_error(
-                "Unsupported property: Symbolic subscript index"
-            )
+            raise self.reduction_error("Unsupported property: Symbolic subscript index")
         index = expression.index.value
-        expr = expression.expr
         self.visit(expression.expr)
         self.variables[expression] = self.variables[expression.expr]
         self.indices[expression] = self.indices[expression.expr][index]
@@ -628,11 +752,11 @@ class HalfspacePolytopePropertyExtractor(PropertyExtractor):
         if self.input is None:
             self.input = expression
             if expression not in self._network_input_shapes:
-                raise self.extraction_error(f"Unknown shape for variable {expression}")
+                raise self.reduction_error(f"Unknown shape for variable {expression}")
             variable = Variable(self._network_input_shapes[expression], str(expression))
             self.input_constraint = self.input_constraint_type(variable)
         elif self.input is not expression:
-            raise self.extraction_error("Multiple inputs detected in property")
+            raise self.reduction_error("Multiple inputs detected in property")
         shape = self._network_input_shapes[expression]
         self.variables[expression] = Variable(
             self._network_input_shapes[expression], str(expression)
@@ -644,10 +768,8 @@ class HalfspacePolytopePropertyExtractor(PropertyExtractor):
 
 
 __all__ = [
-    "HalfspacePolytopePropertyExtractor",
-    "PropertyExtractor",
-    "Property",
     "HalfspacePolytope",
     "HyperRectangle",
+    "IOPolytopeProperty",
+    "IOPolytopeReduction",
 ]
-

@@ -34,7 +34,10 @@ def as_mipverify(
         last_layer.weights = np.stack(
             [-last_layer.weights[:, 0], last_layer.weights[:, 0]], 1
         )
-    shape = np.asarray(input_layer.shape)[[0, 2, 3, 1]]
+    shape = np.asarray(input_layer.shape)
+    if len(shape) == 4:
+        shape = shape[[0, 2, 3, 1]]
+    input_shape = shape.copy()
     seen_fullyconnected = False
     for layer_id, layer in enumerate(layers[1:], 1):
         layer_name = f"layer{layer_id}"
@@ -57,12 +60,9 @@ def as_mipverify(
                         )
                     ]
             layer_parameters[f"{layer_name}_weight"] = weights
-            yield f'{layer_name}_W = parameters["{layer_name}_weight"]'
-            if len(layer.bias) > 1:
-                layer_parameters[f"{layer_name}_bias"] = layer.bias
-                yield f'{layer_name}_b = dropdims(parameters["{layer_name}_bias"], dims=1)'
-            else:
-                yield f"{layer_name}_b = [{layer.bias.item()}]"
+            yield f'{layer_name}_W = reshape(collect(parameters["{layer_name}_weight"]), {tuple(weights.shape)})'
+            layer_parameters[f"{layer_name}_bias"] = layer.bias
+            yield f'{layer_name}_b = reshape(collect(parameters["{layer_name}_bias"]), {tuple(layer.bias.shape)})'
             yield f"{layer_name} = Linear({layer_name}_W, {layer_name}_b)"
             layer_names.append(layer_name)
             if layer.activation == "relu":
@@ -76,44 +76,39 @@ def as_mipverify(
                 raise translator_error(
                     "Different strides in height and width are not supported"
                 )
-            input_shape = shape.copy()
+            in_shape = shape.copy()
             shape[3] = layer.weights.shape[0]  # number of output channels
-            shape[1] = np.ceil(
-                float(input_shape[1]) / float(layer.strides[0])
+            shape[1] = int(
+                np.ceil(
+                    float(
+                        in_shape[1]
+                        - layer.kernel_shape[0]
+                        + layer.pads[0]
+                        + layer.pads[2]
+                        + 1
+                    )
+                    / float(layer.strides[0])
+                )
             )  # output height
-            shape[2] = np.ceil(
-                float(input_shape[2]) / float(layer.strides[1])
+            shape[2] = int(
+                np.ceil(
+                    float(
+                        in_shape[2]
+                        - layer.kernel_shape[1]
+                        + layer.pads[1]
+                        + layer.pads[3]
+                        + 1
+                    )
+                    / float(layer.strides[1])
+                )
             )  # output width
-
-            pad_along_height = max(
-                (shape[1] - 1) * layer.strides[0]
-                + layer.kernel_shape[0]
-                - input_shape[1],
-                0,
-            )
-            pad_along_width = max(
-                (shape[2] - 1) * layer.strides[1]
-                + layer.kernel_shape[1]
-                - input_shape[2],
-                0,
-            )
-            pad_top = pad_along_height // 2
-            pad_bottom = pad_along_height - pad_top
-            pad_left = pad_along_width // 2
-            pad_right = pad_along_width - pad_left
-
-            same_pads = [pad_top, pad_left, pad_bottom, pad_right]
-            if any(p1 != p2 for p1, p2 in zip(layer.pads, same_pads)):
-                raise translator_error("Non-SAME padding is not supported")
+            pads = (layer.pads[0], layer.pads[2], layer.pads[1], layer.pads[3])
             weights = layer.weights.transpose((2, 3, 1, 0))
             layer_parameters[f"{layer_name}_weight"] = weights
-            yield f'{layer_name}_W = parameters["{layer_name}_weight"]'
-            if len(layer.bias) > 1:
-                layer_parameters[f"{layer_name}_bias"] = layer.bias
-                yield f'{layer_name}_b = dropdims(parameters["{layer_name}_bias"], dims=1)'
-            else:
-                yield f"{layer_name}_b = [{layer.bias.item()}]"
-            yield f"{layer_name} = Conv2d({layer_name}_W, {layer_name}_b, {layer.strides[0]})"
+            yield f'{layer_name}_W = reshape(collect(parameters["{layer_name}_weight"]), {tuple(weights.shape)})'
+            layer_parameters[f"{layer_name}_bias"] = layer.bias
+            yield f'{layer_name}_b = reshape(collect(parameters["{layer_name}_bias"]), {tuple(layer.bias.shape)})'
+            yield f"{layer_name} = Conv2d({layer_name}_W, {layer_name}_b, {layer.strides[0]}, {pads})"
             layer_names.append(layer_name)
             if layer.activation == "relu":
                 layer_names.append("ReLU()")
@@ -122,8 +117,11 @@ def as_mipverify(
                     f"{layer.activation} activation is currently unsupported"
                 )
         elif hasattr(layer, "as_julia"):
-            for line in layer.as_julia(layers):
+            for line in layer.as_julia(
+                layer_name, shape, translator_error=translator_error
+            ):
                 yield line
+            layer_names.append(layer_name)
         else:
             raise translator_error(f"Unsupported layer type: {type(layer).__name__}")
     yield "nn = Sequential(["
@@ -133,7 +131,7 @@ def as_mipverify(
     if sample_input.ndim == 4:
         sample_input = sample_input.transpose((0, 2, 3, 1))
     layer_parameters["input"] = sample_input
-    yield f'input = parameters["input"]'
+    yield f'input = reshape(collect(parameters["input"]), {tuple(input_shape)})'
     yield 'print(nn(input), "\\n")'
     perturbation = ""
     if linf is not None:
@@ -141,24 +139,21 @@ def as_mipverify(
             f", pp=MIPVerify.LInfNormBoundedPerturbationFamily({linf}), norm_order=Inf"
         )
     # class 1 (1-indexed) if property is FALSE
-    yield f"d = MIPVerify.find_adversarial_example(nn, input, 1, GurobiSolver(){perturbation}, solve_if_predicted_in_targeted=false, cache_model=false, rebuild=true)"
+    yield f"d = MIPVerify.find_adversarial_example(nn, input, 1, Gurobi.Optimizer, Dict(){perturbation}, solve_if_predicted_in_targeted=false)"
     yield 'print((d[:PredictedIndex] == 2) ? d[:SolveStatus] : "TRIVIAL", "\\n")'
 
     scipy.io.savemat(weights_file.name, layer_parameters)
 
 
 def to_mipverify_inputs(
-    input_interval: HyperRectangle,
+    lb: np.ndarray,
+    ub: np.ndarray,
     layers: List[Layer],
     dirname: Optional[str] = None,
     translator_error: Type[VerifierTranslatorError] = VerifierTranslatorError,
 ) -> Dict[str, str]:
     mipverify_inputs = {}
-    if dirname is None:
-        dirname = tempfile.tempdir
 
-    lb = np.asarray(input_interval.lower_bound)
-    ub = np.asarray(input_interval.upper_bound)
     if lb.ndim == 4:
         lb = lb.transpose((0, 2, 3, 1))
     if ub.ndim == 4:

@@ -1,9 +1,8 @@
-import operator
+import numpy as np
 
-from io import StringIO
 from pathlib import Path
 from simpleparse.parser import Parser
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from .base import *
 from .context import Context
@@ -21,12 +20,12 @@ qual_identifier := identifier/(ws*,"(",ws*,"as",ws*,identifier,ws*,sort,ws*,")",
 sort := identifier/(ws*,"(",ws*,identifier,ws*,(sort,ws*)+,")",ws*)
 identifier := symbol/(ws*,"(",ws*,"_",ws*,symbol,ws*,(index,ws*)+,")",ws*)
 index := numeral/symbol
-spec_constant := numeral/decimal/hexadecimal/binary/string
+spec_constant := decimal/numeral/hexadecimal/binary/string
 symbol := (letter/[~!@$%^&*+=<>.?/_-]),(digit/letter/[~!@$%^&*+=<>.?/_-])*
 string := '"',('""'/[\t\n\r !#-~])*,'"'
 binary := "#b",[01]+
 hexadecimal := "#x",[0-9A-Fa-f]+
-decimal := numeral,".","0"*,numeral
+decimal := numeral,".","0"*,numeral?
 numeral := ([1-9],[0-9]*)/"0"
 letter := [A-Za-z]
 digit := [0-9]
@@ -47,6 +46,7 @@ def subtraction_helper(*args):
         return Negation(*args)
     elif len(args) == 2:
         return Subtract(*args)
+    print(args)
     raise ValueError("Subtraction not implemented for more than 2 args.")
 
 
@@ -81,10 +81,24 @@ class ExpressionBuilder:
             raise VNNLibParseError(f"Name already exists in symbol table: {name}")
         if name.startswith("X_"):
             index = tuple(int(i) for i in name.split("_")[1:])
-            self.symbols[name] = Symbol("X")[index]
+            if len(index) == 1:
+                self.symbols[name] = Symbol("X")[
+                    FunctionCall(
+                        np.unravel_index, (index[0], Network("N").input_shape[0]), {}
+                    )
+                ]
+            else:
+                self.symbols[name] = Symbol("X")[index]
         elif name.startswith("Y_"):
             index = tuple(int(i) for i in name.split("_")[1:])
-            self.symbols[name] = Network("N")(Symbol("X"))[index]
+            if len(index) == 1:
+                self.symbols[name] = Network("N")(Symbol("X"))[
+                    FunctionCall(
+                        np.unravel_index, (index[0], Network("N").output_shape[0]), {}
+                    )
+                ]
+            else:
+                self.symbols[name] = Network("N")(Symbol("X"))[index]
         else:
             self.symbols[name] = Parameter(name, type=sort)
 
@@ -125,6 +139,10 @@ class ExpressionBuilder:
             assert len(tree[3]) == 1
             self.assertions.add(tree[3][0])
         return tree[3]
+
+    def visit_decimal(self, tree: ParseTree):
+        num = float(self.buffer[tree[1] : tree[2]])
+        return Constant(num)
 
     def visit_identifier(self, tree: ParseTree):
         tree = self.visit_subtrees(tree)
@@ -188,4 +206,3 @@ def parse(path: Path, args: Optional[List[str]] = None) -> Expression:
         phi = phi.propagate_constants()
         parse_cli(phi, args)
     return phi
-

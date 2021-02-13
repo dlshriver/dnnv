@@ -1,13 +1,16 @@
 import numpy as np
 import tensorflow.compat.v1 as tf
 
-from ... import Operation, OperationVisitor
+from ..graph import OperationGraph
+from ..operations import Operation
+from ..utils import ONNX_TO_TENSORFLOW_DTYPE
+from ..visitors import OperationVisitor
 
 
-def convert(operations):
+def convert(op_graph: OperationGraph):
     converter = TensorflowConverter()
     output_funcs = []
-    for op in operations:
+    for op in op_graph.output_operations:
         output_funcs.append(converter.visit(op))
 
     def func(*inputs, squeeze=True):
@@ -151,19 +154,42 @@ class TensorflowConverter(OperationVisitor):
             variance = operation.variance
             epsilon = operation.epsilon
 
-            x = tf.transpose(x, (0, 2, 3, 1))
-            result = tf.nn.batch_normalization(
-                x,
-                mean=mean,
-                variance=variance,
-                offset=bias,
-                scale=scale,
-                variance_epsilon=epsilon,
-            )
-            result = tf.transpose(result, (0, 3, 1, 2))
+            if len(x.shape) == 4:
+                x = tf.transpose(x, (0, 2, 3, 1))
+                result = tf.nn.batch_normalization(
+                    x,
+                    mean=mean,
+                    variance=variance,
+                    offset=bias,
+                    scale=scale,
+                    variance_epsilon=epsilon,
+                )
+                result = tf.transpose(result, (0, 3, 1, 2))
+            else:
+                result = tf.nn.batch_normalization(
+                    x,
+                    mean=mean,
+                    variance=variance,
+                    offset=bias,
+                    scale=scale,
+                    variance_epsilon=epsilon,
+                )
             return result
 
         return batchnorm_func
+
+    def visit_Cast(self, operation):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+
+        @self._cached
+        def cast_func(*inputs):
+            x = _concretize([x_], inputs)
+            result = tf.cast(x, ONNX_TO_TENSORFLOW_DTYPE[operation.to])
+            return result
+
+        return cast_func
 
     def visit_Concat(self, operation):
         tensors_ = []
@@ -215,6 +241,22 @@ class TensorflowConverter(OperationVisitor):
 
         return conv_func
 
+    def visit_Div(self, operation):
+        a_ = operation.a
+        if isinstance(a_, Operation):
+            a_ = self.visit(a_)
+        b_ = operation.b
+        if isinstance(b_, Operation):
+            b_ = self.visit(b_)
+
+        @self._cached
+        def div_func(*inputs):
+            a, b = _concretize([a_, b_], inputs)
+            result = tf.divide(a, b)
+            return result
+
+        return div_func
+
     def visit_Dropout(self, operation):
         x_ = operation.x
         if isinstance(x_, Operation):
@@ -243,6 +285,20 @@ class TensorflowConverter(OperationVisitor):
             return result
 
         return elu_func
+
+    def visit_Expand(self, operation):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+
+        @self._cached
+        def expand_func(*inputs):
+            x = _concretize([x_], inputs)
+            shape = operation.shape
+            result = x * tf.ones(shape, x.dtype)
+            return result
+
+        return expand_func
 
     def visit_Flatten(self, operation):
         x_ = operation.x
@@ -532,6 +588,36 @@ class TensorflowConverter(OperationVisitor):
             return result
 
         return softmax_func
+
+    def visit_Sub(self, operation):
+        a_ = operation.a
+        if isinstance(a_, Operation):
+            a_ = self.visit(a_)
+        b_ = operation.b
+        if isinstance(b_, Operation):
+            b_ = self.visit(b_)
+
+        @self._cached
+        def sub_func(*inputs):
+            a, b = _concretize([a_, b_], inputs)
+            result = tf.subtract(a, b)
+            return result
+
+        return sub_func
+
+    def visit_Tile(self, operation):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+
+        @self._cached
+        def tile_func(*inputs):
+            x = _concretize([x_], inputs)
+            repeats = operation.repeats
+            result = tf.tile(x, repeats)
+            return result
+
+        return tile_func
 
     def visit_Transpose(self, operation):
         x_ = operation.x

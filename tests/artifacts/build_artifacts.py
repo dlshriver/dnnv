@@ -257,4 +257,4 @@ def download_eran_benchmark():
 if __name__ == "__main__":
     build_known_behavior_artifacts()
     build_random_weight_artifacts()
-    download_eran_benchmark()
+    # download_eran_benchmark()
