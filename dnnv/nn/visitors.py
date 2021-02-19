@@ -152,6 +152,11 @@ class PrintVisitor(OperationVisitor):
         self.print_op_id(operation)
         print("Dropout(%s, ratio=%s)" % (self.get_op_id(operation.x), operation.ratio))
 
+    def visit_Elu(self, operation: operations.Elu) -> None:
+        self.generic_visit(operation)
+        self.print_op_id(operation)
+        print("Elu(%s)" % self.get_op_id(operation.x))
+
     def visit_Flatten(self, operation: operations.Flatten) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)

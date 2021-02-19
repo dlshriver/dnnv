@@ -1,8 +1,7 @@
 import itertools
 import numpy as np
 
-from collections import namedtuple
-from typing import List
+from typing import List, Set
 
 from .operations import Input, Operation
 from .utils import TensorDetails
@@ -117,6 +116,50 @@ class OperationGraph:
         from .converters.tensorflow import convert as tf_convert
 
         return tf_convert(self)
+
+    def compose(self, input_op_graph: "OperationGraph") -> "OperationGraph":
+        from .transformers import OperationTransformer
+        from . import operations
+
+        self_input_details = self.input_details
+        input_op_graph_output_details = input_op_graph.output_details
+        if len(self_input_details) != len(input_op_graph_output_details):
+            raise ValueError(
+                "Number of inputs and outputs must match for op graph composition."
+            )
+        if any(
+            tuple(int(d) if d > 0 else 1 for d in in_details.shape)
+            != tuple(int(d) if d > 0 else 1 for d in out_details.shape)
+            or in_details.dtype != out_details.dtype
+            for in_details, out_details in zip(
+                self_input_details, input_op_graph_output_details
+            )
+        ):
+            raise ValueError(
+                "Input and output shapes and types must match for op graph composition."
+            )
+
+        class Composer(OperationTransformer):
+            def __init__(self, input_op_graph: OperationGraph):
+                self.input_op_graph = input_op_graph
+                self.input_id = 0
+                self.visited: Set[Operation] = set()
+
+            def visit(self, operation: Operation):
+                if operation not in self.visited:
+                    result = super().visit(operation)
+                    self.visited.add(operation)
+                    return result
+                return operation
+
+            def visit_Input(self, operation: operations.Input):
+                new_op = self.input_op_graph.output_operations[self.input_id]
+                self.input_id += 1
+                return new_op
+
+        new_op_graph = OperationGraph(self.copy().walk(Composer(input_op_graph.copy())))
+
+        return new_op_graph
 
     def __call__(self, *x, **kwargs):
         tf_func = self.as_tf()

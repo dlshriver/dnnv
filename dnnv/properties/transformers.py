@@ -1,3 +1,4 @@
+from types import new_class
 import numpy as np
 
 from collections import defaultdict
@@ -375,6 +376,13 @@ class PropagateConstants(ExpressionTransformer):
     def visit_Attribute(self, expression: Attribute) -> Union[Attribute, Constant]:
         expr = self.visit(expression.expr)
         name = self.visit(expression.name)
+        if (
+            isinstance(expr, Network)
+            and expr.is_concrete
+            and name.is_concrete
+            and name.value == "compose"
+        ):
+            return Constant(expr.compose)
         if expr.is_concrete and name.is_concrete:
             return Constant(getattr(expr.value, name.value))
         return Attribute(expr, name)
@@ -474,7 +482,13 @@ class PropagateConstants(ExpressionTransformer):
             if isinstance(result, Expression):
                 return result.propagate_constants()
             return Constant(result)
-        return FunctionCall(function, args, kwargs)
+        new_function_call = FunctionCall(function, args, kwargs)
+        if new_function_call.is_concrete:
+            result = new_function_call.value
+            if isinstance(result, Expression):
+                return result.propagate_constants()
+            return Constant(result)
+        return new_function_call
 
     def visit_GreaterThan(self, expression: GreaterThan):
         expr1 = self.visit(expression.expr1)

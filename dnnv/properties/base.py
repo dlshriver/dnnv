@@ -499,6 +499,16 @@ class Network(Symbol):
     def __repr__(self):
         return f"Network({self.identifier!r})"
 
+    def compose(self, other: "Network"):
+        if not isinstance(other, Network):
+            raise ValueError("Networks can only be composed with other networks.")
+        if self.is_concrete and other.is_concrete:
+            new_network = Network(f"{self}○{other}")
+            op_graph = self.value.compose(other.value)
+            new_network.concretize(op_graph)
+            return new_network
+        raise ValueError("Network is not concrete.")
+
 
 class Image(Expression):
     def __init__(self, path: Union[Expression, str], *, ctx: Optional[Context] = None):
@@ -544,7 +554,9 @@ class FunctionCall(Expression):
     @property
     def value(self):
         if self.is_concrete:
-            if self._value is None:
+            if getattr(self.function.value, "__func__", None) == Network.compose:
+                self._value = self.function.value(*self.args, **self.kwargs)
+            elif self._value is None:
                 args = tuple(arg.value for arg in self.args)
                 kwargs = {name: value.value for name, value in self.kwargs.items()}
                 self._value = self.function.value(*args, **kwargs)
