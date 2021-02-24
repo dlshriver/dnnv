@@ -161,6 +161,13 @@ class ExpressionBuilder:
         elif tree[3][0] in self.operators:
             return self.operators[tree[3][0]]
         else:
+            try:
+                return int(tree[3][0])
+            except ValueError:
+                try:
+                    return float(tree[3][0])
+                except ValueError:
+                    pass
             raise VNNLibParseError(f"Unknown identifier: {tree[3][0]}")
 
     def visit_sort(self, tree: ParseTree):
