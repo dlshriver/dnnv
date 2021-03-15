@@ -201,6 +201,13 @@ class PrintVisitor(OperationVisitor):
         self.print_op_id(operation)
         print("Input(%s, dtype=%s)" % (operation.shape, operation.dtype.name))
 
+    def visit_LeakyRelu(self, operation: operations.LeakyRelu) -> None:
+        self.generic_visit(operation)
+        self.print_op_id(operation)
+        print(
+            "LeakyRelu(%s, alpha=%f)" % (self.get_op_id(operation.x), operation.alpha)
+        )
+
     def visit_LogSoftmax(self, operation: operations.LogSoftmax) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
@@ -250,6 +257,31 @@ class PrintVisitor(OperationVisitor):
         print(
             "Reshape(%s, %s)"
             % (self.get_op_id(operation.x), self.get_op_id(operation.shape))
+        )
+
+    def visit_Resize(self, operation: operations.Resize) -> None:
+        self.generic_visit(operation)
+        self.print_op_id(operation)
+        inputs = []
+        if operation.roi.size > 0:
+            inputs.append(f"roi={operation.roi.tolist()}")
+        if operation.scales.size > 0:
+            inputs.append(f"scales={operation.scales.tolist()}")
+        if operation.sizes.size > 0:
+            inputs.append(f"sizes={operation.sizes.tolist()}")
+        inputs_str = ", ".join(inputs)
+        print(
+            "Resize(%s, %s, coordinate_transformation_mode=%s, cubic_coeff_a=%f, exclude_outside=%d, extrapolation_value=%f, mode=%s, nearest_mode=%s)"
+            % (
+                self.get_op_id(operation.x),
+                inputs_str,
+                operation.coordinate_transformation_mode,
+                operation.cubic_coeff_a,
+                operation.exclude_outside,
+                operation.extrapolation_value,
+                operation.mode,
+                operation.nearest_mode,
+            )
         )
 
     def visit_Shape(self, operation: operations.Shape) -> None:

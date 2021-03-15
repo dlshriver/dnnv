@@ -7,6 +7,10 @@ from ..utils import ONNX_TO_TENSORFLOW_DTYPE
 from ..visitors import OperationVisitor
 
 
+class TensorflowConverterError(Exception):
+    pass
+
+
 def convert(op_graph: OperationGraph):
     converter = TensorflowConverter()
     output_funcs = []
@@ -64,7 +68,12 @@ class TensorflowConverter(OperationVisitor):
     def _cached(self, func):
         def wrapped_func(*args, **kwargs):
             if func not in self._cache:
-                self._cache[func] = func(*args, **kwargs)
+                try:
+                    self._cache[func] = func(*args, **kwargs)
+                except TensorflowConverterError:
+                    raise
+                except Exception as e:
+                    raise TensorflowConverterError(f"{type(e).__name__}: {e.args[0]}")
             return self._cache[func]
 
         return wrapped_func
@@ -419,6 +428,19 @@ class TensorflowConverter(OperationVisitor):
 
         return input_func
 
+    def visit_LeakyRelu(self, operation):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+
+        @self._cached
+        def leakyrelu_func(*inputs):
+            x = _concretize([x_], inputs)
+            result = tf.nn.leaky_relu(x, alpha=operation.alpha)
+            return result
+
+        return leakyrelu_func
+
     def visit_MatMul(self, operation):
         a_ = operation.a
         if isinstance(a_, Operation):
@@ -545,10 +567,58 @@ class TensorflowConverter(OperationVisitor):
         def reshape_func(*inputs):
             x, shape = _concretize([x_, shape_], inputs)
             result = tf.reshape(x, shape)
-            assert result.shape[0] == x.shape[0]
             return result
 
         return reshape_func
+
+    def visit_Resize(self, operation):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+        roi_ = operation.roi
+        if isinstance(roi_, Operation):
+            roi_ = self.visit(roi_)
+        scales_ = operation.scales
+        if isinstance(scales_, Operation):
+            scales_ = self.visit(scales_)
+        sizes_ = operation.sizes
+        if isinstance(sizes_, Operation):
+            sizes_ = self.visit(sizes_)
+
+        @self._cached
+        def resize_func(*inputs):
+            x, roi, scales, sizes = _concretize([x_, roi_, scales_, sizes_], inputs)
+            assert operation.coordinate_transformation_mode in [
+                "asymmetric",
+                "tf_crop_and_resize",
+            ]
+            assert operation.mode == "nearest"
+            assert operation.nearest_mode == "floor"
+            assert operation.exclude_outside == 0
+            if roi.size == 0:
+                roi = np.array([[0, 0, 1, 1]])
+            else:
+                assert operation.coordinate_transformation_mode == "tf_crop_and_resize"
+                assert roi.size == 8 and roi.ndim == 1
+                roi = roi[None, [2, 3, 6, 7]]
+            if sizes.size == 0:
+                assert scales[0] == 1.0 and scales[1] == 1.0
+                sizes = (scales * [int(d) for d in x.shape]).astype(int)
+            assert sizes.ndim == 1 and sizes.size == 4
+            sizes = sizes[2:]
+            result = tf.transpose(x, (0, 2, 3, 1))
+            result = tf.image.crop_and_resize(
+                result,
+                boxes=roi,
+                box_indices=np.arange(int(x.shape[0])),
+                crop_size=sizes,
+                method=operation.mode,
+                extrapolation_value=operation.extrapolation_value,
+            )
+            result = tf.transpose(result, (0, 3, 1, 2))
+            return result
+
+        return resize_func
 
     def visit_Shape(self, operation):
         x_ = operation.x
