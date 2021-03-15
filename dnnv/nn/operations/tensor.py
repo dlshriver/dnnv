@@ -98,6 +98,56 @@ class Reshape(Operation):
         return cls(*inputs)
 
 
+class Resize(Operation):
+    def __init__(
+        self,
+        x,
+        roi=np.array([], dtype=np.float32),
+        scales=np.array([], dtype=np.float),
+        sizes=np.array([], dtype=np.int64),
+        *,
+        coordinate_transformation_mode="half_pixel",
+        cubic_coeff_a=-0.75,
+        exclude_outside=0,
+        extrapolation_value=0.0,
+        mode="nearest",
+        nearest_mode="round_prefer_floor"
+    ):
+        assert scales.size != 0 or sizes.size != 0
+        assert scales.size == 0 or sizes.size == 0
+        self.x = x
+        self.roi = roi
+        self.scales = scales
+        self.sizes = sizes
+        self.coordinate_transformation_mode = coordinate_transformation_mode
+        self.cubic_coeff_a = cubic_coeff_a
+        self.exclude_outside = exclude_outside
+        self.extrapolation_value = extrapolation_value
+        self.mode = mode
+        self.nearest_mode = nearest_mode
+
+    @classmethod
+    def from_onnx(cls, onnx_node, *inputs):
+        attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
+        coordinate_transformation_mode = attributes.get(
+            "coordinate_transformation_mode", "half_pixel"
+        )
+        cubic_coeff_a = attributes.get("cubic_coeff_a", -0.75)
+        exclude_outside = attributes.get("exclude_outside", 0)
+        extrapolation_value = attributes.get("extrapolation_value", 0.0)
+        mode = attributes.get("mode", "nearest")
+        nearest_mode = attributes.get("nearest_mode", "round_prefer_floor")
+        return cls(
+            *inputs,
+            coordinate_transformation_mode=coordinate_transformation_mode,
+            cubic_coeff_a=cubic_coeff_a,
+            exclude_outside=exclude_outside,
+            extrapolation_value=extrapolation_value,
+            mode=mode,
+            nearest_mode=nearest_mode
+        )
+
+
 class Shape(Operation):
     def __init__(self, x):
         self.x = x

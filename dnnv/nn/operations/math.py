@@ -67,6 +67,18 @@ class Gemm(Operation):
         )
 
 
+class LeakyRelu(Operation):
+    def __init__(self, x, *, alpha=0.01):
+        self.x = x
+        self.alpha = alpha
+
+    @classmethod
+    def from_onnx(cls, onnx_node, *inputs):
+        attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
+        alpha = attributes.get("alpha", 0.01)
+        return cls(*inputs, alpha=alpha)
+
+
 class LogSoftmax(Operation):
     def __init__(self, x, *, axis=1):
         self.x = x
