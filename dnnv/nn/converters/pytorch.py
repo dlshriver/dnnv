@@ -166,7 +166,7 @@ class PytorchConverter(OperationVisitor):
             in_c,
             out_c,
             operation.kernel_shape,
-            stride=operation.strides,
+            stride=operation.strides.tolist(),
             padding=padding,
             dilation=dilation,
             groups=operation.group,

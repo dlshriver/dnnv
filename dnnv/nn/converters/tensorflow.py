@@ -223,6 +223,10 @@ class TensorflowConverter(OperationVisitor):
         @self._cached
         def conv_func(*inputs):
             x = _concretize([x_], inputs)
+            if len(operation.kernel_shape) != 2:
+                raise NotImplementedError(
+                    "Non 2d convolutions are not currently supported."
+                )
             weights = operation.w
             if operation.b is not None:
                 bias = operation.b
@@ -249,6 +253,69 @@ class TensorflowConverter(OperationVisitor):
             return result
 
         return conv_func
+
+    def visit_ConvTranspose(self, operation):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+
+        @self._cached
+        def convtranspose_func(*inputs):
+            x = _concretize([x_], inputs)
+            if len(operation.kernel_shape) != 2:
+                raise NotImplementedError(
+                    "Non 2d ConvTranspose operations are not currently supported."
+                )
+            weights = operation.w
+            if operation.b is not None:
+                bias = operation.b
+            else:
+                bias = np.zeros((weights.shape[0],), dtype=weights.dtype)
+            assert np.all(operation.dilations == 1)
+            assert np.all(operation.group == 1)
+            pad_top, pad_left, pad_bottom, pad_right = operation.pads
+            output_shape = operation.output_shape
+            if output_shape is None:
+                input_shape = [int(d) for d in x.shape[2:]]
+                start_pads = operation.pads[:2]
+                end_pads = operation.pads[2:]
+                output_shape = (
+                    [int(x.shape[0])]
+                    + [
+                        (
+                            operation.strides[i] * (input_shape[i] - 1)
+                            + operation.output_padding[i]
+                            + (
+                                (operation.kernel_shape[i] - 1) * operation.dilations[i]
+                                + 1
+                            )
+                            - start_pads[i]
+                            - end_pads[i]
+                        )
+                        for i in range(len(operation.kernel_shape))
+                    ]
+                    + [weights.shape[1]]
+                )
+
+            x = tf.transpose(x, (0, 2, 3, 1))
+            padded_x = tf.pad(
+                x, ((0, 0), (pad_top, pad_bottom), (pad_left, pad_right), (0, 0))
+            )
+            result = tf.nn.bias_add(
+                tf.nn.conv2d_transpose(
+                    padded_x,
+                    weights.transpose((2, 3, 1, 0)),
+                    output_shape,
+                    strides=operation.strides,
+                    padding="VALID",
+                    dilations=operation.dilations,
+                ),
+                bias,
+            )
+            result = tf.transpose(result, (0, 3, 1, 2))
+            return result
+
+        return convtranspose_func
 
     def visit_Div(self, operation):
         a_ = operation.a

@@ -141,9 +141,23 @@ class PrintVisitor(OperationVisitor):
             "Conv(%s, kernel_shape=%s, strides=%s, pads=%s)"
             % (
                 self.get_op_id(operation.x),
-                operation.kernel_shape,
-                operation.strides,
-                operation.pads,
+                operation.kernel_shape.tolist(),
+                operation.strides.tolist(),
+                operation.pads.tolist(),
+            )
+        )
+    
+    def visit_ConvTranspose(self, operation: operations.ConvTranspose) -> None:
+        self.generic_visit(operation)
+        self.print_op_id(operation)
+        print(
+            "ConvTranspose(%s, kernel_shape=%s, strides=%s, pads=%s, output_padding=%s)"
+            % (
+                self.get_op_id(operation.x),
+                operation.kernel_shape.tolist(),
+                operation.strides.tolist(),
+                operation.pads.tolist(),
+                operation.output_padding.tolist(),
             )
         )
 

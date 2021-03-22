@@ -15,7 +15,7 @@ class AveragePool(Operation):
         ceil_mode=False,
         count_include_pad=False,
         pads=0,
-        strides=1
+        strides=1,
     ):
         self.x = x
         self.kernel_shape = kernel_shape
@@ -44,7 +44,7 @@ class AveragePool(Operation):
             ceil_mode=ceil_mode,
             count_include_pad=count_include_pad,
             pads=pads,
-            strides=strides
+            strides=strides,
         )
 
 
@@ -73,45 +73,115 @@ class Conv(Operation):
         w,
         b=None,
         *,
-        dilations=(1, 1),
+        dilations=None,
         group=1,
         kernel_shape=None,
-        pads=0,
-        strides=1
+        pads=None,
+        strides=None,
     ):
         self.x = x
         self.w = w
         self.b = b
-        self.dilations = np.asarray(dilations)
+
         self.group = group
-        if kernel_shape is not None:
-            self.kernel_shape = kernel_shape
-        else:
-            self.kernel_shape = w.shape[2:]
-        if isinstance(pads, Iterable):
-            self.pads = tuple(pads)
-        elif isinstance(pads, int):
-            self.pads = (pads,) * 4
-        if isinstance(strides, Iterable):
-            self.strides = tuple(strides)
-        elif isinstance(strides, int):
-            self.strides = (strides,) * 4
+        self.kernel_shape = np.asarray(
+            kernel_shape if kernel_shape is not None else w.shape[2:]
+        )
+        self.dilations = np.asarray(
+            dilations if dilations is not None else (1,) * len(self.kernel_shape)
+        )
+        self.pads = np.asarray(
+            pads if pads is not None else (0,) * (len(self.kernel_shape) * 2)
+        )
+        self.strides = np.asarray(
+            strides if strides is not None else (1,) * len(self.kernel_shape)
+        )
 
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):
         attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
-        dilations = attributes.get("dilations", (1, 1))
+        dilations = attributes.get("dilations")
         group = attributes.get("group", 1)
         kernel_shape = attributes.get("kernel_shape")
-        pads = attributes.get("pads", 0)
-        strides = attributes.get("strides", 1)
+        pads = attributes.get("pads")
+        strides = attributes.get("strides")
         return cls(
             *inputs,
             dilations=dilations,
             group=group,
             kernel_shape=kernel_shape,
             pads=pads,
-            strides=strides
+            strides=strides,
+        )
+
+
+class ConvTranspose(Operation):
+    def __init__(
+        self,
+        x,
+        w,
+        b=None,
+        *,
+        auto_pad="NOTSET",
+        dilations=None,
+        group=1,
+        kernel_shape=None,
+        output_padding=None,
+        output_shape=None,
+        pads=None,
+        strides=None,
+    ):
+        self.x = x
+        self.w = w
+        self.b = b
+
+        self.auto_pad = auto_pad
+        self.kernel_shape = np.asarray(
+            kernel_shape if kernel_shape is not None else w.shape[2:]
+        )
+        self.dilations = np.asarray(
+            dilations if dilations is not None else (1,) * len(self.kernel_shape)
+        )
+        self.group = group
+        self.output_padding = np.asarray(
+            output_padding
+            if output_padding is not None
+            else (0,) * len(self.kernel_shape)
+        )
+        self.strides = np.asarray(
+            strides if strides is not None else (1,) * len(self.kernel_shape)
+        )
+        self.output_shape = output_shape
+        if self.output_shape is None:
+            self.pads = np.asarray(
+                pads if pads is not None else (0,) * (len(self.kernel_shape) * 2)
+            )
+        else:
+            raise NotImplementedError(
+                "Setting ConvTranspose output_shape is not currently supported"
+            )
+
+    @classmethod
+    def from_onnx(cls, onnx_node, *inputs):
+        attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
+        auto_pad = attributes.get("auto_pad", "NOTSET")
+        dilations = attributes.get("dilations")
+        group = attributes.get("group", 1)
+        kernel_shape = attributes.get("kernel_shape")
+        output_padding = attributes.get("output_padding")
+        output_shape = attributes.get("output_shape")
+        pads = attributes.get("pads")
+        strides = attributes.get("strides")
+        return cls(
+            *inputs,
+            auto_pad=auto_pad,
+            dilations=dilations,
+            group=group,
+            kernel_shape=kernel_shape,
+            output_padding=output_padding,
+            output_shape=output_shape,
+            pads=pads,
+            strides=strides,
         )
 
 
@@ -149,7 +219,7 @@ class MaxPool(Operation):
         dilations=(1, 1),
         pads=0,
         storage_order=ROW_MAJOR_STORAGE,
-        strides=1
+        strides=1,
     ):
         self.x = x
         self.ceil_mode = ceil_mode
@@ -181,5 +251,6 @@ class MaxPool(Operation):
             dilations=dilations,
             pads=pads,
             storage_order=storage_order,
-            strides=strides
+            strides=strides,
         )
+
