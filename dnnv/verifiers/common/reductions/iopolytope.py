@@ -103,12 +103,26 @@ class HalfspacePolytope(Constraint):
         self.halfspaces: List[Halfspace] = []
         self._A = None
         self._b = None
+        self._A_mat = None
+        self._b_vec = None
         self._lower_bound = np.zeros(self.size()) - np.inf
         self._upper_bound = np.zeros(self.size()) + np.inf
 
+    @property
+    def A(self):
+        if self._A_mat is None:
+            self._A_mat = np.vstack(self._A)
+        return self._A_mat
+
+    @property
+    def b(self):
+        if self._b_vec is None:
+            self._b_vec = np.hstack(self._b)
+        return self._b_vec
+
     def as_matrix_inequality(self, tol=None):
         assert tol is None
-        return self._A, self._b
+        return self.A, self.b
 
     def as_bounds(self, tol=None):
         return self._lower_bound, self._upper_bound
@@ -118,7 +132,12 @@ class HalfspacePolytope(Constraint):
         A, b = self.as_matrix_inequality()
         obj = np.zeros(A.shape[1])
         try:
-            result = linprog(obj, A_ub=A, b_ub=b, bounds=(None, None),)
+            result = linprog(
+                obj,
+                A_ub=A,
+                b_ub=b,
+                bounds=(None, None),
+            )
         except ValueError as e:
             if "The problem is (trivially) infeasible" in e.args[0]:
                 return False
@@ -155,9 +174,7 @@ class HalfspacePolytope(Constraint):
                 obj = np.zeros(n)
                 try:
                     obj[i] = 1
-                    result = linprog(
-                        obj, A_ub=self._A, b_ub=self._b, bounds=(None, None)
-                    )
+                    result = linprog(obj, A_ub=self.A, b_ub=self.b, bounds=(None, None))
                     if result.status == 0:
                         self._lower_bound[i] = result.x[i]
                 except ValueError as e:
@@ -168,9 +185,7 @@ class HalfspacePolytope(Constraint):
                         raise e
                 try:
                     obj[i] = -1
-                    result = linprog(
-                        obj, A_ub=self._A, b_ub=self._b, bounds=(None, None)
-                    )
+                    result = linprog(obj, A_ub=self.A, b_ub=self.b, bounds=(None, None))
                     if result.status == 0:
                         self._upper_bound[i] = result.x[i]
                 except ValueError as e:
@@ -197,11 +212,11 @@ class HalfspacePolytope(Constraint):
         if is_open:
             _b[0] = np.nextafter(b, b - 1)
         if self._A is None:
-            self._A = _A
-            self._b = _b
+            self._A = [_A]
+            self._b = [_b]
         else:
-            self._A = np.vstack([self._A, _A])
-            self._b = np.hstack([self._b, _b])
+            self._A.append(_A)
+            self._b.append(_b)
 
         self._update_bounds(flat_indices, coefficients, b, is_open=is_open)
 
@@ -419,7 +434,8 @@ class IOPolytopeProperty(Property):
                 return new_op
 
         prefix_transformer = PrefixTransformer(
-            self.input_constraint.lower_bounds, self.input_constraint.upper_bounds,
+            self.input_constraint.lower_bounds,
+            self.input_constraint.upper_bounds,
         )
         prefixed_op_graph = OperationGraph(suffixed_op_graph.walk(prefix_transformer))
         return (
