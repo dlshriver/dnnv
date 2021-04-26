@@ -40,14 +40,6 @@ Additionally, several verifiers make use of the [Gurobi solver](https://www.guro
 
 Finally, planet has several additional requirements that currently must be installed separately before installation with `./manage.sh`: libglpk-dev, qt5-qmake, valgrind, libltdl-dev, protobuf-compiler.
 
-#### Full Installation Script
-
-DNNV, with all supported verifiers can be installed using a provided installation script.
-
-```
-$ ./scripts/install_artifact.sh
-```
-
 #### Docker Installation
 
 DNNV can also be built using the provided Docker build scripts. The provided build file will install DNNV with all of the verifiers that do not require Gurobi. To build and run the docker image, run:
@@ -56,6 +48,14 @@ DNNV can also be built using the provided Docker build scripts. The provided bui
 $ docker build . -t dlshriver/dnnv
 $ docker run --rm -it dlshriver/dnnv
 (.venv) dnnv@hostname:~$ python -m dnnv -h
+```
+
+#### Full Installation Script
+
+DNNV, with all supported verifiers can be installed using a provided installation script. **WARNING: This will install system packages. We recommend this only be run in a VM.**
+
+```
+$ sudo ./scripts/install_artifact.sh
 ```
 
 ### Usage
