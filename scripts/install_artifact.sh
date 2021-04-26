@@ -1,9 +1,9 @@
 #!/bin/bash
 
-sudo apt update
-sudo add-apt-repository -y ppa:deadsnakes/ppa
-sudo apt update
-sudo apt install software-properties-common build-essential python3.7 python3.7-dev python3.7-venv cmake wget git liblapack-dev openssl libssl-dev valgrind libtool libboost-all-dev libglpk-dev qt5-qmake libltdl-dev protobuf-compiler
+apt update
+add-apt-repository -y ppa:deadsnakes/ppa
+apt update
+apt install software-properties-common build-essential python3.7 python3.7-dev python3.7-venv cmake wget git liblapack-dev openssl libssl-dev valgrind libtool libboost-all-dev libglpk-dev qt5-qmake libltdl-dev protobuf-compiler
 
 mkdir artifact
 cd artifact
