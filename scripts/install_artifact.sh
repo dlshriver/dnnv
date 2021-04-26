@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 apt update
 add-apt-repository -y ppa:deadsnakes/ppa
 apt update
