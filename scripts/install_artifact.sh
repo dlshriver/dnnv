@@ -1,33 +1,5 @@
 #!/bin/bash
 
-use_gurobi=1
-
-print_usage() {
-    echo "Usage: run.sh [--no-gurobi]"
-    echo ""
-    echo "Available options:"
-    echo "  -h, --help       show this help message and exit"
-    echo "  --no-gurobi      do not run verifiers that require gurobi"
-}
-
-while [ -n "$1" ]; do # while loop starts
-    case "$1" in
-    -h | --help)
-        print_usage
-        exit 0
-        ;;
-    --no-gurobi)
-        use_gurobi=0
-        ;;
-    *)
-        echo "Option $1 not recognized"
-        print_usage
-        exit 1
-        ;;
-    esac
-    shift
-done
-
 sudo apt update
 sudo add-apt-repository -y ppa:deadsnakes/ppa
 sudo apt update
