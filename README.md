@@ -52,10 +52,12 @@ $ docker run --rm -it dlshriver/dnnv
 
 #### Full Installation Script
 
-DNNV, with all supported verifiers can be installed using a provided installation script. **WARNING: This will install system packages. We recommend this only be run in a VM.**
+DNNV, with all supported verifiers can be installed using a provided installation script. We have tested this script on a fresh Ubuntu 20.04 system. **WARNING: This will install system packages. We recommend this only be run in a VM.**
 
 ```
-$ sudo ./scripts/install_artifact.sh
+$ wget https://raw.githubusercontent.com/dlshriver/DNNV/CAV2021/scripts/install_artifact.sh
+$ chmod u+x install_artifact.sh
+$ ./install_artifact.sh
 ```
 
 ### Usage
