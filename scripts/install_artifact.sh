@@ -31,4 +31,4 @@ cd ..
 wget "https://drive.google.com/u/1/uc?id=1RJDq4jsiteEE2RYRo3Nvmm7E8scTxPQm&export=download" -O cav2021_artifact.tar.gz
 tar xzf cav2021_artifact.tar.gz
 
-echo ". $(pwd)/DNNV/.env.d/openenv.sh" >> .bashrc
+echo ". $(pwd)/DNNV/.env.d/openenv.sh" >> ~/.bashrc
