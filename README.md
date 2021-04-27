@@ -36,7 +36,7 @@ $ ./manage.sh install reluplex planet mipverify neurify eran plnn marabou nnenum
 
 Additionally, several verifiers make use of the [Gurobi solver](https://www.gurobi.com/). This should be installed automatically, but requires a license to be manually activated and available on the host machine. Academic licenses can be obtained for free from the [Gurobi website](https://user.gurobi.com/download/licenses/free-academic).
 
-*April 26, 2021:* The Marabou installation script may fail if boost is not installed. We use the original Marabou installation scripts which attempt to download boost if it cannot be found, but we have noticed at this time that this download can fail. To avoid this, try installing boost with `sudo apt install libboost-all-dev` before installing marabou using `./manage.sh`.
+*April 26, 2021:* The Marabou installation script may fail if boost is not installed. We use the original Marabou installation scripts which attempt to download boost if it cannot be found, but we have noticed at this time that this download can fail. To avoid this, try installing boost with `sudo apt install libboost1.71-all-dev` before installing marabou using `./manage.sh`.
 
 Finally, planet has several additional requirements that currently must be installed separately before installation with `./manage.sh`: libglpk-dev, qt5-qmake, valgrind, libltdl-dev, protobuf-compiler.
 
