@@ -28,8 +28,13 @@ class DummyExecutor(VerifierExecutor):
 class Convert(Verifier):
     translator_error = VnnlibTranslatorError
     parameters = {
-        "to": Parameter(str, default="vnnlib", choices=["vnnlib", "rlv", "nnet"],),
+        "to": Parameter(
+            str,
+            default="vnnlib",
+            choices=["vnnlib", "rlv", "nnet"],
+        ),
         "dest": Parameter(Path, default=Path(".")),
+        "extended-vnnlib": Parameter(bool, default=False),
     }
     executor = DummyExecutor
 
@@ -62,7 +67,8 @@ class Convert(Verifier):
         paths = []
         if self.parameters.get("to") == "nnet":
             layers = as_layers(
-                prop.suffixed_op_graph(), translator_error=self.translator_error,
+                prop.suffixed_op_graph(),
+                translator_error=self.translator_error,
             )
             paths.append(
                 Path(
@@ -75,7 +81,8 @@ class Convert(Verifier):
             )
         elif self.parameters.get("to") == "rlv":
             layers = as_layers(
-                prop.suffixed_op_graph(), translator_error=self.translator_error,
+                prop.suffixed_op_graph(),
+                translator_error=self.translator_error,
             )
             paths.append(
                 Path(
@@ -97,7 +104,9 @@ class Convert(Verifier):
             paths.append(
                 Path(
                     to_vnnlib_property_file(
-                        prop, translator_error=self.translator_error
+                        prop,
+                        translator_error=self.translator_error,
+                        extended_vnnlib=self.parameters.get("extended-vnnlib"),
                     )
                 )
             )
