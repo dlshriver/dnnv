@@ -30,6 +30,8 @@ class Parameter:
         help: Optional[str] = None,
     ):
         self.type = dtype
+        if dtype == bool:
+            self.type = lambda x: x not in ["False", "false", "0", "F", "f", False, 0]
         self.default = self.type(default) if default is not None else None
         self.choices = choices
         self.help = help
