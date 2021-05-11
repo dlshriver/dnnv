@@ -101,8 +101,8 @@ class HalfspacePolytope(Constraint):
     def __init__(self, variable):
         super().__init__(variable)
         self.halfspaces: List[Halfspace] = []
-        self._A = None
-        self._b = None
+        self._A = []
+        self._b = []
         self._A_mat = None
         self._b_vec = None
         self._lower_bound = np.zeros(self.size()) - np.inf
@@ -111,18 +111,34 @@ class HalfspacePolytope(Constraint):
     @property
     def A(self):
         if self._A_mat is None:
-            self._A_mat = np.vstack(self._A)
+            if self._A:
+                self._A_mat = np.vstack(self._A)
+            else:
+                return np.empty((0, self.size()))
         return self._A_mat
 
     @property
     def b(self):
         if self._b_vec is None:
-            self._b_vec = np.hstack(self._b)
+            if self._b:
+                self._b_vec = np.hstack(self._b)
+            else:
+                return np.empty((0,))
         return self._b_vec
 
-    def as_matrix_inequality(self, tol=None):
+    def as_matrix_inequality(self, tol=None, include_bounds=False):
         assert tol is None
-        return self.A, self.b
+        A = self.A
+        b = self.b
+        if include_bounds:
+            n = self.size()
+            A_ = np.vstack([A, -np.eye(n), np.eye(n)])
+            b_ = np.hstack([b, -self._lower_bound, self._upper_bound])
+            is_finite = ~np.isposinf(b_)
+            A_ = A_[is_finite]
+            b_ = b_[is_finite]
+            return A_, b_
+        return A, b
 
     def as_bounds(self, tol=None):
         return self._lower_bound, self._upper_bound
@@ -131,12 +147,13 @@ class HalfspacePolytope(Constraint):
     def is_consistent(self):
         A, b = self.as_matrix_inequality()
         obj = np.zeros(A.shape[1])
+        bounds = list(zip(*self.as_bounds()))
         try:
             result = linprog(
                 obj,
                 A_ub=A,
                 b_ub=b,
-                bounds=(None, None),
+                bounds=bounds,
             )
         except ValueError as e:
             if "The problem is (trivially) infeasible" in e.args[0]:
@@ -203,18 +220,15 @@ class HalfspacePolytope(Constraint):
         halfspace = Halfspace(flat_indices, coefficients, b, is_open)
         self.halfspaces.append(halfspace)
 
-        n = self.size()
-        _A = np.zeros((1, n))
-        _b = np.zeros((1,))
-        for i, a in zip(flat_indices, coefficients):
-            _A[0, i] = a
-        _b[0] = b
-        if is_open:
-            _b[0] = np.nextafter(b, b - 1)
-        if self._A is None:
-            self._A = [_A]
-            self._b = [_b]
-        else:
+        if len(indices) > 1:
+            n = self.size()
+            _A = np.zeros((1, n))
+            _b = np.zeros((1,))
+            for i, a in zip(flat_indices, coefficients):
+                _A[0, i] = a
+            _b[0] = b
+            if is_open:
+                _b[0] = np.nextafter(b, b - 1)
             self._A.append(_A)
             self._b.append(_b)
 

@@ -23,13 +23,17 @@ def parse_args():
 
 
 def main(args):
-    (A_input, b_input), (A_output, b_output) = np.load(
+    (lb, ub), (A_input, b_input), (A_output, b_output) = np.load(
         args.constraints, allow_pickle=True
     )
     network = Marabou.read_onnx(args.model)
 
     inputVars = network.inputVars[0]
     outputVars = network.outputVars
+
+    for x, l, u in zip(inputVars.flatten(), lb, ub):
+        network.setLowerBound(x, l)
+        network.setUpperBound(x, u)
 
     for i, (a, b) in enumerate(zip(A_input, b_input)):
         network.addInequality(list(inputVars.flatten()), list(a), b)
@@ -52,7 +56,8 @@ def main(args):
                 cex[multi_index] = result[0][flat_index]
             print(cex)
         np.save(
-            args.output, (is_unsafe, cex),
+            args.output,
+            (is_unsafe, cex),
         )
 
 

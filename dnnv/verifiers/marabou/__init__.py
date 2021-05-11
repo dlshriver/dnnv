@@ -29,13 +29,14 @@ class Marabou(Verifier):
         ) as onnx_model_file:
             prop.op_graph.export_onnx(onnx_model_file.name)
 
+        lb, ub = prop.input_constraint.as_bounds()
         A_in, b_in = prop.input_constraint.as_matrix_inequality()
-        A_out, b_out = prop.output_constraint.as_matrix_inequality()
+        A_out, b_out = prop.output_constraint.as_matrix_inequality(include_bounds=True)
 
         with tempfile.NamedTemporaryFile(
             mode="w+", suffix=".npy", delete=False
         ) as constraint_file:
-            np.save(constraint_file.name, ((A_in, b_in), (A_out, b_out)))
+            np.save(constraint_file.name, ((lb, ub), (A_in, b_in), (A_out, b_out)))
 
         with tempfile.NamedTemporaryFile(
             mode="w+", suffix=".npy", delete=False

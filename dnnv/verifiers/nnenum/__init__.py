@@ -53,7 +53,7 @@ class Nnenum(Verifier):
 
         lb, ub = prop.input_constraint.as_bounds()
         A_in, b_in = prop.input_constraint.as_matrix_inequality()
-        A_out, b_out = prop.output_constraint.as_matrix_inequality()
+        A_out, b_out = prop.output_constraint.as_matrix_inequality(include_bounds=True)
 
         with tempfile.NamedTemporaryFile(
             mode="w+", suffix=".npy", delete=False

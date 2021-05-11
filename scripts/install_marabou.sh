@@ -12,7 +12,7 @@ pip install onnxruntime
 cd $PROJECT_DIR/bin
 git clone https://github.com/NeuralNetworkVerification/Marabou
 cd Marabou
-git checkout 8bea650
+git checkout b484e3b
 mkdir build 
 cd build
 cmake ..
