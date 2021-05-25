@@ -38,7 +38,11 @@ class OnnxConverter(OperationVisitor):
 
         nodes = [n for n in self.visited.values() if isinstance(n, onnx.NodeProto)]
         graph_def = onnx.helper.make_graph(
-            nodes, name, self.inputs, self.outputs, initializer=self.initializer,
+            nodes,
+            name,
+            self.inputs,
+            self.outputs,
+            initializer=self.initializer,
         )
         model_def = onnx.helper.make_model(graph_def, producer_name="dnnv")
         model_def = onnx.shape_inference.infer_shapes(model_def)
@@ -69,6 +73,19 @@ class OnnxConverter(OperationVisitor):
             self.initializer.append(tensor_proto)
             return tensor_proto
         raise ValueError(f"Unknown type for operand of {opname}: {type(value)}")
+
+    def visit_Add(self, operation: operations.Add) -> onnx.NodeProto:
+        idx = self.op_counts["Add"] = self.op_counts["Add"] + 1
+        opname = f"Add_{idx}"
+
+        a = self._to_onnx_proto(operation.a, f"{opname}.a")
+        b = self._to_onnx_proto(operation.b, f"{opname}.b")
+
+        node = onnx.helper.make_node(
+            "Add", inputs=[a.name, b.name], outputs=[opname], name=opname
+        )
+
+        return node
 
     def visit_Conv(self, operation: operations.Conv) -> onnx.NodeProto:
         idx = self.op_counts["Conv"] = self.op_counts["Conv"] + 1

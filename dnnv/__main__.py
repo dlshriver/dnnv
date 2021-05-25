@@ -2,12 +2,14 @@
 """
 import argparse
 import numpy as np
+import os
 import time
 
+from pathlib import Path
 from typing import List, Optional
 
 from . import cli
-from . import logging
+from . import logging_utils as logging
 from . import nn
 from . import properties
 from . import utils
@@ -19,7 +21,9 @@ def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
     utils.set_random_seed(args.seed)
 
     logger.debug("Reading property %s", args.property)
-    phi = properties.parse(args.property, format=args.prop_format, args=extra_args)
+    phi = properties.parse(
+        args.property, format=args.prop_format, args=extra_args
+    ).propagate_constants()
     print("Verifying property:")
     print(phi)
     print()
@@ -77,6 +81,21 @@ def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
 
 
 def _main():
+    local_dnnv_dir = (Path.cwd() / ".dnnv").resolve()
+    home_dnnv_dir = (Path.home() / ".dnnv").resolve()
+    extend_envvar = lambda var, ext: os.path.pathsep.join(
+        [
+            str(p)
+            for p in (
+                local_dnnv_dir / ext,
+                home_dnnv_dir / ext,
+                os.getenv(var, ""),
+            )
+            if p
+        ]
+    )
+    os.environ["PATH"] = extend_envvar("PATH", "bin")
+    os.environ["LD_LIBRARY_PATH"] = extend_envvar("LD_LIBRARY_PATH", "lib")
     return exit(main(*cli.parse_args()))
 
 

@@ -1,0 +1,2 @@
+class InstallationError(Exception):
+    pass

@@ -34,35 +34,51 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install DNNV
-        run: ./manage.sh init
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install --upgrade pip
+          pip install .
       
       - name: "Install Verifier: Reluplex"
-        run: ./manage.sh install reluplex
+        run: |
+          . .venv/bin/activate
+          dnnv_manage install reluplex
       
       - name: "Install Verifier: Planet"
-        run: ./manage.sh install planet
+        run: |
+          . .venv/bin/activate
+          dnnv_manage install planet
       
       - name: "Install Verifier: Neurify"
-        run: ./manage.sh install neurify
+        run: |
+          . .venv/bin/activate
+          dnnv_manage install neurify
       
       - name: "Install Verifier: ERAN"
-        run: ./manage.sh install eran
+        run: |
+          . .venv/bin/activate
+          dnnv_manage install eran
       
       - name: "Install Verifier: Marabou"
-        run: ./manage.sh install marabou
+        run: |
+          . .venv/bin/activate
+          dnnv_manage install marabou
       
       - name: "Install Verifier: nnenum"
-        run: ./manage.sh install nnenum
+        run: |
+          . .venv/bin/activate
+          dnnv_manage install nnenum
       
       - name: Prepare Test Artifacts
         run: |
-          source .env.d/openenv.sh
+          . .venv/bin/activate
           python tests/artifacts/build_artifacts.py
       
       - name: Run DNNV Test Suite
         run: |
           export TF_CPP_MIN_LOG_LEVEL=3
-          source .env.d/openenv.sh
+          . .env.d/openenv.sh
           coverage run
           coverage combine
           coverage xml

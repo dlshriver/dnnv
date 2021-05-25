@@ -22,12 +22,13 @@ requires = [
 requires-python = ">=3.7"
 
 [tool.flit.metadata.requires-extra]
-test = ["toml >=0.10,<0.11", "coverage >=5.0,<5.3"]
+test = ["coverage >=5.0,<5.3"]
 doc = ["sphinx"]
 dev = ["black", "mypy"]
 
 [tool.flit.scripts]
 dnnv = "dnnv.__main__:_main"
+dnnv_manage = "dnnv._manage.__main__:_main"
 
 [tool.coverage.run]
 branch = true

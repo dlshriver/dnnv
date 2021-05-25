@@ -28,7 +28,11 @@ class DummyExecutor(VerifierExecutor):
 class Convert(Verifier):
     translator_error = VnnlibTranslatorError
     parameters = {
-        "to": Parameter(str, default="vnnlib", choices=["vnnlib", "rlv", "nnet"],),
+        "to": Parameter(
+            str,
+            default="vnnlib",
+            choices=["vnnlib", "rlv", "nnet"],
+        ),
         "dest": Parameter(Path, default=Path(".")),
     }
     executor = DummyExecutor
@@ -62,7 +66,8 @@ class Convert(Verifier):
         paths = []
         if self.parameters.get("to") == "nnet":
             layers = as_layers(
-                prop.suffixed_op_graph(), translator_error=self.translator_error,
+                prop.suffixed_op_graph(),
+                translator_error=self.translator_error,
             )
             paths.append(
                 Path(
@@ -75,7 +80,8 @@ class Convert(Verifier):
             )
         elif self.parameters.get("to") == "rlv":
             layers = as_layers(
-                prop.suffixed_op_graph(), translator_error=self.translator_error,
+                prop.suffixed_op_graph(),
+                translator_error=self.translator_error,
             )
             paths.append(
                 Path(
@@ -101,7 +107,6 @@ class Convert(Verifier):
                     )
                 )
             )
-            # TODO : create ONNX model
         dest: Path = self.parameters.get("dest")
         dest.mkdir(exist_ok=True, parents=True)
         for path in paths:
