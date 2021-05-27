@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 mkdir -p bin
 mkdir -p include
 mkdir -p lib
