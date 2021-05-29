@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.7]
+        python-version: [3.7, 3.8, 3.9]
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -65,10 +65,10 @@ jobs:
           . .venv/bin/activate
           dnnv_manage install marabou
       
-      - name: "Install Verifier: nnenum"
-        run: |
-          . .venv/bin/activate
-          dnnv_manage install nnenum
+      # - name: "Install Verifier: nnenum"
+      #   run: |
+      #     . .venv/bin/activate
+      #     dnnv_manage install nnenum
       
       - name: Prepare Test Artifacts
         run: |
@@ -78,7 +78,7 @@ jobs:
       - name: Run DNNV Test Suite
         run: |
           export TF_CPP_MIN_LOG_LEVEL=3
-          . .env.d/openenv.sh
+          . .venv/bin/activate
           coverage run
           coverage combine
           coverage xml
