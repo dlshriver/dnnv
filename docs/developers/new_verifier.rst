@@ -2,8 +2,8 @@ Adding a New Verifier
 =====================
 
 *TODO.* Sorry, this page is still in development.
-Example verifier implementations can be seen
-`here <https://github.com/dlshriver/DNNV/tree/v1_refactor/dnnv/verifiers>`_.
+As an example, the implementation for the planet verifier can be seen
+`here <https://github.com/dlshriver/DNNV/tree/main/dnnv/verifiers/planet>`_.
 
 In general a verifier will subclass the `Verifier` base class 
 and implement at least the methods 

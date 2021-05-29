@@ -4,50 +4,69 @@ A framework for verification and analysis of deep neural networks.
 
 ## Getting Started
 
-For more detailed instructions, see our [documentation](https://dnnv.readthedocs.io/en/stable/).
+For detailed instructions on installing and using DNNV, see our [documentation](https://dnnv.readthedocs.io/en/stable/).
 
 ### Installation
 
-Clone this repository:
+DNNV requires python3.7 or later, and has only been tested on linux. To install the latest stable version run:
 
 ```bash
-$ git clone https://github.com/dlshriver/DNNV.git
+$ pip install dnnv
 ```
 
-Create a python virtual environment for this project:
+or
 
 ```bash
-$ ./manage.sh init
+$ pip install git+https://github.com/dlshriver/DNNV.git@main
 ```
 
-To activate the virtual environment and set environment variables correctly for tools installed using the provided `manage.sh` script, run:
-
-```bash
-$ . .env.d/openenv.sh
-```
+We recommend installing DNNV into a [python virtual environment](https://docs.python.org/3/tutorial/venv.html).
 
 Install any of the supported verifiers ([Reluplex](https://github.com/guykatzz/ReluplexCav2017), [planet](https://github.com/progirep/planet), [MIPVerify.jl](https://github.com/vtjeng/MIPVerify.jl), [Neurify](https://github.com/tcwangshiqi-columbia/Neurify), [ERAN](https://github.com/eth-sri/eran), [PLNN](https://github.com/oval-group/PLNN-verification), [marabou](https://github.com/NeuralNetworkVerification/Marabou), [nnenum](https://github.com/stanleybak/nnenum), [verinet](https://vas.doc.ic.ac.uk/software/neural/)):
 
 ```bash
-$ ./manage.sh install reluplex planet mipverify neurify eran plnn marabou nnenum verinet
+$ dnnv_manage install reluplex planet mipverify neurify eran plnn marabou nnenum verinet
 ```
 
-**Make sure that the project environment is activated** when installing verifiers with the `manage.sh` script. Otherwise some tools may not install correctly.
+*Several verifiers make use of the [Gurobi solver](https://www.gurobi.com/).* This should be installed automatically, but requires a license to be manually activated and available on the host machine. Academic licenses can be obtained for free from the [Gurobi website](https://user.gurobi.com/download/licenses/free-academic).
 
-Additionally, several verifiers make use of the [Gurobi solver](https://www.gurobi.com/). This should be installed automatically, but requires a license to be manually activated and available on the host machine. Academic licenses can be obtained for free from the [Gurobi website](https://user.gurobi.com/download/licenses/free-academic).
+#### Source Installation
 
-*April 26, 2021:* The Marabou installation script may fail if boost is not installed. We use the original Marabou installation scripts which attempt to download boost if it cannot be found, but we have noticed at this time that this download can fail. To avoid this, try installing boost with `sudo apt install libboost1.71-all-dev` before installing marabou using `./manage.sh`.
+First create and activate a python virtual environment.
 
-Finally, planet has several additional requirements that currently must be installed separately before installation with `./manage.sh`: libglpk-dev, qt5-qmake, valgrind, libltdl-dev, protobuf-compiler.
+```bash
+$ python -m venv .venv
+$ . .venv/bin/activate
+```
+
+Then run the following commands to clone DNNV and install it into the virtual environment:
+
+```bash
+$ git clone https://github.com/dlshriver/DNNV.git
+$ cd DNNV
+$ pip install .
+```
+
+Verifiers can then be installed using the `dnnv_manage` tool as described above.
+
+**Make sure that the project environment is activated** when using dnnv or the dnnv_manage tools.
 
 #### Docker Installation
 
-DNNV can also be built using the provided Docker build scripts. The provided build file will install DNNV with all of the verifiers that do not require Gurobi. To build and run the docker image, run:
+We provide a docker image with DNNV and all non-Gurobi dependent verifiers. To obtain and use the latest pre-built image, run:
 
+```bash
+$ docker pull dlshriver/dnnv:latest
+$ docker run --rm -it dlshriver/dnnv:latest
+(.venv) dnnv@hostname:~$ dnnv -h
 ```
+
+The docker image can also be built using the provided Dockerfile. The provided build file will install DNNV with all of the verifiers that do not require Gurobi. To build and run the docker image, run:
+
+```bash
 $ docker build . -t dlshriver/dnnv
 $ docker run --rm -it dlshriver/dnnv
-(.venv) dnnv@hostname:~$ python -m dnnv -h
+(.venv) dnnv@hostname:~$ dnnv -h
 ```
 
 #### Full Installation Script
@@ -91,6 +110,8 @@ Additionally, if the property defines parameters, using the `Parameter` keyword,
 ```bash
 $ python -m dnnv property.prop --network N network.onnx --eran --prop.epsilon=2.0
 ```
+
+To save any counter-example found by the verifier, use the option `--save-violation /path/to/array.npy` when running DNNV. This will save any violation found as a numpy array at the path specified, which is useful for viewing counter-examples to properties and enables additional debugging and analysis later.
 
 ### Examples
 
