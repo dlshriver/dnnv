@@ -15,20 +15,6 @@ class MIPVerify(Verifier):
     translator_error = MIPVerifyTranslatorError
     verifier_error = MIPVerifyError
 
-    @classmethod
-    def is_installed(cls):
-        verifier = "julia"
-        for path in os.environ["PATH"].split(os.pathsep):
-            exe = os.path.join(path, verifier)
-            if os.path.isfile(exe) and os.access(exe, os.X_OK):
-                proc = sp.run(
-                    ["julia", "-e", "using MIPVerify"],
-                    stdout=sp.DEVNULL,
-                    stderr=sp.DEVNULL,
-                )
-                return proc.returncode == 0
-        return False
-
     def build_inputs(self, prop):
         if prop.input_constraint.num_variables > 1:
             raise self.translator_error(
@@ -55,7 +41,7 @@ class MIPVerify(Verifier):
             layers,
             translator_error=self.translator_error,
         )
-        return "julia", mipverify_inputs["property_path"]
+        return "mipverify", mipverify_inputs["property_path"]
 
     def parse_results(self, prop, results):
         stdout, stderr = results

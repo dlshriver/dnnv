@@ -5,12 +5,9 @@ from __future__ import annotations
 
 import argparse
 import logging
-import os
 import sys
 
-from pathlib import Path
-
-from . import verifiers, install_command
+from . import install, uninstall, list_verifiers, verifier_choices
 
 
 def parse_args() -> argparse.Namespace:
@@ -34,15 +31,29 @@ def parse_args() -> argparse.Namespace:
         title="commands",
         help="commands to manage DNNV",
     )
+
     install_parser = subparsers.add_parser("install", help="install a verifier")
     install_parser.add_argument(
         "verifiers",
         type=str,
         nargs="+",
-        choices=verifiers.verifier_choices,
+        choices=verifier_choices,
         help="the verifier to install",
     )
-    install_parser.set_defaults(command=install_command)
+    install_parser.set_defaults(command=install)
+
+    uninstall_parser = subparsers.add_parser("uninstall", help="uninstall a verifier")
+    uninstall_parser.add_argument(
+        "verifiers",
+        type=str,
+        nargs="+",
+        choices=verifier_choices,
+        help="the verifier to uninstall",
+    )
+    uninstall_parser.set_defaults(command=uninstall)
+
+    list_parser = subparsers.add_parser("list", help="list installed verifiers")
+    list_parser.set_defaults(command=list_verifiers)
 
     parser.set_defaults(command=lambda *args, **kwargs: 0)
     parser.set_defaults(verbose=True)
@@ -54,22 +65,6 @@ def parse_args() -> argparse.Namespace:
 
 
 def _main() -> int:
-    local_dnnv_dir = (Path.cwd() / ".dnnv").resolve()
-    home_dnnv_dir = (Path.home() / ".dnnv").resolve()
-    extend_envvar = lambda var, ext: os.path.pathsep.join(
-        [
-            str(p)
-            for p in (
-                local_dnnv_dir / ext,
-                home_dnnv_dir / ext,
-                os.getenv(var, ""),
-            )
-            if p
-        ]
-    )
-    os.environ["PATH"] = extend_envvar("PATH", "bin")
-    os.environ["LD_LIBRARY_PATH"] = extend_envvar("LD_LIBRARY_PATH", "lib")
-
     args = parse_args()
 
     logger = logging.getLogger("dnnv_manage")

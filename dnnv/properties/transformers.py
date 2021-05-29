@@ -404,7 +404,7 @@ class PropagateConstants(ExpressionTransformer):
             return Add(*expressions)
         constant_value = constant_expressions[0].value
         for expr in constant_expressions[1:]:
-            constant_value += expr.value
+            constant_value = constant_value + expr.value
         if len(expressions) == 0:
             return Constant(constant_value)
         elif isinstance(constant_value, (float, int)) and constant_value == 0:
@@ -588,7 +588,7 @@ class PropagateConstants(ExpressionTransformer):
             return Constant(1)
         constant_value = 1
         for expr in constant_expressions:
-            constant_value *= expr.value
+            constant_value = constant_value * expr.value
         if isinstance(constant_value, (float, int)) and constant_value == 0:
             return Constant(0)
         elif len(expressions) == 0:

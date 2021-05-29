@@ -1,23 +1,15 @@
-"""
-dnnv._manage - management tool for DNNV
-"""
-from __future__ import annotations
+import sys
 
-import logging
+__all__ = []
 
-from typing import List
+if sys.platform == "linux":
+    from .linux import *
 
-from . import install
-from .verifiers import import_verifier_module
+    __all__ += linux.__all__
+else:
+    print(f"dnnv_manage is not yet supported on {sys.platform} platforms")
+    exit(1)
 
+from .errors import *
 
-def install_command(verifiers: List[str]) -> int:
-    logger = logging.getLogger("dnnv_manage.install_command")
-    installation_manager = install.InstallationManager()
-    for verifier in verifiers:
-        logger.info("installing %s", verifier)
-        import_verifier_module(verifier).configure_install(installation_manager)
-    return 0
-
-
-__all__ = ["install_command"]
+__all__ += errors.__all__

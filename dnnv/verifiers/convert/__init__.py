@@ -34,6 +34,7 @@ class Convert(Verifier):
             choices=["vnnlib", "rlv", "nnet"],
         ),
         "dest": Parameter(Path, default=Path(".")),
+        "extended-vnnlib": Parameter(bool, default=False),
     }
     executor = DummyExecutor
 
@@ -103,7 +104,9 @@ class Convert(Verifier):
             paths.append(
                 Path(
                     to_vnnlib_property_file(
-                        prop, translator_error=self.translator_error
+                        prop,
+                        translator_error=self.translator_error,
+                        extended_vnnlib=self.parameters.get("extended-vnnlib"),
                     )
                 )
             )

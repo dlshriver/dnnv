@@ -57,8 +57,11 @@ class BaB(Verifier):
         if result_str == "safe":
             return UNSAT, None
         elif result_str == "unsafe":
-            cex = np.load(self._tmp_output_file.name, allow_pickle=True).astype(
-                prop.op_graph.input_details[0].dtype
+            shape, dtype = prop.op_graph.input_details[0]
+            cex = (
+                np.load(self._tmp_output_file.name, allow_pickle=True)
+                .astype(dtype)
+                .reshape(shape)
             )
             return SAT, cex
         elif result_str == "unknown":

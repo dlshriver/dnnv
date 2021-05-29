@@ -15,6 +15,7 @@ RUN apt-get -qq install -y python3.7 python3.7-dev python3.7-venv
 RUN apt-get -qq install -y cmake
 RUN apt-get -qq install -y wget
 RUN apt-get -qq install -y git
+RUN apt-get -qq install -y valgrind
 
 USER dnnv
 WORKDIR /home/dnnv/
@@ -36,7 +37,7 @@ RUN . .venv/bin/activate && flit install -s
 COPY --chown=dnnv tests/artifacts/ tests/artifacts/
 RUN . .venv/bin/activate && python tests/artifacts/build_artifacts.py
 
-# copy infrequently changed files to container
+# copy files to container
 COPY --chown=dnnv scripts/ scripts/
 COPY --chown=dnnv dnnv/ dnnv/
 COPY --chown=dnnv tests/ tests/

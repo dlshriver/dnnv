@@ -81,21 +81,24 @@ def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
 
 
 def _main():
-    local_dnnv_dir = (Path.cwd() / ".dnnv").resolve()
-    home_dnnv_dir = (Path.home() / ".dnnv").resolve()
-    extend_envvar = lambda var, ext: os.path.pathsep.join(
+    os.environ["PATH"] = ":".join(
         [
-            str(p)
-            for p in (
-                local_dnnv_dir / ext,
-                home_dnnv_dir / ext,
-                os.getenv(var, ""),
-            )
-            if p
+            os.environ.get("PATH", ""),
+            str(
+                (
+                    Path(
+                        os.path.join(
+                            os.getenv("XDG_DATA_HOME", "~/.local/share"), "dnnv"
+                        )
+                    )
+                    / "bin"
+                )
+                .expanduser()
+                .resolve()
+            ),
         ]
     )
-    os.environ["PATH"] = extend_envvar("PATH", "bin")
-    os.environ["LD_LIBRARY_PATH"] = extend_envvar("LD_LIBRARY_PATH", "lib")
+    # TODO : only modify path if not in VIRTUAL_ENV
     return exit(main(*cli.parse_args()))
 
 

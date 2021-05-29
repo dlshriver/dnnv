@@ -1,5 +1,4 @@
 from dnnv.properties import *
-import ast
 import numpy as np
 import os
 
@@ -14,3 +13,11 @@ epsilon = 3.0
 Forall(
     x_, Implies(x - epsilon <= x_ <= x + epsilon, np.argmax(N(x_)) == np.argmax(N(x)))
 )
+# label = np.argmax(N(x))
+# other_label = 1 - label
+# Forall(
+#     x_,
+#     Implies(
+#         (x - epsilon) <= x_ <= (x + epsilon), N(x_)[0][label] >= N(x_)[0][other_label]
+#     ),
+# )
