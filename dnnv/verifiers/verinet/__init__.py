@@ -14,7 +14,6 @@ from .errors import VerinetError, VerinetTranslatorError
 
 
 class VeriNet(Verifier):
-    EXE = "verinet.py"
     translator_error = VerinetTranslatorError
     verifier_error = VerinetError
     parameters = {
@@ -85,7 +84,7 @@ class VeriNet(Verifier):
         ) as output_file:
             self._tmp_output_file = output_file
         args = (
-            "verinet.py",
+            "verinet",
             onnx_model_file.name,
             input_bounds_file.name,
             "-o",

@@ -2,12 +2,14 @@
 """
 import argparse
 import numpy as np
+import os
 import time
 
+from pathlib import Path
 from typing import List, Optional
 
 from . import cli
-from . import logging
+from . import logging_utils as logging
 from . import nn
 from . import properties
 from . import utils
@@ -19,7 +21,9 @@ def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
     utils.set_random_seed(args.seed)
 
     logger.debug("Reading property %s", args.property)
-    phi = properties.parse(args.property, format=args.prop_format, args=extra_args)
+    phi = properties.parse(
+        args.property, format=args.prop_format, args=extra_args
+    ).propagate_constants()
     print("Verifying property:")
     print(phi)
     print()
@@ -77,6 +81,24 @@ def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
 
 
 def _main():
+    os.environ["PATH"] = ":".join(
+        [
+            os.environ.get("PATH", ""),
+            str(
+                (
+                    Path(
+                        os.path.join(
+                            os.getenv("XDG_DATA_HOME", "~/.local/share"), "dnnv"
+                        )
+                    )
+                    / "bin"
+                )
+                .expanduser()
+                .resolve()
+            ),
+        ]
+    )
+    # TODO : only modify path if not in VIRTUAL_ENV
     return exit(main(*cli.parse_args()))
 
 

@@ -4,6 +4,7 @@ import torch
 import torchvision.models as models
 import unittest
 
+print(__package__)
 from ...utils import network_artifact_dir as artifact_dir
 from dnnv.nn import parse
 

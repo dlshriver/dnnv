@@ -60,7 +60,9 @@ def simplify(
     dnn: OperationGraph, simplifier: Optional[Simplifier] = None
 ) -> OperationGraph:
     if simplifier is None:
-        simplifier = ComposeSimplifiers(dnn, *[c for c in get_subclasses(Simplifier)])
+        simplifier = ComposeSimplifiers(
+            dnn, *[c for c in get_subclasses(Simplifier) if not c is ComposeSimplifiers]
+        )
     simplified_graph = OperationGraph(dnn.walk(simplifier))
     return simplified_graph
 

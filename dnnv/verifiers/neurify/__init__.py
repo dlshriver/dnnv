@@ -21,18 +21,18 @@ class Neurify(Verifier):
 
     def build_inputs(self, prop):
         if prop.input_constraint.num_variables > 1:
-            raise NeurifyTranslatorError(
+            raise self.translator_error(
                 "Unsupported network: More than 1 input variable"
             )
         layers = as_layers(
             prop.suffixed_op_graph(),
-            translator_error=NeurifyTranslatorError,
+            translator_error=self.translator_error,
         )
         neurify_inputs = to_neurify_inputs(
             prop.input_constraint,
             layers,
             # dirname=dirname,
-            translator_error=NeurifyTranslatorError,
+            translator_error=self.translator_error,
         )
         return (
             "neurify",

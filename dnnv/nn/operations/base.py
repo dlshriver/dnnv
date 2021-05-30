@@ -1,5 +1,6 @@
 """
 """
+import logging
 import numpy as np
 import onnx
 
@@ -7,7 +8,6 @@ from typing import Optional, Sequence, Union
 
 from .patterns import Or, Parallel, Sequential
 from ..utils import ONNX_TO_NUMPY_DTYPE
-from ... import logging
 from ...utils import get_subclasses
 
 

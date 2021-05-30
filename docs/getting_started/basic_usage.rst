@@ -15,8 +15,9 @@ option will list the available options:
 .. code-block:: console
 
   $ python -m dnnv -h
-  usage: dnnv [-h] [-V] [--seed SEED] [-v | -q] [-N NAME NETWORK] [--vnnlib]
-            [--bab] [--bab.reluify_maxpools RELUIFY_MAXPOOLS]
+  usage: dnnv [-h] [-V] [--seed SEED] [-v | -q] [-N NAME NETWORK] 
+            [--save-violation PATH] [--vnnlib] [--bab]
+            [--bab.reluify_maxpools RELUIFY_MAXPOOLS]
             [--bab.smart_branching SMART_BRANCHING] [--eran]
             [--eran.domain {deepzono,deeppoly,refinezono,refinepoly}]
             [--eran.timeout_lp TIMEOUT_LP] [--eran.timeout_milp TIMEOUT_MILP]
@@ -40,7 +41,10 @@ option will list the available options:
     -v, --verbose         show messages with finer-grained information
     -q, --quiet           suppress non-essential messages
     -N, --network NAME NETWORK
+    --save-violation PATH
+                          the path to save a found violation
     --vnnlib              use the vnnlib property format
+    --convert
 
   verifiers:
     --bab
@@ -56,6 +60,11 @@ option will list the available options:
   bab parameters:
     --bab.reluify_maxpools RELUIFY_MAXPOOLS
     --bab.smart_branching SMART_BRANCHING
+  
+  convert parameters:
+    --convert.to {vnnlib,rlv,nnet}
+    --convert.dest DEST
+    --convert.extended-vnnlib EXTENDED-VNNLIB
 
   eran parameters:
     --eran.domain {deepzono,deeppoly,refinezono,refinepoly}
@@ -114,6 +123,11 @@ can be run as::
 This will check whether ``pyt_property_7``---a local robustness
 property---holds for the network ``ffnnRELU__Point_6_500.onnx``---a 6 layer,
 3000 neuron fully connected network.
+
+Another common option is the ``--save-violation /path/to/array.npy`` which 
+will save any violation found by a verifier as a numpy array at the path
+specified. This can be useful for viewing counter-examples to properties
+and enables performing additional debugging and analysis later.
 
 DNNV will first report a basic description of the network, followed
 by the property to be verified. It will then run each of the specified

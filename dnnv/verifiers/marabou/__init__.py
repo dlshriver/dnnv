@@ -10,7 +10,6 @@ from .errors import MarabouError, MarabouTranslatorError
 
 
 class Marabou(Verifier):
-    EXE = "marabou.py"
     reduction = partial(IOPolytopeReduction, HalfspacePolytope, HalfspacePolytope)
     translator_error = MarabouTranslatorError
     verifier_error = MarabouError
@@ -43,7 +42,7 @@ class Marabou(Verifier):
         ) as output_file:
             self._tmp_output_file = output_file
         args = (
-            "marabou.py",
+            "marabou",
             onnx_model_file.name,
             constraint_file.name,
             "-o",
@@ -59,4 +58,4 @@ class Marabou(Verifier):
             input_shape, input_dtype = prop.op_graph.input_details[0]
             cex = cinput.reshape(input_shape).astype(input_dtype)
             return SAT, cex
-        raise self.translator_error(f"Unknown verification result: {result_str}")
+        raise self.translator_error(f"Unknown verification result: {result}")
