@@ -30,6 +30,8 @@ $ dnnv_manage install reluplex planet mipverify neurify eran bab marabou nnenum 
 
 *Several verifiers make use of the [Gurobi solver](https://www.gurobi.com/).* This should be installed automatically, but requires a license to be manually activated and available on the host machine. Academic licenses can be obtained for free from the [Gurobi website](https://user.gurobi.com/download/licenses/free-academic).
 
+**May 30, 2021**: The current version of nnenum can return errors for some problems, as reported [here](https://github.com/stanleybak/nnenum/issues/3), which will result in an `NnenumError(result:error)` result from DNNV. This can sometimes be avoided with the option `--nnenum.num_processes=1`, but this is not a general fix for the issue.
+
 #### Source Installation
 
 First create and activate a python virtual environment.
