@@ -37,8 +37,8 @@ jobs:
         run: |
           python -m venv .venv
           . .venv/bin/activate
-          pip install --upgrade pip
-          pip install .
+          pip install --upgrade pip flit
+          flit install
       
       - name: "Install Verifier: Reluplex"
         run: |
