@@ -7,7 +7,6 @@ from tests.utils import network_artifact_dir, property_artifact_dir
 from dnnv.verifiers.nnenum import Nnenum
 
 
-@unittest.skip("not currently working")
 @unittest.skipIf(not Nnenum.is_installed(), "nnenum is not installed")
 class NnenumVerifierTests(VerifierTests, unittest.TestCase):
     def initialize(self):

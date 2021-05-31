@@ -36,6 +36,7 @@ def parse_args():
 
 
 def main(args):
+    Settings.UNDERFLOW_BEHAVIOR = "warn"
     Settings.PRINT_PROGRESS = False
     if args.num_processes is not None:
         Settings.NUM_PROCESSES = args.num_processes
@@ -80,7 +81,7 @@ if __name__ == "__main__":
 
 class NnenumInstaller(Installer):
     def run(self, env: Environment, dependency: Dependency):
-        commit_hash = "81178bc"
+        commit_hash = "4018cc0"
         name = "nnenum"
 
         cache_dir = env.cache_dir / f"{name}-{commit_hash}"

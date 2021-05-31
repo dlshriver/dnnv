@@ -65,10 +65,10 @@ jobs:
           . .venv/bin/activate
           dnnv_manage install marabou
       
-      # - name: "Install Verifier: nnenum"
-      #   run: |
-      #     . .venv/bin/activate
-      #     dnnv_manage install nnenum
+      - name: "Install Verifier: nnenum"
+        run: |
+          . .venv/bin/activate
+          dnnv_manage install nnenum
       
       - name: Prepare Test Artifacts
         run: |
