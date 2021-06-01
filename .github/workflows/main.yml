@@ -44,34 +44,37 @@ jobs:
         run: |
           . .venv/bin/activate
           dnnv_manage install reluplex
+          rm -rf ~/.cache/dnnv
       
       - name: "Install Verifier: Planet"
         run: |
           . .venv/bin/activate
           dnnv_manage install planet
+          rm -rf ~/.cache/dnnv
       
       - name: "Install Verifier: Neurify"
         run: |
           . .venv/bin/activate
           dnnv_manage install neurify
+          rm -rf ~/.cache/dnnv
       
       - name: "Install Verifier: ERAN"
         run: |
           . .venv/bin/activate
           dnnv_manage install eran
+          rm -rf ~/.cache/dnnv
       
       - name: "Install Verifier: Marabou"
         run: |
           . .venv/bin/activate
           dnnv_manage install marabou
+          rm -rf ~/.cache/dnnv
       
       - name: "Install Verifier: nnenum"
         run: |
           . .venv/bin/activate
           dnnv_manage install nnenum
-      
-      - name: "Clear Cache"
-        run: rm -rf ~/.cache/dnnv
+          rm -rf ~/.cache/dnnv
       
       - name: Prepare Test Artifacts
         run: |
