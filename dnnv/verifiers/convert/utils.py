@@ -62,6 +62,7 @@ def as_vnnlib(
         prop.output_constraint, HalfspacePolytope
     ), "Output constraints expected to be represented as a halfspace-polytope"
     for halfspace in prop.output_constraint.halfspaces:
+        summands = []
         for c, i in zip(halfspace.coefficients, halfspace.indices):
             if extended_vnnlib:
                 _, index = prop.output_constraint.unravel_index(i)
@@ -85,10 +86,6 @@ def as_vnnlib(
         else:
             summands_str = " ".join(summands)
             lhs = f"(+ {summands_str})"
-        # summands = " ".join(
-        #     f"(* {c:.12f} Y_{i})" if c >= 0 else f"(* (- {abs(c):.12f}) Y_{i})"
-        #     for c, i in zip(halfspace.coefficients, halfspace.indices)
-        # )
         yield f"(assert (<= {lhs} {halfspace.b}))"
 
 
