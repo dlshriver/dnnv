@@ -64,8 +64,11 @@ class ExpressionBuilder:
             "<=": LessThanOrEqual,
             "*": Multiply,
             "-": subtraction_helper,
+            "or": Or,
+            "and": And,
         }
         self.assertions: Set[Expression] = set()
+        self.current_assertion: Optional[Expression] = None
 
     def build(self, script):
         self.buffer = script
@@ -130,7 +133,8 @@ class ExpressionBuilder:
         tree = self.visit_subtrees(tree)
 
         command = self.buffer[tree[1] : tree[2]].strip("()").split(" ", maxsplit=1)[0]
-        assert command in ["assert", "declare-const"]
+        if command not in ["assert", "declare-const"]:
+            raise VNNLibParseError(f"Unknown command: {command}")
 
         if command == "declare-const":
             assert len(tree[3]) == 2
