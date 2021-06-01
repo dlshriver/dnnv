@@ -70,6 +70,9 @@ jobs:
           . .venv/bin/activate
           dnnv_manage install nnenum
       
+      - name: "Clear Cache"
+        run: rm -rf ~/.cache/dnnv
+      
       - name: Prepare Test Artifacts
         run: |
           . .venv/bin/activate
