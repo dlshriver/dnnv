@@ -47,7 +47,15 @@ def main(args):
     network = load_onnx_network(args.model)
     ninputs = A_input.shape[1]
 
-    init_box = np.array(list(zip(lb.flatten("F"), ub.flatten("F"))), dtype=np.float32)
+    init_box = np.array(
+        list(
+            zip(
+                lb.reshape(network.get_input_shape()).flatten("F"),
+                ub.reshape(network.get_input_shape()).flatten("F"),
+            )
+        ),
+        dtype=np.float32,
+    )
     init_star = LpStar(
         np.eye(ninputs, dtype=np.float32), np.zeros(ninputs, dtype=np.float32), init_box
     )

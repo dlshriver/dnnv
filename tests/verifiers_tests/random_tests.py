@@ -3,7 +3,6 @@ import unittest
 
 from dnnv import nn
 from dnnv import properties
-from dnnv.properties import Symbol
 from dnnv.properties.context import get_context
 
 from dnnv.verifiers import SAT, UNSAT, UNKNOWN
