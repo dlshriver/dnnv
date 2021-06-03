@@ -9,7 +9,7 @@ source $PROJECT_DIR/scripts/install_common.sh
 cd $PROJECT_DIR/lib
 git clone https://github.com/stanleybak/nnenum.git
 cd nnenum
-git checkout 4018cc0
+git checkout 0986d21
 git pull
 
 cp $PROJECT_DIR/tools/verifier_runners/nnenum.py $PROJECT_DIR/bin/nnenum.py
