@@ -8,6 +8,9 @@ from ... import operations, OperationGraph
 
 class BundleTranspose(Simplifier):
     def visit_Gemm(self, operation: operations.Gemm) -> operations.Gemm:
+        if not all(len(s) > 1 for s in OperationGraph([operation]).input_shape):
+            # ensure that all
+            return operation
         if operation.transpose_a:  # TODO : what if operation.b is the Operation?
             return operation
         input_op = operation.a  # TODO : what if operation.b is the Operation?
@@ -18,7 +21,15 @@ class BundleTranspose(Simplifier):
             return operation
         flatten_op = input_op
         if isinstance(input_op, operations.Reshape):
-            # TODO : check if reshape is a flatten
+            reshape_input_shape = np.asarray(
+                OperationGraph([input_op.x]).output_shape[0]
+            )
+            flat_shape = np.product(reshape_input_shape[1:])
+            if flat_shape != input_op.shape[1] or (
+                input_op.shape[0] != -1 and input_op.shape[0] != reshape_input_shape[0]
+            ):
+                return operation
+        elif isinstance(input_op, operations.Flatten) and not input_op.axis == 1:
             return operation
         flatten_input_op = flatten_op.x
         if not isinstance(flatten_input_op, operations.Transpose):
