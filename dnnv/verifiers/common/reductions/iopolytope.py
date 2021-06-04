@@ -697,7 +697,7 @@ class IOPolytopeReduction(Reduction):
                         "Invalid property: Adding expressions with different shapes is not supported"
                     )
                 c_shape = shape
-                new_shape = np.product(shape), len(shape)
+                num_constraints = np.product(shape)
                 if len(constraints) == 0:
                     constraints = [([], [], rhs[i]) for i in np.ndindex(rhs.shape)]
                 elif len(constraints) == 1:
@@ -709,12 +709,14 @@ class IOPolytopeReduction(Reduction):
                         )
                         for i in np.ndindex(rhs.shape)
                     ]
-                if not len(constraints) == new_shape[0]:
+                if not len(constraints) == num_constraints:
                     raise self.reduction_error(
                         "Invalid property: Adding expressions with different shapes is not supported"
                     )
                 for c, idx_, coef_ in zip(
-                    constraints, idx.reshape(new_shape), coef.reshape(new_shape[0])
+                    constraints,
+                    idx.reshape((num_constraints, -1)),
+                    coef.reshape(num_constraints),
                 ):
                     var_idx = (var, tuple(idx_))
                     if var_idx in c[0]:
