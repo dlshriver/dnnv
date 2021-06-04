@@ -147,7 +147,14 @@ class HalfspacePolytope(Constraint):
     def is_consistent(self):
         A, b = self.as_matrix_inequality()
         obj = np.zeros(A.shape[1])
-        bounds = list(zip(*self.as_bounds()))
+        lb, ub = self.as_bounds()
+        # linprog breaks if bounds are too big or too small
+        bounds = list(
+            zip(
+                (l if l > -1e6 else None for l in lb),
+                (u if u < 1e6 else None for u in ub),
+            )
+        )
         try:
             result = linprog(
                 obj,
