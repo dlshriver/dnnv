@@ -122,6 +122,11 @@ class Canonical(ExpressionTransformer):
         expr2 = expression.expr2
         return self.visit(And(expr1 <= expr2, expr2 <= expr1))
 
+    def visit_NotEqual(self, expression: NotEqual) -> Or:
+        expr1 = expression.expr1
+        expr2 = expression.expr2
+        return self.visit(Or(expr1 > expr2, expr2 > expr1))
+    
     def visit_GreaterThan(self, expression: GreaterThan) -> GreaterThan:
         lhs = self.visit(expression.expr1 - expression.expr2)
         if not isinstance(lhs, Add):
