@@ -4,6 +4,7 @@ import numpy as np
 
 from abc import ABC, abstractmethod
 from collections import namedtuple
+from numpy.core.fromnumeric import var
 from scipy.optimize import linprog
 from typing import Dict, Generator, List, Optional, Tuple, Type, Union
 
@@ -147,7 +148,14 @@ class HalfspacePolytope(Constraint):
     def is_consistent(self):
         A, b = self.as_matrix_inequality()
         obj = np.zeros(A.shape[1])
-        bounds = list(zip(*self.as_bounds()))
+        lb, ub = self.as_bounds()
+        # linprog breaks if bounds are too big or too small
+        bounds = list(
+            zip(
+                (l if l > -1e6 else None for l in lb),
+                (u if u < 1e6 else None for u in ub),
+            )
+        )
         try:
             result = linprog(
                 obj,
@@ -213,6 +221,7 @@ class HalfspacePolytope(Constraint):
                         raise e
 
     def update_constraint(self, variables, indices, coefficients, b, is_open=False):
+        print(variables, coefficients, indices, b)
         flat_indices = [
             self.variables[var] + np.ravel_multi_index(idx, var.shape)
             for var, idx in zip(variables, indices)
@@ -233,6 +242,7 @@ class HalfspacePolytope(Constraint):
             self._b.append(_b)
             self._A_mat = None
             self._b_vec = None
+            print(self._A, self._b)
 
         self._update_bounds(flat_indices, coefficients, b, is_open=is_open)
 
