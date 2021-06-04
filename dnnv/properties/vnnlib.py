@@ -66,6 +66,7 @@ class ExpressionBuilder:
             "-": subtraction_helper,
             "or": Or,
             "and": And,
+            "ite": IfThenElse,
         }
         self.assertions: Set[Expression] = set()
         self.current_assertion: Optional[Expression] = None
