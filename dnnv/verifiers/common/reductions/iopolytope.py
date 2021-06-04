@@ -231,6 +231,8 @@ class HalfspacePolytope(Constraint):
                 _b[0] = np.nextafter(b, b - 1)
             self._A.append(_A)
             self._b.append(_b)
+            self._A_mat = None
+            self._b_vec = None
 
         self._update_bounds(flat_indices, coefficients, b, is_open=is_open)
 
