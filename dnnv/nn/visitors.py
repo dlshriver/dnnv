@@ -146,7 +146,7 @@ class PrintVisitor(OperationVisitor):
                 operation.pads.tolist(),
             )
         )
-    
+
     def visit_ConvTranspose(self, operation: operations.ConvTranspose) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
@@ -159,6 +159,13 @@ class PrintVisitor(OperationVisitor):
                 operation.pads.tolist(),
                 operation.output_padding.tolist(),
             )
+        )
+
+    def visit_Div(self, operation: operations.Div) -> None:
+        self.generic_visit(operation)
+        self.print_op_id(operation)
+        print(
+            "Div(%s, %s)" % (self.get_op_id(operation.a), self.get_op_id(operation.b))
         )
 
     def visit_Dropout(self, operation: operations.Dropout) -> None:
@@ -312,6 +319,13 @@ class PrintVisitor(OperationVisitor):
         self.generic_visit(operation)
         self.print_op_id(operation)
         print("Softmax(%s, axis=%s)" % (self.get_op_id(operation.x), operation.axis))
+
+    def visit_Sub(self, operation: operations.Sub) -> None:
+        self.generic_visit(operation)
+        self.print_op_id(operation)
+        print(
+            "Sub(%s, %s)" % (self.get_op_id(operation.a), self.get_op_id(operation.b))
+        )
 
     def visit_Tanh(self, operation: operations.Tanh) -> None:
         self.generic_visit(operation)
