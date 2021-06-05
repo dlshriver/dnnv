@@ -14,7 +14,7 @@ ensure_suitesparse
 cd $PROJECT_DIR/bin
 git clone https://github.com/dlshriver/Neurify.git
 cd Neurify
-git checkout 90de94a
+git checkout 45acc32b64cc8cbaecfd6ee51b3cf5093421f2d6
 git pull
 cd generic
 make OPENBLAS_HOME=$PROJECT_DIR
