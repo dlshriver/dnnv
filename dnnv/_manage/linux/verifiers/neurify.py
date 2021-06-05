@@ -17,7 +17,7 @@ from ...errors import InstallError, UninstallError
 
 class NeurifyInstaller(Installer):
     def run(self, env: Environment, dependency: Dependency):
-        commit_hash = "663bdd9"
+        commit_hash = "45acc32b64cc8cbaecfd6ee51b3cf5093421f2d6"
 
         cache_dir = env.cache_dir / f"neurify-{commit_hash}"
         cache_dir.mkdir(exist_ok=True, parents=True)
