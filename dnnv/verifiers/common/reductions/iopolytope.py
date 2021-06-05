@@ -221,7 +221,6 @@ class HalfspacePolytope(Constraint):
                         raise e
 
     def update_constraint(self, variables, indices, coefficients, b, is_open=False):
-        print(variables, coefficients, indices, b)
         flat_indices = [
             self.variables[var] + np.ravel_multi_index(idx, var.shape)
             for var, idx in zip(variables, indices)
@@ -242,7 +241,6 @@ class HalfspacePolytope(Constraint):
             self._b.append(_b)
             self._A_mat = None
             self._b_vec = None
-            print(self._A, self._b)
 
         self._update_bounds(flat_indices, coefficients, b, is_open=is_open)
 
