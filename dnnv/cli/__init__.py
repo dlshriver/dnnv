@@ -72,7 +72,7 @@ def parse_args():
     parser.add_argument("--seed", type=int, default=None, help="the random seed to use")
     logging.add_arguments(parser)
 
-    parser.add_argument("property", type=Path)
+    parser.add_argument("property", type=Path, nargs="?")
     parser.add_argument(
         "-N",
         "--network",

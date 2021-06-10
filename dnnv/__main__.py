@@ -20,18 +20,19 @@ def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
     logger = logging.initialize(__package__, args)
     utils.set_random_seed(args.seed)
 
-    logger.debug("Reading property %s", args.property)
-    phi = properties.parse(
-        args.property, format=args.prop_format, args=extra_args
-    ).propagate_constants()
-    print("Verifying property:")
-    print(phi)
-    print()
-    if extra_args is not None and len(extra_args) > 0:
-        logger.error("Unused arguments: %r", extra_args)
-        unknown_args = " ".join(extra_args)
-        print(f"ERROR: Unknown arguments: {unknown_args}")
-        return 1
+    if args.property is not None:
+        logger.debug("Reading property %s", args.property)
+        phi = properties.parse(
+            args.property, format=args.prop_format, args=extra_args
+        ).propagate_constants()
+        print("Verifying property:")
+        print(phi)
+        print()
+        if extra_args is not None and len(extra_args) > 0:
+            logger.error("Unused arguments: %r", extra_args)
+            unknown_args = " ".join(extra_args)
+            print(f"ERROR: Unknown arguments: {unknown_args}")
+            return 1
 
     if args.networks:
         print("Verifying Networks:")
@@ -44,6 +45,20 @@ def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
             networks[name] = dnn
             print()
 
+        if args.property is None:
+            phi = properties.Forall(
+                properties.Symbol("*"),
+                properties.And(
+                    *[
+                        properties.Implies(
+                            properties.Network(name)(properties.Symbol("*")) > 1,
+                            properties.Network(name)(properties.Symbol("*"))
+                            < 2 * properties.Network(name)(properties.Symbol("*")),
+                        )
+                        for name in networks
+                    ]
+                ),
+            )
         phi.concretize(**networks)
 
     if len(args.verifiers) > 1:
