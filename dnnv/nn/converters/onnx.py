@@ -38,7 +38,11 @@ class OnnxConverter(OperationVisitor):
 
         nodes = [n for n in self.visited.values() if isinstance(n, onnx.NodeProto)]
         graph_def = onnx.helper.make_graph(
-            nodes, name, self.inputs, self.outputs, initializer=self.initializer,
+            nodes,
+            name,
+            self.inputs,
+            self.outputs,
+            initializer=self.initializer,
         )
         model_def = onnx.helper.make_model(graph_def, producer_name="dnnv")
         model_def = onnx.shape_inference.infer_shapes(model_def)
@@ -69,6 +73,68 @@ class OnnxConverter(OperationVisitor):
             self.initializer.append(tensor_proto)
             return tensor_proto
         raise ValueError(f"Unknown type for operand of {opname}: {type(value)}")
+
+    def visit_Add(self, operation: operations.Add) -> onnx.NodeProto:
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        a = self._to_onnx_proto(operation.a, f"{opname}.a")
+        b = self._to_onnx_proto(operation.b, f"{opname}.b")
+
+        node = onnx.helper.make_node(
+            op_type,
+            inputs=[a.name, b.name],
+            outputs=[opname],
+            name=opname,
+        )
+
+        return node
+
+    def visit_AveragePool(self, operation: operations.AveragePool) -> onnx.NodeProto:
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        x = self._to_onnx_proto(operation.x, f"{opname}.x")
+
+        node = onnx.helper.make_node(
+            op_type,
+            inputs=[x.name],
+            outputs=[opname],
+            kernel_shape=list(operation.kernel_shape),
+            ceil_mode=operation.ceil_mode,
+            count_include_pad=operation.count_include_pad,
+            strides=list(operation.strides),
+            pads=list(operation.pads),
+            name=opname,
+        )
+
+        return node
+
+    def visit_BatchNormalization(
+        self, operation: operations.BatchNormalization
+    ) -> onnx.NodeProto:
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        x = self._to_onnx_proto(operation.x, f"{opname}.x")
+        scale = self._to_onnx_proto(operation.scale, f"{opname}.scale")
+        bias = self._to_onnx_proto(operation.bias, f"{opname}.bias")
+        mean = self._to_onnx_proto(operation.mean, f"{opname}.mean")
+        variance = self._to_onnx_proto(operation.variance, f"{opname}.variance")
+
+        node = onnx.helper.make_node(
+            op_type,
+            inputs=[x.name, scale.name, bias.name, mean.name, variance.name],
+            outputs=[opname],
+            epsilon=operation.epsilon,
+            momentum=operation.momentum,
+            name=opname,
+        )
+
+        return node
 
     def visit_Conv(self, operation: operations.Conv) -> onnx.NodeProto:
         idx = self.op_counts["Conv"] = self.op_counts["Conv"] + 1
@@ -105,6 +171,23 @@ class OnnxConverter(OperationVisitor):
             inputs=[x.name for x in inputs],
             outputs=[opname],
             axis=operation.axis,
+            name=opname,
+        )
+
+        return node
+
+    def visit_Div(self, operation: operations.Div) -> onnx.NodeProto:
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        a = self._to_onnx_proto(operation.a, f"{opname}.a")
+        b = self._to_onnx_proto(operation.b, f"{opname}.b")
+
+        node = onnx.helper.make_node(
+            op_type,
+            inputs=[a.name, b.name],
+            outputs=[opname],
             name=opname,
         )
 
@@ -147,6 +230,24 @@ class OnnxConverter(OperationVisitor):
 
         return node
 
+    def visit_GlobalAveragePool(
+        self, operation: operations.GlobalAveragePool
+    ) -> onnx.NodeProto:
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        x = self._to_onnx_proto(operation.x, f"{opname}.x")
+
+        node = onnx.helper.make_node(
+            op_type,
+            inputs=[x.name],
+            outputs=[opname],
+            name=opname,
+        )
+
+        return node
+
     def visit_Input(self, operation: operations.Input) -> onnx.ValueInfoProto:
         idx = self.op_counts["Input"] = self.op_counts["Input"] + 1
         opname = f"Input_{idx}"
@@ -158,6 +259,62 @@ class OnnxConverter(OperationVisitor):
 
         node = onnx.helper.make_tensor_value_info(opname, dtype, shape)
         self.inputs.append(node)
+
+        return node
+
+    def visit_MatMul(self, operation: operations.MatMul) -> onnx.NodeProto:
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        a = self._to_onnx_proto(operation.a, f"{opname}.a")
+        b = self._to_onnx_proto(operation.b, f"{opname}.b")
+
+        node = onnx.helper.make_node(
+            op_type,
+            inputs=[a.name, b.name],
+            outputs=[opname],
+            name=opname,
+        )
+
+        return node
+
+    def visit_MaxPool(self, operation: operations.MaxPool) -> onnx.NodeProto:
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        x = self._to_onnx_proto(operation.x, f"{opname}.x")
+
+        node = onnx.helper.make_node(
+            op_type,
+            inputs=[x.name],
+            outputs=[opname],
+            kernel_shape=list(operation.kernel_shape),
+            ceil_mode=operation.ceil_mode,
+            strides=list(operation.strides),
+            dilations=list(operation.dilations),
+            pads=list(operation.pads),
+            storage_order=operation.storage_order,
+            name=opname,
+        )
+
+        return node
+
+    def visit_Mul(self, operation: operations.Mul) -> onnx.NodeProto:
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        a = self._to_onnx_proto(operation.a, f"{opname}.a")
+        b = self._to_onnx_proto(operation.b, f"{opname}.b")
+
+        node = onnx.helper.make_node(
+            op_type,
+            inputs=[a.name, b.name],
+            outputs=[opname],
+            name=opname,
+        )
 
         return node
 
@@ -182,6 +339,49 @@ class OnnxConverter(OperationVisitor):
 
         node = onnx.helper.make_node(
             "Reshape", inputs=[x.name, shape.name], outputs=[opname], name=opname
+        )
+
+        return node
+
+    def visit_Sigmoid(self, operation: operations.Sigmoid) -> onnx.NodeProto:
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        x = self._to_onnx_proto(operation.x, f"{opname}.x")
+
+        node = onnx.helper.make_node(
+            op_type, inputs=[x.name], outputs=[opname], name=opname
+        )
+
+        return node
+
+    def visit_Sub(self, operation: operations.Sub) -> onnx.NodeProto:
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        a = self._to_onnx_proto(operation.a, f"{opname}.a")
+        b = self._to_onnx_proto(operation.b, f"{opname}.b")
+
+        node = onnx.helper.make_node(
+            op_type,
+            inputs=[a.name, b.name],
+            outputs=[opname],
+            name=opname,
+        )
+
+        return node
+
+    def visit_Tanh(self, operation: operations.Tanh) -> onnx.NodeProto:
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        x = self._to_onnx_proto(operation.x, f"{opname}.x")
+
+        node = onnx.helper.make_node(
+            op_type, inputs=[x.name], outputs=[opname], name=opname
         )
 
         return node

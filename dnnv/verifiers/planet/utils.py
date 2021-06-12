@@ -48,7 +48,7 @@ def as_rlv(
                 name = f"layer{layer_id}:fc:{i}"
                 curr_layer.append(name)
                 computation = " ".join(f"{w:.12f} {n}" for w, n in zip(W, prev_layer))
-                yield f"{activation} {name} {bias:.12f} {computation}"
+                yield f"{activation} {name} {bias.item():.12f} {computation}"
             output_shape = [input_shape[0], len(curr_layer)]
         elif isinstance(layer, Convolutional):
             yield from conv_as_rlv(

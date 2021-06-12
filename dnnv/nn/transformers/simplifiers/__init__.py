@@ -12,9 +12,13 @@ from ....utils import get_subclasses
 from .base import ComposeSimplifiers, Simplifier
 from .bundle_padding import BundlePadding
 from .bundle_transpose import BundleTranspose
+from .convert_add import *
 from .convert_batch_norm import ConvertBatchNorm
-from .convert_matmul_add_to_gemm import ConvertMatMulAddToGemm
+from .convert_div_to_mul import *
+from .convert_matmul_to_gemm import *
+from .convert_mul import *
 from .convert_reshape_to_flatten import ConvertReshapeToFlatten
+from .convert_sub_to_add import *
 from .drop_identities import DropIdentity, DropUnnecessaryConcat, DropUnnecessaryFlatten
 from .move_activations_back import MoveActivationsBackward
 from .squeeze_convs import SqueezeConvs
