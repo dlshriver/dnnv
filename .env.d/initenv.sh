@@ -12,7 +12,7 @@ mkdir -p $PROJECT_DIR/include
 mkdir -p $PROJECT_DIR/lib
 mkdir -p $PROJECT_DIR/share
 
-python3.7 -m venv .venv
+python -m venv .venv
 . .venv/bin/activate
 python -m pip install --upgrade pip setuptools flit
 flit install -s
