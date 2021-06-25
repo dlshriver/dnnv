@@ -7,3 +7,4 @@ keras>=2.3,<2.4
 simpleparse>=2.2,<2.3
 torch >=1.5,<1.7
 torchvision >=0.6,<0.8
+simpleparse==2.2.2
