@@ -39,7 +39,8 @@ class ExpressionTests(unittest.TestCase):
 
     def test_bool(self):
         e1 = Symbol("x") + Symbol("y")
-        self.assertTrue(bool(e1))
+        with self.assertWarns(RuntimeWarning):
+            self.assertTrue(bool(e1))
         self.assertFalse(e1.concretize(x=0, y=0))
         self.assertTrue(e1.concretize(x=1, y=1))
 

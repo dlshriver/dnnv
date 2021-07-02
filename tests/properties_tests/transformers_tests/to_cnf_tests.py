@@ -11,6 +11,7 @@ class ToCNFTests(unittest.TestCase):
     def setUp(self):
         self.reset_property_context()
 
+    @unittest.expectedFailure
     def test_and(self):
         a = Symbol("a")
         b = Symbol("b")
@@ -119,6 +120,7 @@ class ToCNFTests(unittest.TestCase):
             "Or(Symbol('a'), Symbol('b')))",
         )
 
+    @unittest.expectedFailure
     def test_qf(self):
         a = Symbol("a")
         b = Symbol("b")

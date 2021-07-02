@@ -3,6 +3,21 @@ from ..visitors import OperationVisitor
 
 
 class OperationTransformer(OperationVisitor):
+    def __init__(self, cached=True):
+        self.cached = cached
+        self._cache = {}
+
+    def visit(self, operation: Operation):
+        if not self.cached or operation not in self._cache:
+            method_name = "visit_%s" % operation.__class__.__name__
+            visitor = getattr(self, method_name, self.generic_visit)
+            result = visitor(operation)
+            if self.cached:
+                self._cache[operation] = result
+        elif operation in self._cache:
+            result = self._cache[operation]
+        return result
+
     def generic_visit(self, operation: Operation) -> Operation:
         for name, value in operation.__dict__.items():
             if isinstance(value, Operation):

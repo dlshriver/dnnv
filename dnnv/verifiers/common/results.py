@@ -6,7 +6,7 @@ class PropertyCheckResult:
         return self.name
 
     def __repr__(self):
-        return f"PropertyCheckResult({self.name})"
+        return f"PropertyCheckResult({self.name!r})"
 
     def __invert__(self):
         if self == UNSAT:
@@ -18,6 +18,8 @@ class PropertyCheckResult:
     def __and__(self, other):
         if not isinstance(other, PropertyCheckResult):
             return NotImplemented
+        if self not in (SAT, UNSAT, UNKNOWN) or other not in (SAT, UNSAT, UNKNOWN):
+            return UNKNOWN
         if self == UNSAT or other == UNSAT:
             return UNSAT
         if self == UNKNOWN or other == UNKNOWN:
@@ -27,6 +29,8 @@ class PropertyCheckResult:
     def __or__(self, other):
         if not isinstance(other, PropertyCheckResult):
             return NotImplemented
+        if self not in (SAT, UNSAT, UNKNOWN) or other not in (SAT, UNSAT, UNKNOWN):
+            return UNKNOWN
         if self == SAT or other == SAT:
             return SAT
         if self == UNKNOWN or other == UNKNOWN:

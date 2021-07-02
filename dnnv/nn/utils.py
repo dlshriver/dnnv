@@ -1,6 +1,6 @@
 import numpy as np
 import onnx
-import tensorflow.compat.v1 as tf
+import tensorflow as tf
 
 from collections import namedtuple
 from onnx import numpy_helper

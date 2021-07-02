@@ -23,7 +23,6 @@ class Reluplex(Verifier):
         nnet_file_name = to_nnet_file(
             prop.input_constraint,
             layers,
-            # dirname=dirname,
             translator_error=self.translator_error,
         )
         return "reluplex", nnet_file_name

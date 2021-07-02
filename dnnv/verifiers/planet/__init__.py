@@ -29,7 +29,6 @@ class Planet(Verifier):
         rlv_file_name = to_rlv_file(
             prop.input_constraint,
             layers,
-            # dirname=dirname,
             translator_error=self.translator_error,
         )
         return "planet", rlv_file_name

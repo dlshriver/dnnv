@@ -76,7 +76,6 @@ class BaB(Verifier):
         rlv_file_path = to_rlv_file(
             prop.input_constraint,
             layers,
-            # dirname=dirname,
             translator_error=self.translator_error,
         )
         return (

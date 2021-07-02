@@ -82,7 +82,9 @@ class PrintVisitor(OperationVisitor):
 
     def generic_visit(self, operation: Operation):
         if not hasattr(self, "visit_%s" % operation.__class__.__name__):
-            raise ValueError(operation)
+            raise ValueError(
+                f"Operation not currently supported by PrintVisitor: {operation}"
+            )
         super().generic_visit(operation)
 
     def get_op_id(self, operation: Operation) -> str:
@@ -128,6 +130,11 @@ class PrintVisitor(OperationVisitor):
         self.generic_visit(operation)
         self.print_op_id(operation)
         print("BatchNormalization(%s)" % self.get_op_id(operation.x))
+
+    def visit_Cast(self, operation: operations.Cast) -> None:
+        self.generic_visit(operation)
+        self.print_op_id(operation)
+        print("Cast(%s, to=%s)" % (self.get_op_id(operation.x), operation.to))
 
     def visit_Concat(self, operation: operations.Concat) -> None:
         self.generic_visit(operation)
@@ -176,7 +183,15 @@ class PrintVisitor(OperationVisitor):
     def visit_Elu(self, operation: operations.Elu) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print("Elu(%s)" % self.get_op_id(operation.x))
+        print("Elu(%s, alpha=%s)" % (self.get_op_id(operation.x), operation.alpha))
+
+    def visit_Expand(self, operation: operations.Expand) -> None:
+        self.generic_visit(operation)
+        self.print_op_id(operation)
+        print(
+            "Expand(%s, %s)"
+            % (self.get_op_id(operation.x), self.get_op_id(operation.shape))
+        )
 
     def visit_Flatten(self, operation: operations.Flatten) -> None:
         self.generic_visit(operation)
@@ -315,6 +330,11 @@ class PrintVisitor(OperationVisitor):
         self.print_op_id(operation)
         print("Sigmoid(%s)" % self.get_op_id(operation.x))
 
+    def visit_Sign(self, operation: operations.Sign) -> None:
+        self.generic_visit(operation)
+        self.print_op_id(operation)
+        print("Sign(%s)" % self.get_op_id(operation.x))
+
     def visit_Softmax(self, operation: operations.Softmax) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
@@ -331,6 +351,11 @@ class PrintVisitor(OperationVisitor):
         self.generic_visit(operation)
         self.print_op_id(operation)
         print("Tanh(%s)" % self.get_op_id(operation.x))
+
+    def visit_Tile(self, operation: operations.Tile) -> None:
+        self.generic_visit(operation)
+        self.print_op_id(operation)
+        print("Tile(%s, %s)" % (self.get_op_id(operation.x), operation.repeats))
 
     def visit_Transpose(self, operation: operations.Transpose) -> None:
         self.generic_visit(operation)

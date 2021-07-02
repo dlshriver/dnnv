@@ -4,7 +4,7 @@ import unittest
 
 from dnnv.nn import parse, OperationGraph, operations
 from dnnv.nn.transformers import DropPrefix
-from ..utils import network_artifact_dir as artifact_dir
+from tests.utils import network_artifact_dir as artifact_dir
 
 THRESHOLD = 1e-6
 
@@ -235,14 +235,14 @@ class SimplifierTests(AssertCloseMixin, unittest.TestCase):
         from dnnv.nn.transformers.simplifiers import ConvertBatchNorm
 
         input_op = operations.Input((1, 3, 3, 3), np.float32)
-        w = np.zeros((3, 3, 1, 1))
+        w = np.zeros((3, 3, 1, 1)).astype(np.float32)
         for i in range(3):
             w[i, i] = 1
-        b = np.array([0.1, 0.5, 1.0])
+        b = np.array([0.1, 0.5, 1.0]).astype(np.float32)
         conv_op1 = operations.Conv(input_op, w, b)
-        scale = np.random.randn(3)
-        bias = np.random.randn(3)
-        mean = np.random.randn(3)
+        scale = np.random.randn(3).astype(np.float32)
+        bias = np.random.randn(3).astype(np.float32)
+        mean = np.random.randn(3).astype(np.float32)
         variance = np.random.random()
         bn_op1 = operations.BatchNormalization(conv_op1, scale, bias, mean, variance)
 
@@ -265,14 +265,14 @@ class SimplifierTests(AssertCloseMixin, unittest.TestCase):
     def test_ConvertBatchNorm_2(self):
         from dnnv.nn.transformers.simplifiers import ConvertBatchNorm
 
-        input_op = operations.Input((1, 10), np.float32)
-        w = np.random.random(size=(10, 20))
-        b = np.random.random(size=(20,))
+        input_op = operations.Input((1, 10), np.dtype(np.float32))
+        w = np.random.random(size=(10, 20)).astype(np.float32)
+        b = np.random.random(size=(20,)).astype(np.float32)
         gemm_op1 = operations.Gemm(input_op, w, b)
-        scale = np.random.randn(20)
-        bias = np.random.randn(20)
-        mean = np.random.randn(20)
-        variance = np.random.random()
+        scale = np.random.randn(20).astype(np.float32)
+        bias = np.random.randn(20).astype(np.float32)
+        mean = np.random.randn(20).astype(np.float32)
+        variance = np.random.random(20).astype(np.float32)
         bn_op1 = operations.BatchNormalization(gemm_op1, scale, bias, mean, variance)
 
         op_graph = OperationGraph([bn_op1])
@@ -289,9 +289,9 @@ class SimplifierTests(AssertCloseMixin, unittest.TestCase):
         )
 
         gemm_op1 = operations.Gemm(input_op, w.T, b, transpose_b=True)
-        scale = np.random.randn(20)
-        bias = np.random.randn(20)
-        mean = np.random.randn(20)
+        scale = np.random.randn(20).astype(np.float32)
+        bias = np.random.randn(20).astype(np.float32)
+        mean = np.random.randn(20).astype(np.float32)
         variance = np.random.random()
         bn_op1 = operations.BatchNormalization(gemm_op1, scale, bias, mean, variance)
 

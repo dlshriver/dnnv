@@ -3,10 +3,11 @@ import unittest
 
 from dnnv.nn import parse
 
-from ..utils import network_artifact_dir as artifact_dir
+from tests.utils import network_artifact_dir as artifact_dir
 
 
 class GraphTests(unittest.TestCase):
+    @unittest.skip("removed")
     def test_is_linear(self):
         dave_op_graph = parse(artifact_dir / "dave.onnx")
         self.assertTrue(dave_op_graph.is_linear)

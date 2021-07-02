@@ -1,9 +1,9 @@
 import itertools
 import numpy as np
 
-from typing import List, Set
+from typing import Dict, List
 
-from .operations import Input, Operation
+from .operations import Operation
 from .utils import TensorDetails
 
 
@@ -40,9 +40,11 @@ class OperationGraph:
         if self._input_details is None:
             from .visitors import GetInputDetails
 
-            self._input_details = tuple(
-                itertools.chain.from_iterable(self.walk(GetInputDetails()))
-            )
+            input_details_visitor = GetInputDetails()
+            result = ()
+            for output_op in self.output_operations:
+                result = input_details_visitor.visit(output_op)
+            self._input_details = result
         return self._input_details
 
     @property
@@ -68,35 +70,6 @@ class OperationGraph:
     def output_shape(self):
         return tuple(details.shape for details in self.output_details)
 
-    @property
-    def is_linear(self) -> bool:
-        from .visitors import OperationVisitor
-
-        LinearPattern = (Operation >> Operation) | Input
-
-        class IsLinear(OperationVisitor):
-            def __init__(self):
-                super().__init__()
-                self.result = True
-
-            def generic_visit(self, operation):
-                matches = LinearPattern.match([operation])
-                found_match = False
-                for match in matches:
-                    found_match = True
-                    self.result &= len(match) <= 1
-                    if not self.result:
-                        continue
-                self.result &= found_match
-                if not self.result:
-                    return False
-                return super().generic_visit(operation)
-
-        linearity_visitor = IsLinear()
-        self.walk(linearity_visitor)
-        result = linearity_visitor.result
-        return result
-
     def export_onnx(self, filename):
         import onnx
 
@@ -106,11 +79,6 @@ class OperationGraph:
         from .converters.onnx import convert as onnx_convert
 
         return onnx_convert(self)
-
-    def as_pytorch(self):
-        from .converters.pytorch import convert as pytorch_convert
-
-        return pytorch_convert(self)
 
     def as_tf(self):
         from .converters.tensorflow import convert as tf_convert
@@ -141,16 +109,10 @@ class OperationGraph:
 
         class Composer(OperationTransformer):
             def __init__(self, input_op_graph: OperationGraph):
+                super().__init__()
                 self.input_op_graph = input_op_graph
                 self.input_id = 0
-                self.visited: Set[Operation] = set()
-
-            def visit(self, operation: Operation):
-                if operation not in self.visited:
-                    result = super().visit(operation)
-                    self.visited.add(operation)
-                    return result
-                return operation
+                self.visited: Dict[Operation, Operation] = {}
 
             def visit_Input(self, operation: operations.Input):
                 new_op = self.input_op_graph.output_operations[self.input_id]
@@ -186,7 +148,7 @@ class OperationGraph:
                 f"Unsupported type for selecting operations: {type(index[1]).__name__!r}"
             )
 
-        if index[0].step is not None:
+        if index[0].step is not None and index[0].step != 1:
             raise ValueError("Slicing does not support non-unit steps.")
         start = index[0].start or 0
         stop = index[0].stop

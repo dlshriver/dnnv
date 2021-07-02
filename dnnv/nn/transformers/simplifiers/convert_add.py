@@ -13,6 +13,7 @@ class ConvertAdd(Simplifier):
     ) -> Union[operations.Add, operations.Gemm]:
         a = operation.a
         b = operation.b
+        transpose_a = False
         if isinstance(a, operations.Operation) and isinstance(b, operations.Operation):
             return operation
         elif isinstance(a, operations.Operation):
@@ -23,25 +24,28 @@ class ConvertAdd(Simplifier):
         elif isinstance(b, operations.Operation):
             input_op = b
             c = a
+            transpose_a = True
             if np.all(c == 0):
                 return input_op
         else:
             return a + b
-        input_shape = OperationGraph([input_op]).output_shape[0]
+        input_details = OperationGraph([input_op]).output_details[0]
+        input_shape = input_details.shape
+        input_dtype = input_details.dtype
         if len(input_shape) == 0:
             return operation
-            w = np.eye(1, dtype=c.dtype)
+            w = np.eye(1, dtype=input_dtype)
         elif len(input_shape) == 1:
             return operation
-            w = np.eye(input_shape[0], dtype=c.dtype)
+            w = np.eye(input_shape[1 - transpose_a], dtype=input_dtype)
         elif len(input_shape) == 2:
-            w = np.eye(input_shape[1], dtype=c.dtype)
+            w = np.eye(input_shape[1 - transpose_a], dtype=input_dtype)
         elif len(input_shape) == 4:
             return operation
             num_channels = input_shape[1]
             if not np.size(c) == num_channels:
                 return operation
-            w = np.eye(num_channels, dtype=c.dtype).reshape(
+            w = np.eye(num_channels, dtype=input_dtype).reshape(
                 num_channels, num_channels, 1, 1
             )
             c = np.reshape(c, -1)
@@ -55,7 +59,7 @@ class ConvertAdd(Simplifier):
             )
         else:
             return operation
-        return operations.Gemm(input_op, w, c)
+        return operations.Gemm(input_op, w, c, transpose_a=transpose_a)
 
 
 __all__ = ["ConvertAdd"]

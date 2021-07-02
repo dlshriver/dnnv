@@ -1,0 +1,6 @@
+from dnnv.properties import *
+
+N = Network("N")
+x = Symbol("x")
+
+Forall(x, Implies(And(0 <= x <= 1, N(x) > 1), N(x) < 2 * N(x)))

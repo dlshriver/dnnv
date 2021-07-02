@@ -4,7 +4,7 @@ import argparse
 import logging
 import os
 import sys
-import tensorflow.compat.v1 as tf
+import tensorflow as tf
 
 from contextlib import contextmanager
 from functools import partial

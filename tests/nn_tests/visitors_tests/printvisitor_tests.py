@@ -2,9 +2,8 @@ import io
 import sys
 import unittest
 
-from dnnv.nn import parse, OperationGraph
-from dnnv.nn.visitors import PrintVisitor
-from ...utils import network_artifact_dir as artifact_dir
+from dnnv.nn import parse
+from tests.utils import network_artifact_dir as artifact_dir
 
 RESNET34_TEXT = """Input_0                         : Input([  1   3 224 224], dtype=float32)
 Conv_0                          : Conv(Input_0, kernel_shape=[7, 7], strides=[2, 2], pads=[3, 3, 3, 3])

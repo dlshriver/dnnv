@@ -4,6 +4,7 @@ T = TypeVar("T")
 
 
 class Context:
+    _current_context = None
     count = 0
 
     def __init__(self):
@@ -11,6 +12,9 @@ class Context:
         Context.count += 1
         self._instance_cache: Dict[Type[T], Dict[str, T]] = {}
         self._prev_context: Optional[Context] = None
+
+    def __repr__(self):
+        return f"Context(id={self.id}, _prev_context={self._prev_context!r})"
 
     def __getstate__(self):
         return {}
@@ -20,21 +24,22 @@ class Context:
         return self
 
     def __enter__(self):
-        global _current_context
-        self._prev_context = _current_context
-        _current_context = self
+        if Context._current_context is self:
+            return self
+        self._prev_context = Context._current_context
+        Context._current_context = self
         return self
 
     def __exit__(self, *args):
-        global _current_context
-        _current_context = self._prev_context
+        if self._prev_context is not None:
+            Context._current_context = self._prev_context
 
     def reset(self):
         self._instance_cache = {}
 
 
-_current_context = Context()
+Context._current_context = Context()
 
 
 def get_context() -> Context:
-    return _current_context
+    return Context._current_context

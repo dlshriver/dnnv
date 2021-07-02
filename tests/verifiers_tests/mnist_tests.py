@@ -3,7 +3,6 @@ import unittest
 
 from dnnv import nn
 from dnnv import properties
-from dnnv.properties import Symbol
 from dnnv.properties.context import get_context
 
 from dnnv.verifiers import SAT, UNSAT, UNKNOWN
@@ -24,7 +23,13 @@ class MNISTTests(unittest.TestCase):
         self.reset_property_context()
         for varname in ["SEED", "EPSILON", "INPUT_LAYER", "OUTPUT_LAYER"]:
             if varname in os.environ:
-                del os.environ[varname]
+                os.environ.pop(varname)
+
+    def tearDown(self):
+        self.reset_property_context()
+        for varname in ["SEED", "EPSILON", "INPUT_LAYER", "OUTPUT_LAYER"]:
+            if varname in os.environ:
+                os.environ.pop(varname)
 
     def reset_property_context(self):
         get_context().reset()

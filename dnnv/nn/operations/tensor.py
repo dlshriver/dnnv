@@ -89,22 +89,25 @@ class Pad(Operation):
 
 
 class Reshape(Operation):
-    def __init__(self, x, shape):
+    def __init__(self, x, shape, *, allowzero=False):
         self.x = x
         self.shape = shape
+        self.allowzero = allowzero
 
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):
-        return cls(*inputs)
+        attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
+        allowzero = attributes.get("allowzero", False)
+        return cls(*inputs, allowzero=allowzero)
 
 
 class Resize(Operation):
     def __init__(
         self,
         x,
-        roi=np.array([], dtype=np.float32),
-        scales=np.array([], dtype=np.float),
-        sizes=np.array([], dtype=np.int64),
+        roi,  # np.array([], dtype=np.float32)
+        scales,  # np.array([], dtype=np.float)
+        sizes,  # np.array([], dtype=np.int64)
         *,
         coordinate_transformation_mode="half_pixel",
         cubic_coeff_a=-0.75,

@@ -4,8 +4,11 @@ import numpy as np
 
 from abc import ABC, abstractmethod
 from collections import namedtuple
+from numpy.core.fromnumeric import var
 from scipy.optimize import linprog
 from typing import Dict, Generator, List, Optional, Tuple, Type, Union
+
+import dnnv.nn.operations as operations
 
 from dnnv.nn import OperationGraph, OperationTransformer
 from dnnv.properties import ExpressionVisitor
@@ -54,12 +57,14 @@ class Variable:
     def __eq__(self, other):
         if not isinstance(other, Variable):
             return False
-        return (self.name == self.name) and (self.shape == self.shape)
+        return (self.name == other.name) and (self.shape == other.shape)
 
 
 class Constraint(ABC):
-    def __init__(self, variable: Variable):
-        self.variables = {variable: 0}
+    def __init__(self, variable: Optional[Variable] = None):
+        self.variables = {}
+        if variable is not None:
+            self.add_variable(variable)
 
     @property
     def is_consistent(self):
@@ -78,11 +83,12 @@ class Constraint(ABC):
         return self
 
     def unravel_index(self, index: int):
+        c_size = self.size()
         for variable, size in sorted(self.variables.items(), key=lambda kv: -kv[1]):
-            if index >= size:
+            if size <= index < c_size:
                 return variable, np.unravel_index(index - size, variable.shape)
         raise ValueError(
-            f"index {index} is out of bounds for constraint with size {self.size()}"
+            f"index {index} is out of bounds for constraint with size {c_size}"
         )
 
     @abstractmethod
@@ -98,15 +104,15 @@ Halfspace = namedtuple("Halfspace", ["indices", "coefficients", "b", "is_open"])
 
 
 class HalfspacePolytope(Constraint):
-    def __init__(self, variable):
+    def __init__(self, variable=None):
         super().__init__(variable)
         self.halfspaces: List[Halfspace] = []
         self._A = []
         self._b = []
         self._A_mat = None
         self._b_vec = None
-        self._lower_bound = np.zeros(self.size()) - np.inf
-        self._upper_bound = np.zeros(self.size()) + np.inf
+        self._lower_bound = np.full(self.size(), -np.inf)
+        self._upper_bound = np.full(self.size(), np.inf)
 
     @property
     def A(self):
@@ -174,13 +180,23 @@ class HalfspacePolytope(Constraint):
             return True
         return None  # unknown
 
-    def _update_bounds(self, indices, coefficients, b, is_open=False):
-        n = self.size()
-        if self._lower_bound is None:
-            self._lower_bound = np.zeros((n,)) - np.inf
-        if self._upper_bound is None:
-            self._upper_bound = np.zeros((n,)) + np.inf
+    def add_variable(self, variable: Variable):
+        prev_size = self.size()
+        super().add_variable(variable)
+        new_size = self.size()
 
+        new_lb = np.full(new_size, -np.inf)
+        new_ub = np.full(new_size, np.inf)
+
+        if prev_size > 0:
+            new_lb[:prev_size] = self._lower_bound
+            new_ub[:prev_size] = self._upper_bound
+
+        self._lower_bound = new_lb
+        self._upper_bound = new_ub
+        return self
+
+    def _update_bounds(self, indices, coefficients, b, is_open=False):
         if len(indices) == 1:
             index = indices[0]
             coef_sign = np.sign(coefficients[0])
@@ -194,6 +210,7 @@ class HalfspacePolytope(Constraint):
                     value = np.nextafter(value, value - 1)
                 self._upper_bound[index] = min(value, self._upper_bound[index])
         else:
+            n = self.size()
             for i in indices:
                 obj = np.zeros(n)
                 try:
@@ -244,7 +261,14 @@ class HalfspacePolytope(Constraint):
         self._update_bounds(flat_indices, coefficients, b, is_open=is_open)
 
     def validate(self, *x, threshold=1e-6):
-        x_flat = np.concatenate([x_.flatten() for x_ in x])
+        if len(x) != len(self.variables):
+            return False
+        x_flat_ = []
+        for x_, v in zip(x, self.variables):
+            if x_.shape != v.shape:
+                return False
+            x_flat_.append(x_.flatten())
+        x_flat = np.concatenate(x_flat_)
         for hs in self.halfspaces:
             t = sum(c * x_flat[i] for c, i in zip(hs.coefficients, hs.indices))
             b = hs.b
@@ -299,34 +323,11 @@ class HyperRectangle(HalfspacePolytope):
             )
         return ubs
 
-    def add_variable(self, variable):
-        super().add_variable(variable)
-        size = variable.size()
-        self._lower_bound = np.concatenate([self._lower_bound, np.zeros(size) - np.inf])
-        self._upper_bound = np.concatenate([self._upper_bound, np.zeros(size) + np.inf])
-        return self
-
-    def _update_bounds(self, *args, **kwargs):
-        pass
-
     def update_constraint(self, variables, indices, coefficients, b, is_open=False):
         if len(indices) > 1:
             raise ValueError(
                 "HyperRectangle constraints can only constrain a single dimension"
             )
-        flat_index = self.variables[variables[0]] + np.ravel_multi_index(
-            indices[0], variables[0].shape
-        )
-        coef = np.sign(coefficients[0])
-        value = b / coefficients[0]
-        if coef < 0:
-            if is_open:
-                value = np.nextafter(value, value + 1)
-            self._lower_bound[flat_index] = max(value, self._lower_bound[flat_index])
-        elif coef > 0:
-            if is_open:
-                value = np.nextafter(value, value - 1)
-            self._upper_bound[flat_index] = min(value, self._upper_bound[flat_index])
         super().update_constraint(variables, indices, coefficients, b, is_open)
 
     def __str__(self):
@@ -359,6 +360,7 @@ class IOPolytopeProperty(Property):
         class Merger(OperationTransformer):
             # TODO : merge common layers (e.g. same normalization, reshaping of input)
             def __init__(self):
+                super().__init__()
                 self.output_operations = []
                 self.input_operations = {}
 
@@ -398,8 +400,6 @@ class IOPolytopeProperty(Property):
     def prefixed_and_suffixed_op_graph(
         self,
     ) -> Tuple[OperationGraph, Tuple[List[np.ndarray], List[np.ndarray]]]:
-        import dnnv.nn.operations as operations
-
         if not isinstance(self.input_constraint, HyperRectangle):
             raise ValueError(
                 f"{type(self.input_constraint).__name__} input constraints are not yet supported"
@@ -419,16 +419,20 @@ class IOPolytopeProperty(Property):
             def visit_Input(
                 self, operation: operations.Input
             ) -> Union[operations.Conv, operations.Gemm]:
+                shape = operation.shape
+                dtype = operation.dtype
                 new_op: Union[operations.Conv, operations.Gemm]
                 input_shape = self.lbs[self._input_count].shape
                 if len(input_shape) == 2:
                     ranges = self.ubs[self._input_count] - self.lbs[self._input_count]
                     mins = self.lbs[self._input_count]
                     new_op = operations.Gemm(
-                        operation, np.diag(ranges.flatten()), mins.flatten()
+                        operation,
+                        np.diag(ranges.flatten()).astype(dtype),
+                        mins.flatten().astype(dtype),
                     )
-                    self.final_lbs.append(np.zeros(mins.shape))
-                    self.final_ubs.append(np.ones(mins.shape))
+                    self.final_lbs.append(np.zeros_like(mins))
+                    self.final_ubs.append(np.ones_like(mins))
                 elif len(input_shape) == 4:
                     b = self.lbs[self._input_count].min(axis=(0, 2, 3))
                     r = self.ubs[self._input_count].max(axis=(0, 2, 3)) - b
@@ -437,8 +441,9 @@ class IOPolytopeProperty(Property):
                     for i in range(c):
                         w[i, i, 0, 0] = 1
                     w = w * r.reshape((c, 1, 1, 1))
-                    new_op = operations.Conv(operation, w, b)
-                    test_op_graph = OperationGraph([new_op])
+                    new_op = operations.Conv(
+                        operation, w.astype(dtype), b.astype(dtype)
+                    )
                     tile_shape = list(self.lbs[self._input_count].shape)
                     tile_shape[1] = 1
                     tiled_b = np.tile(b.reshape((1, -1, 1, 1)), tile_shape)
@@ -467,12 +472,6 @@ class IOPolytopeProperty(Property):
         )
 
     def suffixed_op_graph(self) -> OperationGraph:
-        import dnnv.nn.operations as operations
-
-        if not isinstance(self.output_constraint, HalfspacePolytope):
-            raise ValueError(
-                f"{type(self.output_constraint).__name__} output constraints are not yet supported"
-            )
         if len(self.op_graph.output_operations) == 1:
             new_output_op = self.op_graph.output_operations[0]
         else:

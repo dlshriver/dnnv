@@ -14,21 +14,20 @@ class AveragePool(Operation):
         *,
         ceil_mode=False,
         count_include_pad=False,
-        pads=0,
-        strides=1,
+        pads=None,
+        strides=None,
     ):
         self.x = x
         self.kernel_shape = kernel_shape
         self.ceil_mode = ceil_mode
         self.count_include_pad = count_include_pad
-        if isinstance(pads, Iterable):
-            self.pads = tuple(pads)
-        elif isinstance(pads, int):
-            self.pads = (pads,) * 4
-        if isinstance(strides, Iterable):
-            self.strides = tuple(strides)
-        elif isinstance(strides, int):
-            self.strides = (strides,) * 4
+
+        self.pads = np.asarray(
+            pads if pads is not None else (0,) * (len(self.kernel_shape) * 2)
+        )
+        self.strides = np.asarray(
+            strides if strides is not None else (1,) * len(self.kernel_shape)
+        )
 
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):
@@ -36,8 +35,8 @@ class AveragePool(Operation):
         ceil_mode = bool(attributes.get("ceil_mode", False))
         count_include_pad = bool(attributes.get("count_include_pad", False))
         kernel_shape = attributes.get("kernel_shape")
-        pads = attributes.get("pads", 0)
-        strides = attributes.get("strides", 1)
+        pads = attributes.get("pads")
+        strides = attributes.get("strides")
         return cls(
             *inputs,
             kernel_shape,
@@ -216,34 +215,37 @@ class MaxPool(Operation):
         kernel_shape,
         *,
         ceil_mode=False,
-        dilations=(1, 1),
-        pads=0,
+        dilations=None,
+        pads=None,
         storage_order=ROW_MAJOR_STORAGE,
-        strides=1,
+        strides=None,
     ):
         self.x = x
         self.ceil_mode = ceil_mode
-        self.dilations = np.asarray(dilations)
-        self.kernel_shape = kernel_shape
         self.storage_order = storage_order
-        if isinstance(pads, Iterable):
-            self.pads = tuple(pads)
-        elif isinstance(pads, int):
-            self.pads = (pads,) * 4
-        if isinstance(strides, Iterable):
-            self.strides = tuple(strides)
-        elif isinstance(strides, int):
-            self.strides = (strides,) * 4
+
+        self.kernel_shape = np.asarray(
+            kernel_shape if kernel_shape is not None else w.shape[2:]
+        )
+        self.dilations = np.asarray(
+            dilations if dilations is not None else (1,) * len(self.kernel_shape)
+        )
+        self.pads = np.asarray(
+            pads if pads is not None else (0,) * (len(self.kernel_shape) * 2)
+        )
+        self.strides = np.asarray(
+            strides if strides is not None else (1,) * len(self.kernel_shape)
+        )
 
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):
         attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
         ceil_mode = bool(attributes.get("ceil_mode", False))
-        dilations = attributes.get("dilations", (1, 1))
+        dilations = attributes.get("dilations")
         kernel_shape = attributes.get("kernel_shape")
-        pads = attributes.get("pads", 0)
+        pads = attributes.get("pads")
         storage_order = attributes.get("storage_order", MaxPool.ROW_MAJOR_STORAGE)
-        strides = attributes.get("strides", 1)
+        strides = attributes.get("strides")
         return cls(
             *inputs,
             kernel_shape,
@@ -253,4 +255,3 @@ class MaxPool(Operation):
             storage_order=storage_order,
             strides=strides,
         )
-

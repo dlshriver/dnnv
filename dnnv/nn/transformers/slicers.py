@@ -4,15 +4,14 @@ from copy import deepcopy
 
 from ..graph import OperationGraph
 from ..operations import Input, Operation
-from ..visitors import GetInputDetails
 
 from .base import OperationTransformer
 
 
 class DropPrefix(OperationTransformer):
     def __init__(self, prefix_graph):
+        super().__init__()
         self.prefix_graph = prefix_graph
-        self._cache = {}
 
     def visit(self, operation):
         if operation not in self._cache:
@@ -42,6 +41,8 @@ class DropPrefix(OperationTransformer):
 
 class Slicer(OperationTransformer):
     def __init__(self, start, stop):
+        super().__init__(cached=False)
+        # TODO : This class needs a refactor
         self.start = start
         self.stop = stop
 
@@ -49,7 +50,6 @@ class Slicer(OperationTransformer):
         self.length = 0
         self._index_cache = {}
         self.current_pass = None
-        self._cache = {}
 
     def visit(self, operation):
         is_first = False

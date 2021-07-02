@@ -33,10 +33,8 @@ class VeriNet(Verifier):
         ) as onnx_model_file:
             op_graph = prop.suffixed_op_graph()
             supported_operations = [
-                operations.Concat,
                 operations.Conv,
                 operations.Flatten,
-                operations.Gather,
                 operations.Gemm,
                 operations.Input,
                 operations.Relu,
@@ -44,8 +42,6 @@ class VeriNet(Verifier):
                 operations.Shape,
                 operations.Sigmoid,
                 operations.Tanh,
-                operations.Transpose,
-                operations.Unsqueeze,
             ]
             op_graph.walk(
                 EnsureSupportVisitor(supported_operations, self.translator_error)
@@ -60,14 +56,7 @@ class VeriNet(Verifier):
                 ]
             )
 
-            torch.onnx.export(
-                op_graph.as_pytorch(),
-                tuple(
-                    torch.ones(tuple((d if d > 0 else 1) for d in shape))
-                    for shape in op_graph.input_shape
-                ),
-                onnx_model_file.name,
-            )
+            prop.op_graph.export_onnx(onnx_model_file.name)
 
         lb = prop.input_constraint.lower_bounds[0].flatten().copy()
         ub = prop.input_constraint.upper_bounds[0].flatten().copy()

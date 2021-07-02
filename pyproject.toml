@@ -13,8 +13,7 @@ requires = [
     "onnx >=1.7,<1.8",
     "psutil >=5.6,<5.7",
     "scipy >=1.4,<1.6",
-    "tensorflow >=1.15,<2.3",
-    "keras >=2.3,<2.4",
+    "tensorflow >=2.2,<2.3",
     "simpleparse >=2.2,<2.3",
     "torch >=1.5,<1.7",
     "torchvision >=0.6,<0.8"
@@ -22,7 +21,7 @@ requires = [
 requires-python = ">=3.7"
 
 [tool.flit.metadata.requires-extra]
-test = ["toml >=0.10,<0.11", "coverage >=5.0,<5.3"]
+test = ["toml >=0.10", "coverage >=5.0", "pytest >=6.2"]
 doc = ["sphinx"]
 dev = ["black", "mypy"]
 
@@ -31,7 +30,7 @@ dnnv = "dnnv.__main__:_main"
 
 [tool.coverage.run]
 branch = true
-command_line = "-m unittest discover -v -p *_tests.py"
+command_line = "-m pytest new_tests tests/properties_tests tests/verifiers_tests --ff --verbose --import-mode=importlib --full-trace"
 # concurrency = ["multiprocessing", "thread"]
 parallel = true
 source = ["dnnv"]

@@ -200,6 +200,8 @@ class FullyConnected(Layer):
                 % op.__class__.__name__
             )
         op = op.inputs
+        # TODO : what is this check?
+        # TODO : check Flatten axis and Reshape shape to ensure correct shapes
         if len(op) > 1:
             return cls(weights, bias, activation=activation)
         assert len(op) == 1
@@ -272,7 +274,7 @@ class Convolutional(Layer):
                 raise ValueError(
                     "Dilation is currently not supported in Convolutional layers."
                 )
-            if op.group != 1:
+            if np.any(op.group != 1):
                 raise ValueError(
                     "Grouping is currently not supported in Convolutional layers."
                 )

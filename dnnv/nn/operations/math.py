@@ -1,3 +1,5 @@
+import numpy as np
+
 from .base import Operation
 from ..utils import as_numpy
 
@@ -45,11 +47,17 @@ class Elu(Operation):
 
 class Gemm(Operation):
     def __init__(
-        self, a, b, c, *, alpha=1.0, beta=1.0, transpose_a=False, transpose_b=False
+        self, a, b, c=None, *, alpha=1.0, beta=1.0, transpose_a=False, transpose_b=False
     ):
         self.a = a
         self.b = b
-        self.c = c
+        if c is None:
+            if transpose_b:
+                self.c = np.zeros(self.b.shape[0])
+            else:
+                self.c = np.zeros(self.b.shape[1])
+        else:
+            self.c = c
         self.alpha = alpha
         self.beta = beta
         self.transpose_a = transpose_a
@@ -80,7 +88,7 @@ class LeakyRelu(Operation):
 
 
 class LogSoftmax(Operation):
-    def __init__(self, x, *, axis=1):
+    def __init__(self, x, *, axis=-1):
         self.x = x
         self.axis = axis
 
@@ -139,7 +147,7 @@ class Sign(Operation):
 
 
 class Softmax(Operation):
-    def __init__(self, x, *, axis=1):
+    def __init__(self, x, *, axis=-1):
         self.x = x
         self.axis = axis
 
