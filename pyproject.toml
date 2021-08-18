@@ -6,7 +6,7 @@ build-backend = "flit.buildapi"
 name = "dnnv"
 authors = [{ name = "David Shriver", email = "dls2fc@virginia.edu" }]
 readme = "README.md"
-license = "LICENSE"
+license = { file = "LICENSE" }
 classifiers = ["License :: OSI Approved :: MIT License"]
 requires-python = ">=3.7"
 dynamic = ["version", 'description']
