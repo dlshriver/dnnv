@@ -43,7 +43,7 @@ append_path $PROJECT_DIR/lib/eran/ELINA/python_interface PYTHONPATH
 append_path $PROJECT_DIR/bin/julia-1.0.4/bin PATH
 
 # nnenum paths
-append_path $PROJECT_DIR/lib/nnenum/nnenum PYTHONPATH
+append_path $PROJECT_DIR/lib/nnenum/src PYTHONPATH
 
 # marabou paths
 append_path $PROJECT_DIR/bin/Marabou PYTHONPATH
