@@ -26,11 +26,13 @@ preferred-citation:
   doi: "10.1007/978-3-030-81685-8_6"
   title: "DNNV: A Framework for Deep Neural Network Verification"
   conference:
-  - name: "Computer Aided Verification"
+    name: "Computer Aided Verification"
   collection-title: "Computer Aided Verification - 33rd International Conference, CAV 2021, Virtual Event, July 20-23, 2021, Proceedings, Part I"
   editors:
-  - family-names: ["Silva", "Leino"]
-    given-names: ["Alexandra", "K. Rustan M."]
+  - family-names: "Silva"
+    given-names: "Alexandra"
+  - family-names: "Leino"
+    given-names: "K. Rustan M."
   publisher: "Springer International Publishing"
   volume: 12759
   start: 137 # First page number
