@@ -90,9 +90,7 @@ class Verifier(ABC):
         return self.parse_results(prop, results)
 
     def reduce_property(self) -> Generator[Property, None, None]:
-        for subproperty in self.reduction(
-            reduction_error=self.translator_error
-        ).reduce_property(~self.property):
+        for subproperty in self.reduction().reduce_property(~self.property):
             yield subproperty
 
     def run(self) -> Tuple[PropertyCheckResult, Optional[Any]]:

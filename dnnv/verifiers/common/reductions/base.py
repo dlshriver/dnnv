@@ -1,9 +1,12 @@
 from abc import ABC, abstractmethod
 from typing import Any, Generator, Optional, Tuple, Type
 
+from dnnv.errors import DNNVError
 from dnnv.properties import Expression
 
-from ..errors import VerifierTranslatorError
+
+class ReductionError(DNNVError):
+    pass
 
 
 class Property:
@@ -15,7 +18,7 @@ class Property:
 class Reduction(ABC):
     def __init__(
         self,
-        reduction_error: Type[VerifierTranslatorError] = VerifierTranslatorError,
+        reduction_error: Type[ReductionError] = ReductionError,
     ):
         self.reduction_error = reduction_error
 
@@ -24,4 +27,4 @@ class Reduction(ABC):
         raise NotImplementedError()
 
 
-__all__ = ["Property", "Reduction"]
+__all__ = ["Property", "Reduction", "ReductionError"]

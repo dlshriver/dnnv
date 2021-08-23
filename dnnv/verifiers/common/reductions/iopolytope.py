@@ -28,8 +28,12 @@ from dnnv.properties.base import (
     Symbol,
 )
 
-from .base import Property, Reduction
+from .base import Property, Reduction, ReductionError
 from ..errors import VerifierTranslatorError
+
+
+class IOPolytopeReductionError(ReductionError):
+    pass
 
 
 class Variable:
@@ -505,7 +509,7 @@ class IOPolytopeReduction(Reduction):
         self,
         input_constraint_type: Type[Constraint] = HyperRectangle,
         output_constraint_type: Type[Constraint] = HalfspacePolytope,
-        reduction_error: Type[VerifierTranslatorError] = VerifierTranslatorError,
+        reduction_error: Type[ReductionError] = IOPolytopeReductionError,
     ):
         super().__init__(reduction_error=reduction_error)
         self.input_constraint_type = input_constraint_type
@@ -830,4 +834,5 @@ __all__ = [
     "HyperRectangle",
     "IOPolytopeProperty",
     "IOPolytopeReduction",
+    "IOPolytopeReductionError",
 ]

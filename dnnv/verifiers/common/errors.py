@@ -1,8 +1,11 @@
-class VerifierError(Exception):
+from dnnv.errors import DNNVError
+
+
+class VerifierError(DNNVError):
     pass
 
 
-class VerifierTranslatorError(Exception):
+class VerifierTranslatorError(DNNVError):
     pass
 
 

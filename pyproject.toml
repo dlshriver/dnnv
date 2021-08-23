@@ -30,7 +30,9 @@ dnnv = "dnnv.__main__:_main"
 
 [tool.coverage.run]
 branch = true
-command_line = "-m pytest new_tests tests/properties_tests tests/verifiers_tests --ff --verbose --import-mode=importlib --full-trace"
+# command_line = "-m pytest new_tests tests/properties_tests tests/verifiers_tests --ff --verbose --import-mode=importlib --full-trace"
+# command_line = "-m pytest new_tests --ff --verbose --import-mode=importlib --full-trace"
+command_line = "-m pytest new_tests/unit_tests/test_verifiers/test_common/test_reductions/test_iopolytope --ff --verbose --import-mode=importlib --full-trace"
 # concurrency = ["multiprocessing", "thread"]
 parallel = true
 source = ["dnnv"]
