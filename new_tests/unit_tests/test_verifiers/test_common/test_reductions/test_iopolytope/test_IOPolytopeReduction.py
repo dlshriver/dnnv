@@ -32,6 +32,7 @@ def test_non_concrete_network():
         properties = list(reduction.reduce_property(phi))
 
 
+# TODO : finish this
 # def test_simple_property():
 #     reduction = IOPolytopeReduction()
 
