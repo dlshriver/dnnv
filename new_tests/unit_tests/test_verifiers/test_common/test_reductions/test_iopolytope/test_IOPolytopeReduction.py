@@ -32,17 +32,17 @@ def test_non_concrete_network():
         properties = list(reduction.reduce_property(phi))
 
 
-def test_simple_property():
-    reduction = IOPolytopeReduction()
+# def test_simple_property():
+#     reduction = IOPolytopeReduction()
 
-    phi = Exists(Symbol("x"), Network("N")(Symbol("x")) > Constant(0))
-    input_op = operations.Input((1,), np.dtype(np.float64))
-    output_op = operations.Add(input_op, operations.Mul(np.float64(-2), input_op))
-    op_graph = OperationGraph([output_op])
-    phi.concretize(N=op_graph)
+#     phi = Exists(Symbol("x"), Network("N")(Symbol("x")) > Constant(0))
+#     input_op = operations.Input((1,), np.dtype(np.float64))
+#     output_op = operations.Add(input_op, operations.Mul(np.float64(-2), input_op))
+#     op_graph = OperationGraph([output_op])
+#     phi.concretize(N=op_graph)
 
-    properties = list(reduction.reduce_property(phi))
-    print(properties)
-    for p in properties:
-        print(p)
-    assert 0
+#     properties = list(reduction.reduce_property(phi))
+#     print(properties)
+#     for p in properties:
+#         print(p)
+#     assert 0
