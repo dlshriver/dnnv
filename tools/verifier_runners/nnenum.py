@@ -56,7 +56,7 @@ def main(args):
             cex = (
                 np.array(list(result.cinput))
                 .astype(np.float32)
-                .reshape(network.get_input_shape(), order="F")
+                .reshape(network.get_input_shape())
             )
             print(cex)
         np.save(args.output, (result.result_str, cex))
