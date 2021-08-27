@@ -2,13 +2,16 @@
 requires = ["flit"]
 build-backend = "flit.buildapi"
 
-[tool.flit.metadata]
-module = "dnnv"
-author = "David Shriver"
-author-email = "dls2fc@virginia.edu"
-home-page = "https://github.com/dlshriver/DNNV"
-description-file = "README.md"
-requires = [
+[project]
+name = "dnnv"
+authors = [{ name = "David Shriver", email = "dls2fc@virginia.edu" }]
+readme = "README.md"
+license = { file = "LICENSE" }
+classifiers = ["License :: OSI Approved :: MIT License"]
+requires-python = ">=3.7"
+dynamic = ["version", 'description']
+keywords = ["DNN", "neural network", "verification"]
+dependencies = [
     "numpy >=1.18,<1.20",
     "onnx >=1.7,<1.8",
     "psutil >=5.6,<5.7",
@@ -17,22 +20,24 @@ requires = [
     "keras >=2.3,<2.4",
     "simpleparse >=2.2,<2.3",
     "torch >=1.5,<1.7",
-    "torchvision >=0.6,<0.8"
+    "torchvision >=0.6,<0.8",
 ]
-requires-python = ">=3.7"
 
-[tool.flit.metadata.requires-extra]
+[project.optional-dependencies]
 test = ["coverage >=5.0,<5.3"]
 doc = ["sphinx", "sphinx-rtd-theme"]
 dev = ["black", "mypy"]
 
-[tool.flit.scripts]
+[project.urls]
+Documentation = "https://dnnv.readthedocs.io/en/latest/"
+Source = "https://github.com/dlshriver/DNNV"
+
+[project.scripts]
 dnnv = "dnnv.__main__:_main"
 dnnv_manage = "dnnv._manage.__main__:_main"
 
 [tool.coverage.run]
 branch = true
 command_line = "-m unittest discover -v -p *_tests.py"
-# concurrency = ["multiprocessing", "thread"]
 parallel = true
 source = ["dnnv"]

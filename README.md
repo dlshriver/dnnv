@@ -1,6 +1,6 @@
 # Deep Neural Network Verification
 
-A framework for verification and analysis of deep neural networks.
+A framework for verification and analysis of deep neural networks. You can read an overview of DNNV in our CAV 2021 paper [*DNNV: A Framework for Deep Neural Network Verification*](https://arxiv.org/abs/2105.12841), or watch our presentation on [YouTube](https://youtu.be/GhXlONbvx1Y).
 
 ## Getting Started
 
