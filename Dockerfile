@@ -46,11 +46,11 @@ COPY --chown=dnnv tools/ tools/
 
 # install verifiers
 # RUN . .venv/bin/activate && dnnv_manage install bab # requires gurobi
-RUN . .venv/bin/activate && dnnv_manage install eran
-RUN . .venv/bin/activate && dnnv_manage install marabou
+# RUN . .venv/bin/activate && dnnv_manage install eran
+# RUN . .venv/bin/activate && dnnv_manage install marabou
 # RUN . .venv/bin/activate && dnnv_manage install mipverify # requires gurobi
-RUN . .venv/bin/activate && dnnv_manage install neurify
-# RUN source .venv/bin/activate && dnnv_manage install nnenum # not currently working
-RUN . .venv/bin/activate && dnnv_manage install planet
-RUN . .venv/bin/activate && dnnv_manage install reluplex
+# RUN . .venv/bin/activate && dnnv_manage install neurify
+# RUN . .venv/bin/activate && dnnv_manage install nnenum
+# RUN . .venv/bin/activate && dnnv_manage install planet
+# RUN . .venv/bin/activate && dnnv_manage install reluplex
 # RUN . .venv/bin/activate && dnnv_manage install verinet # requires gurobi
