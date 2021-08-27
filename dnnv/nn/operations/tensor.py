@@ -219,3 +219,20 @@ class Unsqueeze(Operation):
                 a = np.expand_dims(a, axis)
             return a
         return cls(*inputs, axes=axes, name=onnx_node.name)
+
+
+__all__ = [
+    "Cast",
+    "Concat",
+    "Expand",
+    "Flatten",
+    "Gather",
+    "Identity",
+    "Pad",
+    "Reshape",
+    "Resize",
+    "Shape",
+    "Tile",
+    "Transpose",
+    "Unsqueeze",
+]

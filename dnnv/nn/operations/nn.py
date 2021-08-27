@@ -249,9 +249,7 @@ class MaxPool(Operation):
         self.ceil_mode = ceil_mode
         self.storage_order = storage_order
 
-        self.kernel_shape = np.asarray(
-            kernel_shape if kernel_shape is not None else w.shape[2:]
-        )
+        self.kernel_shape = np.asarray(kernel_shape)
         self.dilations = np.asarray(
             dilations if dilations is not None else (1,) * len(self.kernel_shape)
         )
@@ -281,3 +279,14 @@ class MaxPool(Operation):
             strides=strides,
             name=onnx_node.name,
         )
+
+
+__all__ = [
+    "AveragePool",
+    "BatchNormalization",
+    "Conv",
+    "ConvTranspose",
+    "Dropout",
+    "GlobalAveragePool",
+    "MaxPool",
+]

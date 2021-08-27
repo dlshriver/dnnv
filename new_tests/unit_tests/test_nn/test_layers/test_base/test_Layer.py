@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 from dnnv.nn.graph import OperationGraph

@@ -200,3 +200,22 @@ class Tanh(Operation):
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):
         return cls(*inputs, name=onnx_node.name)
+
+
+__all__ = [
+    "Add",
+    "Atan",
+    "Div",
+    "Elu",
+    "Gemm",
+    "LeakyRelu",
+    "LogSoftmax",
+    "MatMul",
+    "Mul",
+    "Relu",
+    "Sigmoid",
+    "Sign",
+    "Softmax",
+    "Sub",
+    "Tanh",
+]

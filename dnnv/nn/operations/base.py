@@ -125,3 +125,6 @@ class OutputSelect(Operation):
         super().__init__(name=name)
         self.operation = operation
         self.index = index
+
+
+__all__ = ["Op", "Operation", "Input", "OutputSelect"]

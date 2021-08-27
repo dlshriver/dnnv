@@ -53,6 +53,8 @@ class OperationGraph:
 
     @property
     def output_details(self):
+        # TODO : fix output_details calculation
+        # for operations with multiple outputs
         if self._output_details is None:
             output = self(
                 *[
@@ -68,6 +70,8 @@ class OperationGraph:
 
     @property
     def output_shape(self):
+        # TODO : fix output_shape calculation
+        # for operations with multiple outputs
         return tuple(details.shape for details in self.output_details)
 
     def export_onnx(self, filename):

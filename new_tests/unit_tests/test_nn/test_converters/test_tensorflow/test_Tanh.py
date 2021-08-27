@@ -14,7 +14,7 @@ def test_Tanh():
     result = tf_op().numpy()
     assert np.allclose(result, y)
 
-    op = Tanh(Input((12,), np.dtype(np.float32)))
+    op = Tanh(Input((3,), np.dtype(np.float32)))
     tf_op = TensorflowConverter().visit(op)
     result = tf_op(x).numpy()
     assert np.allclose(result, y)
