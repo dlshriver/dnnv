@@ -13,7 +13,7 @@ dynamic = ["version", 'description']
 keywords = ["DNN", "neural network", "verification"]
 dependencies = [
     "numpy ~=1.18",
-    "onnx ~=1.8",
+    "onnx ~=1.8,<1.9",
     "psutil ~=5.6",
     "scipy ~=1.5",
     "tensorflow ~=2.2,<2.3",
@@ -26,7 +26,7 @@ dependencies = [
 all = [
     # default
     "numpy ~=1.18",
-    "onnx ~=1.8",
+    "onnx ~=1.8,<1.9",
     "psutil ~=5.6",
     "scipy ~=1.5",
     "tensorflow ~=2.2",
@@ -56,8 +56,8 @@ dnnv = "dnnv.__main__:_main"
 
 [tool.coverage.run]
 branch = true
-# command_line = "-m pytest new_tests tests/properties_tests tests/verifiers_tests --ff --verbose --import-mode=importlib --full-trace"
-command_line = "-m pytest new_tests --ff -x --verbose --import-mode=importlib --full-trace"
+command_line = "-m pytest new_tests tests/properties_tests tests/verifiers_tests --ff --verbose --import-mode=importlib --full-trace"
+# command_line = "-m pytest new_tests --ff -x --verbose --import-mode=importlib --full-trace"
 # command_line = "-m pytest new_tests/unit_tests/test_verifiers/test_common/test_reductions/test_iopolytope --ff --verbose --import-mode=importlib --full-trace"
 # command_line = "-m pytest new_tests/unit_tests/test_verifiers new_tests/unit_tests/test_nn/test_analyzers new_tests/unit_tests/test_nn/test_converters new_tests/unit_tests/test_nn/test_graph new_tests/unit_tests/test_nn/test_layers new_tests/unit_tests/test_nn/test_operations new_tests/unit_tests/test_nn/test_transformers --ff --verbose --import-mode=importlib --full-trace"
 parallel = true

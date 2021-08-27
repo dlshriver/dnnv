@@ -256,7 +256,7 @@ def test_Gemm(capsys):
     captured = capsys.readouterr()
     expected_output = """\
 Input_0                         : Input((1, 5), dtype=float32)
-Gemm_0                          : Gemm(Input_0, ndarray(shape=(5, 2)), [0. 0.])
+Gemm_0                          : Gemm(Input_0, ndarray(shape=(5, 2)), [0. 0.], transpose_a=0, transpose_b=0, alpha=1.000000, beta=1.000000)
 """
     assert captured.out == expected_output
 
@@ -270,7 +270,7 @@ Gemm_0                          : Gemm(Input_0, ndarray(shape=(5, 2)), [0. 0.])
     captured = capsys.readouterr()
     expected_output = """\
 Input_0                         : Input((1, 5), dtype=float32)
-Gemm_0                          : Gemm(ndarray(shape=(2, 5)), Input_0, [0. 0.])
+Gemm_0                          : Gemm(ndarray(shape=(2, 5)), Input_0, [0. 0.], transpose_a=0, transpose_b=1, alpha=1.000000, beta=1.000000)
 """
     assert captured.out == expected_output
 

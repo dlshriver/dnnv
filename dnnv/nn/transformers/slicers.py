@@ -1,6 +1,7 @@
 import numpy as np
 
 from copy import deepcopy
+from typing import Optional, Sequence, Union
 
 from ..graph import OperationGraph
 from ..operations import Input, Operation
@@ -9,11 +10,11 @@ from .base import OperationTransformer
 
 
 class DropPrefix(OperationTransformer):
-    def __init__(self, prefix_graph):
+    def __init__(self, prefix_graph: OperationGraph):
         super().__init__()
         self.prefix_graph = prefix_graph
 
-    def visit(self, operation):
+    def visit(self, operation: Operation) -> Operation:
         if operation not in self._cache:
             if operation not in self.prefix_graph.output_operations:
                 result = super().visit(operation)
@@ -28,7 +29,7 @@ class DropPrefix(OperationTransformer):
             self._cache[operation] = result
         return self._cache[operation]
 
-    def generic_visit(self, operation):
+    def generic_visit(self, operation: Operation) -> Operation:
         kwargs = {}
         for name, value in operation.__dict__.items():
             if isinstance(value, Operation):
@@ -40,10 +41,10 @@ class DropPrefix(OperationTransformer):
 
 
 class Slicer(OperationTransformer):
-    def __init__(self, start, stop):
+    def __init__(self, start: Optional[int], stop: Optional[int]):
         super().__init__(cached=False)
         # TODO : This class needs a refactor
-        self.start = start
+        self.start = start or 0
         self.stop = stop
 
         self.index = 0
@@ -51,7 +52,7 @@ class Slicer(OperationTransformer):
         self._index_cache = {}
         self.current_pass = None
 
-    def visit(self, operation):
+    def visit(self, operation: Operation) -> Union[Operation, Sequence[Operation]]:
         is_first = False
         if self.current_pass is None:
             is_first = True
@@ -68,6 +69,8 @@ class Slicer(OperationTransformer):
             outputs = []
             if self.stop is None:
                 outputs.append(super().visit(operation))
+            elif self.stop == 0:
+                outputs = []
             else:
                 for pi, ni, op in self._index_cache.values():
                     if min(self.stop, self.length) in (pi + 1, ni + 1):
@@ -90,7 +93,7 @@ class Slicer(OperationTransformer):
         else:
             raise ValueError()
 
-    def generic_visit(self, operation):
+    def generic_visit(self, operation: Operation) -> Operation:
         if self.current_pass == "indexing":
             self.index -= 1
             self.length = max(self.length, -self.index)

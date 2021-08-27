@@ -1,3 +1,5 @@
+from copy import copy
+
 from ..operations import Operation
 from ..visitors import OperationVisitor
 

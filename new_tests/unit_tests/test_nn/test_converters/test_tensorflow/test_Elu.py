@@ -30,7 +30,7 @@ def test_Elu_default_consts():
 
 def test_Elu_default_x_is_op():
     x = np.random.randn(3, 4, 5).astype(np.float32)
-    input_op = Input((3,), np.dtype(np.float32))
+    input_op = Input((3, 4, 5), np.dtype(np.float32))
     op = Elu(input_op)
     tf_op = TensorflowConverter().visit(op)
     result = tf_op(x).numpy()

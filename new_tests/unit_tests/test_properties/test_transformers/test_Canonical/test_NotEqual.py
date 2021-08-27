@@ -10,7 +10,6 @@ def test_NotEqual_symbols():
     a, b = Symbol("a"), Symbol("b")
     expr = NotEqual(a, b)
     new_expr = transformer.visit(expr)
-    print(repr(new_expr))
     assert new_expr is not expr
     assert isinstance(new_expr, And)
     assert len(new_expr.expressions) == 1

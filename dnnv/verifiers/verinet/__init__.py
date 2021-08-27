@@ -1,11 +1,8 @@
+from dnnv.nn.graph import OperationGraph
 import numpy as np
 import tempfile
-import torch.onnx
 
-from contextlib import contextmanager
-from typing import Any, Dict, List, Optional
-
-from dnnv.nn import operations
+from dnnv.nn import operations, OperationTransformer
 from dnnv.nn.visitors import EnsureSupportVisitor
 from dnnv.verifiers.common.base import Parameter, Verifier
 from dnnv.verifiers.common.results import SAT, UNSAT, UNKNOWN
@@ -31,7 +28,7 @@ class VeriNet(Verifier):
         with tempfile.NamedTemporaryFile(
             mode="w+", suffix=".onnx", delete=False
         ) as onnx_model_file:
-            op_graph = prop.suffixed_op_graph()
+            op_graph = prop.suffixed_op_graph().simplify()
             supported_operations = [
                 operations.Conv,
                 operations.Flatten,
@@ -46,17 +43,60 @@ class VeriNet(Verifier):
             op_graph.walk(
                 EnsureSupportVisitor(supported_operations, self.translator_error)
             )
-            op_graph.output_operations[0].b = np.hstack(
+
+            output_op = op_graph.output_operations[0]
+            b = output_op.b
+            if output_op.transpose_b:
+                b = b.T
+
+            output_op.transpose_b = True
+            output_op.b = np.vstack(
                 [
-                    op_graph.output_operations[0].b,
+                    b,
                     np.zeros(
-                        op_graph.output_operations[0].b.shape,
-                        dtype=op_graph.output_operations[0].b.dtype,
+                        b.T.shape,
+                        dtype=b.dtype,
+                    ),
+                ]
+            )
+            output_op.c = np.hstack(
+                [
+                    output_op.c,
+                    np.zeros(
+                        output_op.c.shape,
+                        dtype=output_op.c.dtype,
                     ),
                 ]
             )
 
-            prop.op_graph.export_onnx(onnx_model_file.name)
+            class TransposeB(OperationTransformer):
+                def visit_Gemm(self, op: operations.Gemm):
+                    a = op.a
+                    if isinstance(a, operations.Operation):
+                        a = self.visit(op.a)
+                    b = op.b
+                    if isinstance(b, operations.Operation):
+                        b = self.visit(op.b)
+                    c = op.c
+                    if isinstance(c, operations.Operation):
+                        c = self.visit(op.c)
+                    if op.transpose_b:
+                        op.a = a
+                        op.b = b
+                        op.c = c
+                        return op
+                    return operations.Gemm(
+                        a,
+                        b.T,
+                        c,
+                        transpose_a=op.transpose_a,
+                        transpose_b=True,
+                        alpha=op.alpha,
+                        beta=op.beta,
+                    )
+
+            op_graph = OperationGraph(op_graph.walk(TransposeB()))
+            op_graph.export_onnx(onnx_model_file.name)
 
         lb = prop.input_constraint.lower_bounds[0].flatten().copy()
         ub = prop.input_constraint.upper_bounds[0].flatten().copy()
@@ -99,6 +139,6 @@ class VeriNet(Verifier):
                 return UNKNOWN, None
             elif status == "Undecided":
                 raise self.verifier_error("Undecided")
-            raise self.translator_error(f"Unknown verification result: {result_str}")
+            raise self.translator_error(f"Unknown verification result: {status}")
         finally:
             del self._tmp_output_file

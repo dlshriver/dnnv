@@ -68,7 +68,6 @@ def test_Or_and_multi_expressions():
 
     expr = Or(And(Symbol("a"), Symbol("b")), Symbol("c"), Symbol("d"))
     new_expr = transformer.visit(expr)
-    print(new_expr)
     assert new_expr is not expr
     assert isinstance(new_expr, And)
     assert len(new_expr.expressions) == 2

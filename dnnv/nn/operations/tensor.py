@@ -1,11 +1,14 @@
 import numpy as np
 
+from typing import Optional
+
 from .base import Operation
 from ..utils import as_numpy
 
 
 class Cast(Operation):
-    def __init__(self, x, to):
+    def __init__(self, x, to, *, name: Optional[str] = None):
+        super().__init__(name=name)
         self.x = x
         self.to = to
 
@@ -13,11 +16,12 @@ class Cast(Operation):
     def from_onnx(cls, onnx_node, *inputs):
         attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
         axis = attributes.get("to")
-        return cls(inputs, axis=axis)
+        return cls(inputs, axis=axis, name=onnx_node.name)
 
 
 class Concat(Operation):
-    def __init__(self, x, axis):
+    def __init__(self, x, axis, *, name: Optional[str] = None):
+        super().__init__(name=name)
         self.x = x
         self.axis = axis
 
@@ -25,21 +29,23 @@ class Concat(Operation):
     def from_onnx(cls, onnx_node, *inputs):
         attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
         axis = attributes.get("axis")
-        return cls(inputs, axis=axis)
+        return cls(inputs, axis=axis, name=onnx_node.name)
 
 
 class Expand(Operation):
-    def __init__(self, x, shape):
+    def __init__(self, x, shape, *, name: Optional[str] = None):
+        super().__init__(name=name)
         self.x = x
         self.shape = shape
 
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):
-        return cls(*inputs)
+        return cls(*inputs, name=onnx_node.name)
 
 
 class Flatten(Operation):
-    def __init__(self, x, *, axis=1):
+    def __init__(self, x, *, axis=1, name: Optional[str] = None):
+        super().__init__(name=name)
         self.x = x
         self.axis = axis
 
@@ -47,11 +53,12 @@ class Flatten(Operation):
     def from_onnx(cls, onnx_node, *inputs):
         attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
         axis = attributes.get("axis", 1)
-        return cls(*inputs, axis=axis)
+        return cls(*inputs, axis=axis, name=onnx_node.name)
 
 
 class Gather(Operation):
-    def __init__(self, x, indices, *, axis=0):
+    def __init__(self, x, indices, *, axis=0, name: Optional[str] = None):
+        super().__init__(name=name)
         self.x = x
         self.indices = indices
         self.axis = axis
@@ -60,20 +67,24 @@ class Gather(Operation):
     def from_onnx(cls, onnx_node, *inputs):
         attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
         axis = attributes.get("axis", 0)
-        return cls(*inputs, axis=axis)
+        return cls(*inputs, axis=axis, name=onnx_node.name)
 
 
 class Identity(Operation):
-    def __init__(self, x):
+    def __init__(self, x, *, name: Optional[str] = None):
+        super().__init__(name=name)
         self.x = x
 
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):
-        return cls(*inputs)
+        return cls(*inputs, name=onnx_node.name)
 
 
 class Pad(Operation):
-    def __init__(self, x, pads, *, mode="constant", value=0.0):
+    def __init__(
+        self, x, pads, *, mode="constant", value=0.0, name: Optional[str] = None
+    ):
+        super().__init__(name=name)
         self.x = x
         self.pads = pads
         self.mode = mode
@@ -85,11 +96,12 @@ class Pad(Operation):
         mode = attributes.get("mode", "constant")
         pads = attributes.get("pads")
         value = attributes.get("value", 0.0)
-        return cls(*inputs, pads, mode=mode, value=value)
+        return cls(*inputs, pads, mode=mode, value=value, name=onnx_node.name)
 
 
 class Reshape(Operation):
-    def __init__(self, x, shape, *, allowzero=False):
+    def __init__(self, x, shape, *, allowzero=False, name: Optional[str] = None):
+        super().__init__(name=name)
         self.x = x
         self.shape = shape
         self.allowzero = allowzero
@@ -98,7 +110,7 @@ class Reshape(Operation):
     def from_onnx(cls, onnx_node, *inputs):
         attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
         allowzero = attributes.get("allowzero", False)
-        return cls(*inputs, allowzero=allowzero)
+        return cls(*inputs, allowzero=allowzero, name=onnx_node.name)
 
 
 class Resize(Operation):
@@ -114,8 +126,10 @@ class Resize(Operation):
         exclude_outside=0,
         extrapolation_value=0.0,
         mode="nearest",
-        nearest_mode="round_prefer_floor"
+        nearest_mode="round_prefer_floor",
+        name: Optional[str] = None
     ):
+        super().__init__(name=name)
         assert scales.size != 0 or sizes.size != 0
         assert scales.size == 0 or sizes.size == 0
         self.x = x
@@ -147,31 +161,35 @@ class Resize(Operation):
             exclude_outside=exclude_outside,
             extrapolation_value=extrapolation_value,
             mode=mode,
-            nearest_mode=nearest_mode
+            nearest_mode=nearest_mode,
+            name=onnx_node.name
         )
 
 
 class Shape(Operation):
-    def __init__(self, x):
+    def __init__(self, x, *, name: Optional[str] = None):
+        super().__init__(name=name)
         self.x = x
 
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):
-        return cls(*inputs)
+        return cls(*inputs, name=onnx_node.name)
 
 
 class Tile(Operation):
-    def __init__(self, x, repeats):
+    def __init__(self, x, repeats, *, name: Optional[str] = None):
+        super().__init__(name=name)
         self.x = x
         self.repeats = repeats
 
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):
-        return cls(*inputs)
+        return cls(*inputs, name=onnx_node.name)
 
 
 class Transpose(Operation):
-    def __init__(self, x, *, permutation=None):
+    def __init__(self, x, *, permutation=None, name: Optional[str] = None):
+        super().__init__(name=name)
         self.x = x
         if permutation is not None:
             self.permutation = permutation
@@ -182,11 +200,12 @@ class Transpose(Operation):
     def from_onnx(cls, onnx_node, *inputs):
         attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
         perm = attributes.get("perm")
-        return cls(*inputs, permutation=perm)
+        return cls(*inputs, permutation=perm, name=onnx_node.name)
 
 
 class Unsqueeze(Operation):
-    def __init__(self, x, axes):
+    def __init__(self, x, axes, *, name: Optional[str] = None):
+        super().__init__(name=name)
         self.x = x
         self.axes = axes
 
@@ -199,4 +218,4 @@ class Unsqueeze(Operation):
             for axis in axes:
                 a = np.expand_dims(a, axis)
             return a
-        return cls(*inputs, axes=axes)
+        return cls(*inputs, axes=axes, name=onnx_node.name)

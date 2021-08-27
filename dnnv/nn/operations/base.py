@@ -35,11 +35,27 @@ class Op(type):
 
 
 class Operation(metaclass=Op):
+    __id = 0
+
+    def __init__(self, name: Optional[str] = None):
+        self.name = name
+        if name is None:
+            self.name = f"{type(self).__name__}_{self.__id}"
+            Operation.__id += 1
+
+    def __eq__(self, other):
+        if type(other) != type(self):
+            return False
+        for name, value in self.__dict__.items():
+            if np.any(other.__dict__[name] != value):
+                return False
+        return True
+
     def __getitem__(self, index):
         return OutputSelect(self, index)
 
     def __hash__(self):
-        return hash(type(self))
+        return hash(self.name)
 
     def __str__(self):
         return type(self).__name__
@@ -88,9 +104,10 @@ class Operation(metaclass=Op):
 
 
 class Input(Operation):
-    def __init__(self, shape, dtype):
+    def __init__(self, shape, dtype, name: Optional[str] = None):
+        super().__init__(name=name)
         self.shape = shape
-        self.dtype = dtype
+        self.dtype = np.dtype(dtype)
 
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):
@@ -100,10 +117,11 @@ class Input(Operation):
         ]
         shape = np.array(dims)
         dtype = ONNX_TO_NUMPY_DTYPE[onnx_node.type.tensor_type.elem_type]
-        return cls(shape, dtype=dtype)
+        return cls(shape, dtype=dtype, name=onnx_node.name)
 
 
 class OutputSelect(Operation):
-    def __init__(self, operation, index):
+    def __init__(self, operation, index, name: Optional[str] = None):
+        super().__init__(name=name)
         self.operation = operation
         self.index = index

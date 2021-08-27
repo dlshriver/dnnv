@@ -458,16 +458,14 @@ class TensorflowConverter(OperationVisitor):
         @self._cached
         def gemm_func(*inputs):
             a, b, c = _concretize([a_, b_, c_], inputs)
-            result = (
-                operation.alpha
-                * tf.matmul(
-                    a,
-                    b,
-                    transpose_a=operation.transpose_a,
-                    transpose_b=operation.transpose_b,
-                )
-                + operation.beta * c
+            result = operation.alpha * tf.matmul(
+                a,
+                b,
+                transpose_a=operation.transpose_a,
+                transpose_b=operation.transpose_b,
             )
+            if c is not None:
+                result = result + operation.beta * c
             return result
 
         return gemm_func

@@ -31,9 +31,9 @@ class GetInputDetails(OperationVisitor):
         self.input_details = []
 
     def visit(self, operation: Operation):
-        if operation not in self.visited:
+        if id(operation) not in self.visited:
             super().visit(operation)
-            self.visited.add(operation)
+            self.visited.add(id(operation))
         return tuple(self.input_details)
 
     def visit_Input(self, operation: operations.Input):
@@ -47,8 +47,8 @@ class OperationCounter(OperationVisitor):
         self.visited = set()
 
     def visit(self, operation: Operation):
-        if operation not in self.visited:
-            self.visited.add(operation)
+        if id(operation) not in self.visited:
+            self.visited.add(id(operation))
             super().generic_visit(operation)
         return len(self.visited)
 
@@ -214,11 +214,15 @@ class PrintVisitor(OperationVisitor):
         self.generic_visit(operation)
         self.print_op_id(operation)
         print(
-            "Gemm(%s, %s, %s)"
+            "Gemm(%s, %s, %s, transpose_a=%d, transpose_b=%d, alpha=%f, beta=%f)"
             % (
                 self.get_op_id(operation.a),
                 self.get_op_id(operation.b),
                 self.get_op_id(operation.c),
+                operation.transpose_a,
+                operation.transpose_b,
+                operation.alpha,
+                operation.beta,
             )
         )
 
