@@ -35,8 +35,8 @@ def main(args):
     init_box = np.array(
         list(
             zip(
-                lb.reshape(network.get_input_shape()).flatten("F"),
-                ub.reshape(network.get_input_shape()).flatten("F"),
+                lb.reshape(network.get_input_shape()).flatten(),
+                ub.reshape(network.get_input_shape()).flatten(),
             )
         ),
         dtype=np.float32,
@@ -45,7 +45,7 @@ def main(args):
         np.eye(ninputs, dtype=np.float32), np.zeros(ninputs, dtype=np.float32), init_box
     )
     for a, b in zip(A_input, b_input):
-        a_ = a.reshape(network.get_input_shape()).flatten("F")
+        a_ = a.reshape(network.get_input_shape()).flatten()
         init_star.lpi.add_dense_row(a_, b)
     spec = Specification(A_output, b_output)
     result = enumerate_network(init_star, network, spec)
