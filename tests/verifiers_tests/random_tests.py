@@ -222,6 +222,36 @@ class RandomTests(unittest.TestCase):
                     result, _ = verifier.verify(phi)
                     self.check_results(result, results)
 
+    def test_hyperlocal_random_conv_0(self):
+        os.environ["OUTPUT_LAYER"] = "-1"
+        excluded_verifiers = {
+            "reluplex",
+            "verinet",
+        }
+        for epsilon in [0.01, 0.1, 0.5, 1.0]:
+            os.environ["EPSILON"] = str(epsilon)
+            for i in range(RUNS_PER_PROP):
+                os.environ["SEED"] = str(i)
+                results = []
+                for name, verifier in VERIFIERS.items():
+                    if name == "marabou" and (epsilon == 0.5 or epsilon == 1.0):
+                        # numerical inconsistencies # TODO : address these
+                        continue
+                    if name in excluded_verifiers:
+                        continue
+                    if not verifier.is_installed():
+                        continue
+                    self.reset_property_context()
+                    dnn = nn.parse(
+                        network_artifact_dir / "random_conv_0.onnx"
+                    ).simplify()
+                    phi = properties.parse(
+                        property_artifact_dir / "hyperlocalrobustness.py"
+                    )
+                    phi.concretize(N=dnn)
+                    result, _ = verifier.verify(phi)
+                    self.check_results(result, results)
+
 
 if __name__ == "__main__":
     unittest.main()
