@@ -8,7 +8,7 @@ from pathlib import Path
 
 from .. import verifiers
 from .. import __version__
-from .. import logging
+from .. import logging_utils as logging
 
 
 class HelpFormatter(argparse.HelpFormatter):
@@ -72,7 +72,7 @@ def parse_args():
     parser.add_argument("--seed", type=int, default=None, help="the random seed to use")
     logging.add_arguments(parser)
 
-    parser.add_argument("property", type=Path)
+    parser.add_argument("property", type=Path, nargs="?")
     parser.add_argument(
         "-N",
         "--network",
@@ -108,7 +108,8 @@ def parse_args():
     from ..utils import get_subclasses
 
     for verifier in sorted(
-        get_subclasses(verifiers.Verifier), key=lambda v: v.__module__.split(".")[-1],
+        get_subclasses(verifiers.Verifier),
+        key=lambda v: v.__module__.split(".")[-1],
     ):
         if verifier.is_installed():
             vname = verifier.__module__.split(".")[-1]

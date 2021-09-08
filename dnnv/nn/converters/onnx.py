@@ -49,7 +49,7 @@ class OnnxConverter(OperationVisitor):
         )
         model_def = onnx.helper.make_model(graph_def, producer_name="dnnv")
         model_def = onnx.shape_inference.infer_shapes(model_def)
-        onnx.checker.check_model(model_def)
+        onnx.checker.check_model(model_def, full_check=True)
         return model_def
 
     def visit(self, operation: Operation) -> Union[onnx.NodeProto, onnx.ValueInfoProto]:

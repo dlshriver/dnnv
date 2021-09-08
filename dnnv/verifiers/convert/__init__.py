@@ -110,7 +110,6 @@ class Convert(Verifier):
                     )
                 )
             )
-            # TODO : create ONNX model
         dest: Path = self.parameters.get("dest")
         dest.mkdir(exist_ok=True, parents=True)
         for path in paths:

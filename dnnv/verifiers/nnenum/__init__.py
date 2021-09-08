@@ -14,7 +14,6 @@ from .errors import NnenumError, NnenumTranslatorError
 
 
 class Nnenum(Verifier):
-    EXE = "nnenum.py"
     reduction = partial(IOPolytopeReduction, HalfspacePolytope, HalfspacePolytope)
     translator_error = NnenumTranslatorError
     verifier_error = NnenumError
@@ -65,7 +64,7 @@ class Nnenum(Verifier):
         ) as output_file:
             self._tmp_output_file = output_file
         args = (
-            "nnenum.py",
+            "nnenum",
             onnx_model_file.name,
             constraint_file.name,
             "-o",
@@ -85,4 +84,6 @@ class Nnenum(Verifier):
             return UNSAT, None
         elif result_str == "unsafe":
             return SAT, cex
+        elif result_str == "error":
+            raise self.verifier_error("result:error")
         raise self.translator_error(f"Unknown verification result: {result_str}")

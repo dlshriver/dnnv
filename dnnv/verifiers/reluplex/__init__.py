@@ -14,11 +14,12 @@ class Reluplex(Verifier):
 
     def build_inputs(self, prop):
         if prop.input_constraint.num_variables > 1:
-            raise ReluplexTranslatorError(
+            raise self.translator_error(
                 "Unsupported network: More than 1 input variable"
             )
         layers = as_layers(
-            prop.suffixed_op_graph(), translator_error=self.translator_error,
+            prop.suffixed_op_graph(),
+            translator_error=self.translator_error,
         )
         nnet_file_name = to_nnet_file(
             prop.input_constraint,

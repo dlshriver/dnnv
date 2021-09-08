@@ -30,6 +30,11 @@ Convert MatMul followed by Add to Gemm
 
 DNNV converts instances of MatMul (matrix multiplication) operations, followed immediately by Add operations to an equivalent Gemm (generalized matrix multiplication) operation. The Gemm operation generalizes the matrix multiplication and addition, and can simplify subsequent processing and analysis of the DNN.
 
+Convert Reshape to Flatten
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+DNNV converts the sequence of operations Shape, Gather, Unsqueeze, Concat, Reshape into an equivalent Flatten operation whenever possible. This replaces several, often unsupported operations, with a much more commonly supported operation.
+
 Combine Consecutive Gemm
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -45,6 +50,11 @@ Bundle Pad
 ^^^^^^^^^^
 
 DNNV can bundle explicit Pad operations with an immediately succeeding Conv or MaxPool operation. This both simplifies the DNN model, and increases support, since many verifiers do not support explicit Pad operations (but can support padding as part of a Conv or MaxPool operation).
+
+Bundle Transpose
+^^^^^^^^^^^^^^^^
+
+DNNV can bundle Transpose operations followed by Flatten or Reshape operations with a successive Gemm operation. This effectively removes the Transpose operation from the network, since some verifiers do not support them.
 
 Move Activations Backward
 ^^^^^^^^^^^^^^^^^^^^^^^^^

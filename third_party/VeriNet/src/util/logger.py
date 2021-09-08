@@ -23,15 +23,15 @@ def get_logger(level, name: str, directory: str, filename: str):
         The logger
     """
 
-    if not os.path.isdir(directory):
-        os.mkdir(directory)
+    # if not os.path.isdir(directory):
+    #     os.mkdir(directory)
 
     logger = logging.getLogger(name)
     logger.setLevel(level)
-    handler = logging.FileHandler(directory + filename)
-    handler.setLevel(level)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    # handler = logging.FileHandler(directory + filename)
+    # handler.setLevel(level)
+    # formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    # handler.setFormatter(formatter)
+    # logger.addHandler(handler)
 
     return logger

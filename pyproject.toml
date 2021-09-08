@@ -45,7 +45,7 @@ all = [
 ]
 test = ["coverage~=5.5", "pytest~=6.2", "onnxruntime~=1.8"]
 dev = ["black~=21.7b0", "mypy~=0.910"]
-docs = ["sphinx"]
+docs = ["sphinx", "sphinx-rtd-theme"]
 
 [project.urls]
 Documentation = "https://dnnv.readthedocs.io/en/latest/"
@@ -53,6 +53,7 @@ Source = "https://github.com/dlshriver/DNNV"
 
 [project.scripts]
 dnnv = "dnnv.__main__:_main"
+dnnv_manage = "dnnv._manage.__main__:_main"
 
 [tool.coverage.run]
 branch = true
@@ -60,4 +61,9 @@ command_line = "-m pytest new_tests tests/properties_tests tests/verifiers_tests
 # command_line = "-m pytest new_tests --ff -x --verbose --import-mode=importlib --full-trace"
 parallel = true
 source = ["dnnv"]
-omit = ["dnnv/__main__.py", "dnnv/cli/*", "dnnv/logging/*"]
+omit = [
+    "dnnv/__main__.py",
+    "dnnv/cli/*",
+    "dnnv/logging_utils/*",
+    "dnnv/_manage/*",
+]

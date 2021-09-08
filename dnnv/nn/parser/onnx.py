@@ -1,10 +1,10 @@
+import logging
 import onnx
 
 from pathlib import Path
 from typing import Set
 
 from .. import OperationGraph
-from ... import logging
 from ..operations import Operation
 from ..utils import as_numpy
 

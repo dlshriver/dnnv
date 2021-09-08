@@ -15,23 +15,9 @@ class MIPVerify(Verifier):
     translator_error = MIPVerifyTranslatorError
     verifier_error = MIPVerifyError
 
-    @classmethod
-    def is_installed(cls):
-        verifier = "julia"
-        for path in os.environ["PATH"].split(os.pathsep):
-            exe = os.path.join(path, verifier)
-            if os.path.isfile(exe) and os.access(exe, os.X_OK):
-                proc = sp.run(
-                    ["julia", "-e", "using MIPVerify"],
-                    stdout=sp.DEVNULL,
-                    stderr=sp.DEVNULL,
-                )
-                return proc.returncode == 0
-        return False
-
     def build_inputs(self, prop):
         if prop.input_constraint.num_variables > 1:
-            raise MIPVerifyTranslatorError(
+            raise self.translator_error(
                 "Unsupported network: More than 1 input variable"
             )
         if all((lb >= 0).all() for lb in prop.input_constraint.lower_bounds) and all(
@@ -45,15 +31,17 @@ class MIPVerify(Verifier):
         layers = as_layers(
             op_graph,
             extra_layer_types=MIPVERIFY_LAYER_TYPES,
-            translator_error=MIPVerifyTranslatorError,
+            translator_error=self.translator_error,
         )
-        input_shape = prop.op_graph.input_shape[0]
         lb = lbs[0]
         ub = ubs[0]
         mipverify_inputs = to_mipverify_inputs(
-            lb, ub, layers, translator_error=MIPVerifyTranslatorError,
+            lb,
+            ub,
+            layers,
+            translator_error=self.translator_error,
         )
-        return "julia", mipverify_inputs["property_path"]
+        return "mipverify", mipverify_inputs["property_path"]
 
     def parse_results(self, prop, results):
         stdout, stderr = results
@@ -64,4 +52,4 @@ class MIPVerify(Verifier):
             return SAT, None
         elif "trivial" in result:
             return SAT, None
-        raise MIPVerifyTranslatorError(f"Unexpected verification result: {stdout[-1]}")
+        raise self.translator_error(f"Unexpected verification result: {stdout[-1]}")

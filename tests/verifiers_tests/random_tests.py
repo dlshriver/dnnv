@@ -3,11 +3,11 @@ import unittest
 
 from dnnv import nn
 from dnnv import properties
-from dnnv.properties import Symbol
 from dnnv.properties.context import get_context
 
 from dnnv.verifiers import SAT, UNSAT, UNKNOWN
 from dnnv.verifiers.bab import BaB
+from dnnv.verifiers.babsb import BaBSB
 from dnnv.verifiers.eran import ERAN
 from dnnv.verifiers.marabou import Marabou
 from dnnv.verifiers.mipverify import MIPVerify
@@ -23,6 +23,7 @@ RUNS_PER_PROP = int(os.environ.get("_DNNV_TEST_RUNS_PER_PROP", "1"))
 
 VERIFIERS = {
     "bab": BaB,
+    "babsb": BaBSB,
     "eran": ERAN,
     "marabou": Marabou,
     "mipverify": MIPVerify,

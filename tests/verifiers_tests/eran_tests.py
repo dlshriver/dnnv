@@ -1,4 +1,3 @@
-import os
 import unittest
 
 from tests.verifiers_tests.utils import VerifierTests
