@@ -1,9 +1,8 @@
 import unittest
 
-from tests.verifiers_tests.utils import VerifierTests
-from tests.utils import network_artifact_dir, property_artifact_dir
-
 from dnnv.verifiers.eran import ERAN
+
+from old_tests.verifiers_tests.utils import VerifierTests
 
 
 @unittest.skipIf(not ERAN.is_installed(), "ERAN is not installed")

@@ -1,12 +1,11 @@
 import os
-import unittest
 
 from dnnv import nn
 from dnnv import properties
 from dnnv.properties.context import get_context
 from dnnv.verifiers import SAT, UNSAT, UNKNOWN
 
-from tests.utils import network_artifact_dir, property_artifact_dir
+from old_tests.utils import network_artifact_dir, property_artifact_dir
 
 RUNS_PER_PROP = int(os.environ.get("_DNNV_TEST_RUNS_PER_PROP", "1"))
 

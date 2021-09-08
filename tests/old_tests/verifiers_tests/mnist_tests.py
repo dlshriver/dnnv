@@ -17,7 +17,7 @@ from dnnv.verifiers.planet import Planet
 from dnnv.verifiers.reluplex import Reluplex
 from dnnv.verifiers.verinet import VeriNet
 
-from tests.utils import network_artifact_dir, property_artifact_dir
+from old_tests.utils import network_artifact_dir, property_artifact_dir
 
 RUNS_PER_PROP = int(os.environ.get("_DNNV_TEST_RUNS_PER_PROP", "1"))
 
