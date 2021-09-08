@@ -79,8 +79,8 @@ def test_Implies_mixed():
 def test_Implies_const_arrays():
     transformer = PropagateConstants()
 
-    a, b = Constant(np.ones((1, 3), dtype=np.bool)), Constant(
-        np.ones((1, 3), dtype=np.bool)
+    a, b = Constant(np.ones((1, 3), dtype=bool)), Constant(
+        np.ones((1, 3), dtype=bool)
     )
     expr = Implies(a, b)
     new_expr = transformer.visit(expr)
@@ -88,8 +88,8 @@ def test_Implies_const_arrays():
     assert isinstance(new_expr, Constant)
     assert new_expr.value == True
 
-    a, b = Constant(np.ones((1, 3), dtype=np.bool)), Constant(
-        np.zeros((1, 3), dtype=np.bool)
+    a, b = Constant(np.ones((1, 3), dtype=bool)), Constant(
+        np.zeros((1, 3), dtype=bool)
     )
     expr = Implies(a, b)
     new_expr = transformer.visit(expr)
@@ -97,8 +97,8 @@ def test_Implies_const_arrays():
     assert isinstance(new_expr, Constant)
     assert new_expr.value == False
 
-    a, b = Constant(np.zeros((1, 3), dtype=np.bool)), Constant(
-        np.ones((1, 3), dtype=np.bool)
+    a, b = Constant(np.zeros((1, 3), dtype=bool)), Constant(
+        np.ones((1, 3), dtype=bool)
     )
     expr = Implies(a, b)
     new_expr = transformer.visit(expr)
@@ -106,8 +106,8 @@ def test_Implies_const_arrays():
     assert isinstance(new_expr, Constant)
     assert new_expr.value == True
 
-    a, b = Constant(np.zeros((1, 3), dtype=np.bool)), Constant(
-        np.zeros((1, 3), dtype=np.bool)
+    a, b = Constant(np.zeros((1, 3), dtype=bool)), Constant(
+        np.zeros((1, 3), dtype=bool)
     )
     expr = Implies(a, b)
     new_expr = transformer.visit(expr)
@@ -115,33 +115,33 @@ def test_Implies_const_arrays():
     assert isinstance(new_expr, Constant)
     assert new_expr.value == True
 
-    arr_a = np.array([1, 0, 1, 0], dtype=np.bool)
-    arr_b = np.array([1, 0, 0, 1], dtype=np.bool)
+    arr_a = np.array([1, 0, 1, 0], dtype=bool)
+    arr_b = np.array([1, 0, 0, 1], dtype=bool)
     a, b = Constant(arr_a), Constant(arr_b)
     expr = Implies(a, b)
     new_expr = transformer.visit(expr)
     assert new_expr is not expr
     assert isinstance(new_expr, Constant)
-    assert np.all(new_expr.value == np.array([1, 1, 0, 1], dtype=np.bool))
+    assert np.all(new_expr.value == np.array([1, 1, 0, 1], dtype=bool))
 
 
 def test_Implies_array_for_antecedent():
     transformer = PropagateConstants()
 
-    a, b = Constant(np.ones((1, 3), dtype=np.bool)), Symbol("b")
+    a, b = Constant(np.ones((1, 3), dtype=bool)), Symbol("b")
     expr = Implies(a, b)
     new_expr = transformer.visit(expr)
     assert new_expr is not expr
     assert new_expr is Symbol("b")
 
-    a, b = Constant(np.zeros((1, 3), dtype=np.bool)), Symbol("b")
+    a, b = Constant(np.zeros((1, 3), dtype=bool)), Symbol("b")
     expr = Implies(a, b)
     new_expr = transformer.visit(expr)
     assert new_expr is not expr
     assert isinstance(new_expr, Constant)
     assert new_expr.value == True
 
-    arr_a = np.array([1, 0], dtype=np.bool)
+    arr_a = np.array([1, 0], dtype=bool)
     a, b = Constant(arr_a), Symbol("b")
     expr = Implies(a, b)
     new_expr = transformer.visit(expr)
@@ -154,21 +154,21 @@ def test_Implies_array_for_antecedent():
 def test_Implies_array_for_consequent():
     transformer = PropagateConstants()
 
-    a, b = Symbol("a"), Constant(np.zeros((1, 3), dtype=np.bool))
+    a, b = Symbol("a"), Constant(np.zeros((1, 3), dtype=bool))
     expr = Implies(a, b)
     new_expr = transformer.visit(expr)
     assert new_expr is not expr
     assert isinstance(new_expr, Not)
     assert new_expr.expr is Symbol("a")
 
-    a, b = Symbol("a"), Constant(np.ones((1, 3), dtype=np.bool))
+    a, b = Symbol("a"), Constant(np.ones((1, 3), dtype=bool))
     expr = Implies(a, b)
     new_expr = transformer.visit(expr)
     assert new_expr is not expr
     assert isinstance(new_expr, Constant)
     assert new_expr.value == True
 
-    arr_b = np.array([1, 0], dtype=np.bool)
+    arr_b = np.array([1, 0], dtype=bool)
     a, b = Symbol("a"), Constant(arr_b)
     expr = Implies(a, b)
     new_expr = transformer.visit(expr)

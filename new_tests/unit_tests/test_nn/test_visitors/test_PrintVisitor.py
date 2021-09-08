@@ -469,7 +469,7 @@ def test_Resize(capsys):
     resize_op = Resize(
         input_op,
         np.array([], dtype=np.float32),
-        np.array([1, 1, 2, 2], dtype=np.float),
+        np.array([1, 1, 2, 2], dtype=np.float64),
         np.array([], dtype=np.int64),
     )
     PrintVisitor().visit(resize_op)
@@ -484,7 +484,7 @@ Resize_0                        : Resize(Input_0, scales=[1.0, 1.0, 2.0, 2.0], c
     resize_op = Resize(
         input_op,
         np.array([], dtype=np.float32),
-        np.array([], dtype=np.float),
+        np.array([], dtype=np.float64),
         np.array([1, 3, 4, 4], dtype=np.int64),
     )
     PrintVisitor().visit(resize_op)
@@ -499,7 +499,7 @@ Resize_0                        : Resize(Input_0, sizes=[1, 3, 4, 4], coordinate
     resize_op = Resize(
         input_op,
         np.array([0, 0, 1, 1], dtype=np.float32),
-        np.array([], dtype=np.float),
+        np.array([], dtype=np.float64),
         np.array([1, 3, 4, 4], dtype=np.int64),
     )
     PrintVisitor().visit(resize_op)

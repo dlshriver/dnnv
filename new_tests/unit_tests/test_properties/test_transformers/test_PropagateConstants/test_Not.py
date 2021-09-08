@@ -33,9 +33,9 @@ def test_Not_on_const():
 def test_Not_on_const_array():
     transformer = PropagateConstants()
 
-    arr = np.array([1, 0], dtype=np.bool)
+    arr = np.array([1, 0], dtype=bool)
     expr = Not(Constant(arr))
     new_expr = transformer.visit(expr)
     assert new_expr is not expr
     assert isinstance(new_expr, Constant)
-    assert np.allclose(new_expr.value, np.array([0, 1], dtype=np.bool))
+    assert np.allclose(new_expr.value, np.array([0, 1], dtype=bool))

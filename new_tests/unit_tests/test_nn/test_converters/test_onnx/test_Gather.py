@@ -36,7 +36,7 @@ def test_Gather_0():
 
     data = np.random.randn(5, 4, 3, 2).astype(np.float32)
     indices = np.array([0, 1, 3])
-    indices_input_op = Input((3,), np.dtype(np.int))
+    indices_input_op = Input((3,), np.dtype(np.int64))
     op = Gather(data, indices_input_op, axis=0)
     onnx_model = convert(OperationGraph([op]))
 

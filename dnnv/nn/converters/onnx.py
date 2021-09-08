@@ -33,7 +33,6 @@ class OnnxConverter(OperationVisitor):
             self.op_graph.output_details
         )  # TODO: don't rely on tensorflow converter
         for op, (shape, dtype) in zip(self.op_graph.output_operations, output_details):
-            print(op, shape, dtype)
             output_op = self.visit(op)
             node = onnx.helper.make_tensor_value_info(
                 output_op.name, NUMPY_TO_ONNX_DTYPE[dtype], shape
@@ -48,7 +47,6 @@ class OnnxConverter(OperationVisitor):
             self.outputs,
             initializer=self.initializer,
         )
-        print(graph_def)
         model_def = onnx.helper.make_model(graph_def, producer_name="dnnv")
         model_def = onnx.shape_inference.infer_shapes(model_def)
         onnx.checker.check_model(model_def)
@@ -76,15 +74,9 @@ class OnnxConverter(OperationVisitor):
             tensor_proto = onnx.numpy_helper.from_array(value, name=opname)
             self.initializer.append(tensor_proto)
             return tensor_proto
-        elif isinstance(value, (int)):
+        elif isinstance(value, (int, float)):
             tensor_proto = onnx.numpy_helper.from_array(
-                np.array(value, dtype=np.int32), name=opname
-            )
-            self.initializer.append(tensor_proto)
-            return tensor_proto
-        elif isinstance(value, (float)):
-            tensor_proto = onnx.numpy_helper.from_array(
-                np.array(value, dtype=np.float32), name=opname
+                np.array(value, dtype=f"{type(value).__name__}32"), name=opname
             )
             self.initializer.append(tensor_proto)
             return tensor_proto

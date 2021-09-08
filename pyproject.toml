@@ -58,7 +58,6 @@ dnnv = "dnnv.__main__:_main"
 branch = true
 command_line = "-m pytest new_tests tests/properties_tests tests/verifiers_tests --ff --verbose --import-mode=importlib --full-trace"
 # command_line = "-m pytest new_tests --ff -x --verbose --import-mode=importlib --full-trace"
-# command_line = "-m pytest new_tests/unit_tests/test_verifiers/test_common/test_reductions/test_iopolytope --ff --verbose --import-mode=importlib --full-trace"
-# command_line = "-m pytest new_tests/unit_tests/test_verifiers new_tests/unit_tests/test_nn/test_analyzers new_tests/unit_tests/test_nn/test_converters new_tests/unit_tests/test_nn/test_graph new_tests/unit_tests/test_nn/test_layers new_tests/unit_tests/test_nn/test_operations new_tests/unit_tests/test_nn/test_transformers --ff --verbose --import-mode=importlib --full-trace"
 parallel = true
 source = ["dnnv"]
+omit = ["dnnv/__main__.py", "dnnv/cli/*", "dnnv/logging/*"]

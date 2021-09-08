@@ -38,33 +38,33 @@ def test_And_consts():
 def test_And_const_arrays():
     transformer = PropagateConstants()
 
-    a, b, c = Constant(np.ones((1, 3), dtype=np.bool)), Constant(True), Constant(False)
+    a, b, c = Constant(np.ones((1, 3), dtype=bool)), Constant(True), Constant(False)
     expr = a & b & c
     new_expr = transformer.visit(expr)
     assert new_expr is not expr
     assert isinstance(new_expr, Constant)
-    assert np.allclose(new_expr.value, np.zeros((1, 3), dtype=np.bool))
-    assert np.allclose(a.value, np.ones((1, 3), dtype=np.bool))
+    assert np.allclose(new_expr.value, np.zeros((1, 3), dtype=bool))
+    assert np.allclose(a.value, np.ones((1, 3), dtype=bool))
 
     a, b, c = (
-        Constant(np.ones((1, 3), dtype=np.bool)),
+        Constant(np.ones((1, 3), dtype=bool)),
         Constant(False),
-        Constant(np.ones((1, 3), dtype=np.bool)),
+        Constant(np.ones((1, 3), dtype=bool)),
     )
     expr = a & b & c
     new_expr = transformer.visit(expr)
     assert new_expr is not expr
     assert isinstance(new_expr, Constant)
-    assert np.allclose(new_expr.value, np.zeros((1, 3), dtype=np.bool))
-    assert np.allclose(a.value, np.ones((1, 3), dtype=np.bool))
-    assert np.allclose(c.value, np.ones((1, 3), dtype=np.bool))
+    assert np.allclose(new_expr.value, np.zeros((1, 3), dtype=bool))
+    assert np.allclose(a.value, np.ones((1, 3), dtype=bool))
+    assert np.allclose(c.value, np.ones((1, 3), dtype=bool))
 
-    a, b, c = Constant(True), Constant(True), Constant(np.zeros((1, 3), dtype=np.bool))
+    a, b, c = Constant(True), Constant(True), Constant(np.zeros((1, 3), dtype=bool))
     expr = a & b & c
     new_expr = transformer.visit(expr)
     assert new_expr is not expr
     assert isinstance(new_expr, Constant)
-    assert np.allclose(new_expr.value, np.zeros((1, 3), dtype=np.bool))
+    assert np.allclose(new_expr.value, np.zeros((1, 3), dtype=bool))
     assert np.allclose(c.value, np.zeros((1, 3)))
 
 
@@ -114,9 +114,9 @@ def test_And_mixed_const_arrays():
 
     expr = And(
         Symbol("a"),
-        Constant(np.ones((1, 3), dtype=np.bool)),
+        Constant(np.ones((1, 3), dtype=bool)),
         Symbol("b"),
-        Constant(np.ones((1, 3), dtype=np.bool)),
+        Constant(np.ones((1, 3), dtype=bool)),
     )
     new_expr = transformer.visit(expr)
     assert new_expr is not expr
@@ -127,8 +127,8 @@ def test_And_mixed_const_arrays():
 
     expr = And(
         Symbol("a"),
-        Constant(np.ones((1, 3), dtype=np.bool)),
-        Constant(np.ones((1, 3), dtype=np.bool)),
+        Constant(np.ones((1, 3), dtype=bool)),
+        Constant(np.ones((1, 3), dtype=bool)),
     )
     new_expr = transformer.visit(expr)
     assert new_expr is not expr
@@ -136,22 +136,22 @@ def test_And_mixed_const_arrays():
 
     expr = And(
         Symbol("a"),
-        Constant(np.ones((1, 3), dtype=np.bool)),
+        Constant(np.ones((1, 3), dtype=bool)),
         Symbol("b"),
-        Constant(np.zeros((1, 3), dtype=np.bool)),
+        Constant(np.zeros((1, 3), dtype=bool)),
     )
     new_expr = transformer.visit(expr)
     assert new_expr is not expr
     assert isinstance(new_expr, Constant)
     assert new_expr.value == False
 
-    arr = np.ones((1, 3), dtype=np.bool)
+    arr = np.ones((1, 3), dtype=bool)
     arr[0, 1] = False
     expr = And(
         Symbol("a"),
         Constant(arr),
         Symbol("b"),
-        Constant(np.ones((1, 3), dtype=np.bool)),
+        Constant(np.ones((1, 3), dtype=bool)),
     )
     new_expr = transformer.visit(expr)
     assert new_expr is not expr

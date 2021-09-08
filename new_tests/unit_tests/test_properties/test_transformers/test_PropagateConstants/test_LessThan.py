@@ -82,4 +82,4 @@ def test_LessThan_const_arrays():
     new_expr = transformer.visit(expr)
     assert new_expr is not expr
     assert isinstance(new_expr, Constant)
-    assert np.all(new_expr.value == np.array([0, 0, 1], dtype=np.bool))
+    assert np.all(new_expr.value == np.array([0, 0, 1], dtype=bool))

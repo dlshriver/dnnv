@@ -37,9 +37,9 @@ def as_numpy(node):
         return numpy_helper.to_array(node.attribute[0].t)
     elif isinstance(node, onnx.AttributeProto):
         if node.type == onnx.AttributeProto.FLOAT:
-            return np.float(node.f)
+            return float(node.f)
         elif node.type == onnx.AttributeProto.INT:
-            return np.int(node.i)
+            return int(node.i)
         elif node.type == onnx.AttributeProto.INTS:
             return np.asarray(node.ints)
         elif node.type == onnx.AttributeProto.STRING:

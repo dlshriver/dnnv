@@ -225,6 +225,7 @@ class RandomTests(unittest.TestCase):
     def test_hyperlocal_random_conv_0(self):
         os.environ["OUTPUT_LAYER"] = "-1"
         excluded_verifiers = {
+            "mipverify",
             "reluplex",
             "verinet",
         }

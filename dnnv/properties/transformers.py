@@ -377,7 +377,7 @@ class PropagateConstants(ExpressionTransformer):
         condition = self.visit(expression.condition)
         t_expr = self.visit(expression.t_expr)
         f_expr = self.visit(expression.f_expr)
-        bool_type = (bool, np.bool, np.bool_)
+        bool_type = (bool, np.bool_)
         if condition.is_concrete:
             if condition.value:
                 return t_expr
@@ -506,7 +506,7 @@ class PropagateConstants(ExpressionTransformer):
 
     def visit_Not(self, expression: Network):
         expr = self.visit(expression.expr)
-        bool_type = (bool, np.bool, np.bool_)
+        bool_type = (bool, np.bool_)
         if isinstance(expr, Constant):
             if isinstance(expr.value, bool_type):
                 return Constant(not expr.value)
