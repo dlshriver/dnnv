@@ -48,12 +48,7 @@ def main(args):
     ninputs = A_input.shape[1]
 
     init_box = np.array(
-        list(
-            zip(
-                lb.reshape(network.get_input_shape()),
-                ub.reshape(network.get_input_shape()),
-            )
-        ),
+        list(zip(lb.flatten(), ub.flatten())),
         dtype=np.float32,
     )
     init_star = LpStar(
