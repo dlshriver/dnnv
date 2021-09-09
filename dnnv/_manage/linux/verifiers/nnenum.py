@@ -48,12 +48,7 @@ def main(args):
     ninputs = A_input.shape[1]
 
     init_box = np.array(
-        list(
-            zip(
-                lb.reshape(network.get_input_shape()).flatten("F"),
-                ub.reshape(network.get_input_shape()).flatten("F"),
-            )
-        ),
+        list(zip(lb.flatten(), ub.flatten())),
         dtype=np.float32,
     )
     init_star = LpStar(
@@ -74,7 +69,7 @@ def main(args):
             cex = (
                 np.array(list(result.cinput))
                 .astype(np.float32)
-                .reshape(network.get_input_shape(), order="F")
+                .reshape(network.get_input_shape())
             )
             print(cex)
         np.save(args.output, (result.result_str, cex))
@@ -89,7 +84,7 @@ if __name__ == "__main__":
 
 class NnenumInstaller(Installer):
     def run(self, env: Environment, dependency: Dependency):
-        commit_hash = "4018cc0"
+        commit_hash = "6854a6b0bb766806bb42570230adcbd0ecfab809"
         name = "nnenum"
 
         cache_dir = env.cache_dir / f"{name}-{commit_hash}"

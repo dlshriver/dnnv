@@ -46,7 +46,6 @@ def subtraction_helper(*args):
         return Negation(*args)
     elif len(args) == 2:
         return Subtract(*args)
-    print(args)
     raise ValueError("Subtraction not implemented for more than 2 args.")
 
 

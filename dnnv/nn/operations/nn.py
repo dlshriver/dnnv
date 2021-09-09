@@ -1,6 +1,6 @@
 import numpy as np
 
-from collections import Iterable
+from typing import Optional
 
 from .base import Operation
 from ..utils import as_numpy
@@ -14,21 +14,22 @@ class AveragePool(Operation):
         *,
         ceil_mode=False,
         count_include_pad=False,
-        pads=0,
-        strides=1,
+        pads=None,
+        strides=None,
+        name: Optional[str] = None,
     ):
+        super().__init__(name=name)
         self.x = x
         self.kernel_shape = kernel_shape
         self.ceil_mode = ceil_mode
         self.count_include_pad = count_include_pad
-        if isinstance(pads, Iterable):
-            self.pads = tuple(pads)
-        elif isinstance(pads, int):
-            self.pads = (pads,) * 4
-        if isinstance(strides, Iterable):
-            self.strides = tuple(strides)
-        elif isinstance(strides, int):
-            self.strides = (strides,) * 4
+
+        self.pads = np.asarray(
+            pads if pads is not None else (0,) * (len(self.kernel_shape) * 2)
+        )
+        self.strides = np.asarray(
+            strides if strides is not None else (1,) * len(self.kernel_shape)
+        )
 
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):
@@ -36,8 +37,8 @@ class AveragePool(Operation):
         ceil_mode = bool(attributes.get("ceil_mode", False))
         count_include_pad = bool(attributes.get("count_include_pad", False))
         kernel_shape = attributes.get("kernel_shape")
-        pads = attributes.get("pads", 0)
-        strides = attributes.get("strides", 1)
+        pads = attributes.get("pads")
+        strides = attributes.get("strides")
         return cls(
             *inputs,
             kernel_shape,
@@ -45,11 +46,24 @@ class AveragePool(Operation):
             count_include_pad=count_include_pad,
             pads=pads,
             strides=strides,
+            name=onnx_node.name,
         )
 
 
 class BatchNormalization(Operation):
-    def __init__(self, x, scale, bias, mean, variance, *, epsilon=1e-5, momentum=0.9):
+    def __init__(
+        self,
+        x,
+        scale,
+        bias,
+        mean,
+        variance,
+        *,
+        epsilon=1e-5,
+        momentum=0.9,
+        name: Optional[str] = None,
+    ):
+        super().__init__(name=name)
         self.x = x
         self.scale = scale
         self.bias = bias
@@ -63,7 +77,7 @@ class BatchNormalization(Operation):
         attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
         epsilon = attributes.get("epsilon", 1e-5)
         momentum = attributes.get("momentum", 0.9)
-        return cls(*inputs, epsilon=epsilon, momentum=momentum)
+        return cls(*inputs, epsilon=epsilon, momentum=momentum, name=onnx_node.name)
 
 
 class Conv(Operation):
@@ -78,7 +92,9 @@ class Conv(Operation):
         kernel_shape=None,
         pads=None,
         strides=None,
+        name: Optional[str] = None,
     ):
+        super().__init__(name=name)
         self.x = x
         self.w = w
         self.b = b
@@ -112,6 +128,7 @@ class Conv(Operation):
             kernel_shape=kernel_shape,
             pads=pads,
             strides=strides,
+            name=onnx_node.name,
         )
 
 
@@ -130,7 +147,9 @@ class ConvTranspose(Operation):
         output_shape=None,
         pads=None,
         strides=None,
+        name: Optional[str] = None,
     ):
+        super().__init__(name=name)
         self.x = x
         self.w = w
         self.b = b
@@ -182,11 +201,13 @@ class ConvTranspose(Operation):
             output_shape=output_shape,
             pads=pads,
             strides=strides,
+            name=onnx_node.name,
         )
 
 
 class Dropout(Operation):
-    def __init__(self, x, *, ratio=0.5):
+    def __init__(self, x, *, ratio=0.5, name: Optional[str] = None):
+        super().__init__(name=name)
         self.x = x
         self.ratio = ratio
 
@@ -194,16 +215,17 @@ class Dropout(Operation):
     def from_onnx(cls, onnx_node, *inputs):
         attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
         ratio = attributes.get("ratio", 0.5)
-        return cls(*inputs, ratio=ratio)
+        return cls(*inputs, ratio=ratio, name=onnx_node.name)
 
 
 class GlobalAveragePool(Operation):
-    def __init__(self, x):
+    def __init__(self, x, *, name: Optional[str] = None):
+        super().__init__(name=name)
         self.x = x
 
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):
-        return cls(*inputs)
+        return cls(*inputs, name=onnx_node.name)
 
 
 class MaxPool(Operation):
@@ -216,34 +238,37 @@ class MaxPool(Operation):
         kernel_shape,
         *,
         ceil_mode=False,
-        dilations=(1, 1),
-        pads=0,
+        dilations=None,
+        pads=None,
         storage_order=ROW_MAJOR_STORAGE,
-        strides=1,
+        strides=None,
+        name: Optional[str] = None,
     ):
+        super().__init__(name=name)
         self.x = x
         self.ceil_mode = ceil_mode
-        self.dilations = np.asarray(dilations)
-        self.kernel_shape = kernel_shape
         self.storage_order = storage_order
-        if isinstance(pads, Iterable):
-            self.pads = tuple(pads)
-        elif isinstance(pads, int):
-            self.pads = (pads,) * 4
-        if isinstance(strides, Iterable):
-            self.strides = tuple(strides)
-        elif isinstance(strides, int):
-            self.strides = (strides,) * 4
+
+        self.kernel_shape = np.asarray(kernel_shape)
+        self.dilations = np.asarray(
+            dilations if dilations is not None else (1,) * len(self.kernel_shape)
+        )
+        self.pads = np.asarray(
+            pads if pads is not None else (0,) * (len(self.kernel_shape) * 2)
+        )
+        self.strides = np.asarray(
+            strides if strides is not None else (1,) * len(self.kernel_shape)
+        )
 
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):
         attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
         ceil_mode = bool(attributes.get("ceil_mode", False))
-        dilations = attributes.get("dilations", (1, 1))
+        dilations = attributes.get("dilations")
         kernel_shape = attributes.get("kernel_shape")
-        pads = attributes.get("pads", 0)
+        pads = attributes.get("pads")
         storage_order = attributes.get("storage_order", MaxPool.ROW_MAJOR_STORAGE)
-        strides = attributes.get("strides", 1)
+        strides = attributes.get("strides")
         return cls(
             *inputs,
             kernel_shape,
@@ -252,5 +277,16 @@ class MaxPool(Operation):
             pads=pads,
             storage_order=storage_order,
             strides=strides,
+            name=onnx_node.name,
         )
 
+
+__all__ = [
+    "AveragePool",
+    "BatchNormalization",
+    "Conv",
+    "ConvTranspose",
+    "Dropout",
+    "GlobalAveragePool",
+    "MaxPool",
+]

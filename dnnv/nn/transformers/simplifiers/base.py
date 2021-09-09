@@ -10,7 +10,7 @@ class Simplifier(OperationTransformer):
     ANALYSES: Dict[str, Type[Analysis]] = {}
 
     def __init__(self, dnn: OperationGraph):
-        self._cache: Dict[Operation, Operation] = {}
+        super().__init__()
         self._modified_graph = False
         self.dnn = dnn
         self.run_analyses()
@@ -47,6 +47,7 @@ class ComposeSimplifiers(Simplifier):
                 if modified_graph:
                     for simplifier in self.simplifiers:
                         simplifier.run_analyses()
+                    break
             self._modified_graph |= modified_graph
         return operation
 

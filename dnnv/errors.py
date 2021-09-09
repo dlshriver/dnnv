@@ -1,0 +1,2 @@
+class DNNVError(Exception):
+    pass

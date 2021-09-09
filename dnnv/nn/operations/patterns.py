@@ -138,3 +138,6 @@ class Sequential(OperationPattern):
             next_operations = matches
         for match in next_operations:
             yield match
+
+
+__all__ = ["OperationPattern", "Or", "Parallel", "Sequential"]

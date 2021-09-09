@@ -115,9 +115,10 @@ ENV/
 /share/
 /data/
 /artifacts/
-/tests/artifacts/networks/*.onnx
-!/tests/artifacts/networks/dave.onnx
-!/tests/artifacts/networks/dronet.onnx
-!/tests/artifacts/networks/convSmallRELU__Point.onnx
-!/tests/artifacts/networks/mnist_relu_3_50.onnx
+/tests/old_tests/artifacts/networks/*.onnx
+!/tests/old_tests/artifacts/networks/dave.onnx
+!/tests/old_tests/artifacts/networks/dronet.onnx
+!/tests/old_tests/artifacts/networks/convSmallRELU__Point.onnx
+!/tests/old_tests/artifacts/networks/mnist_relu_3_50.onnx
+!/tests/old_tests/artifacts/networks/mnist_300_200_100.onnx
 .dnnv/

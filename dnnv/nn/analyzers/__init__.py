@@ -28,6 +28,8 @@ class ConstantsAnalysis(Analysis):
 
     def visit(self, operation: Operation):
         super().visit(operation)
+        if operation in self.results:
+            return self
         for value in operation.__dict__.values():
             if isinstance(value, Operation) and not self.results[value]:
                 self.results[operation] = False
@@ -36,21 +38,12 @@ class ConstantsAnalysis(Analysis):
             self.results[operation] = True
         return self
 
-    def visit_Gather(self, operation: operations.Gather):
-        if isinstance(operation.x, operations.Shape):
-            shape = OperationGraph([operation.x]).output_shape[0]
-            gathered_shape = np.take(shape, operation.indices, operation.axis)
-            if all(d > 0 for d in gathered_shape):
-                self.results[operation] = True
-                return
-        return self.generic_visit(operation)
-
     def visit_Input(self, operation: operations.Input):
         self.results[operation] = False
 
     def visit_Shape(self, operation: operations.Shape):
         shape = OperationGraph([operation.x]).output_shape[0]
-        if all(d > 0 for d in shape):
+        if all(d >= 0 for d in shape):
             self.results[operation] = True
 
 

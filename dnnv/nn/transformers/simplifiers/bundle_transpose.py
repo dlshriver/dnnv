@@ -9,7 +9,6 @@ from ... import operations, OperationGraph
 class BundleTranspose(Simplifier):
     def visit_Gemm(self, operation: operations.Gemm) -> operations.Gemm:
         if not all(len(s) > 1 for s in OperationGraph([operation]).input_shape):
-            # ensure that all
             return operation
         if operation.transpose_a:  # TODO : what if operation.b is the Operation?
             return operation

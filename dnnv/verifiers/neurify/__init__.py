@@ -41,7 +41,7 @@ class Neurify(Verifier):
             "-x",
             neurify_inputs["input_path"],
             "-sl",
-            "0.0000000000001",  # TODO: remove magic number
+            "0.000000000001",  # TODO: remove magic number
             "-I",
             neurify_inputs["input_interval_path"],
             "-H",

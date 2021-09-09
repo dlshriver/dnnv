@@ -1,5 +1,5 @@
 import numpy as np
-import tensorflow.compat.v1 as tf
+import tensorflow as tf
 
 from ..graph import OperationGraph
 from ..operations import Operation
@@ -18,28 +18,13 @@ def convert(op_graph: OperationGraph):
         output_funcs.append(converter.visit(op))
 
     def func(*inputs, squeeze=True):
-        concrete = True
-        if any(isinstance(x, tf.Tensor) for x in inputs):
-            concrete = False
         converter._cache.clear()
-        graph = tf.Graph()
-        with graph.as_default():
-            outputs = []
-            for output_func in output_funcs:
-                output = output_func(*inputs)
-                if isinstance(output, tf.Tensor) and tf.executing_eagerly():
-                    output = output.numpy()
-                outputs.append(output)
-        if concrete:
-            tensor_indices = []
-            for i, output in enumerate(outputs):
-                if isinstance(output, tf.Tensor):
-                    tensor_indices.append(i)
-            if len(tensor_indices) > 0:
-                with tf.Session(graph=graph) as sess:
-                    concrete_outputs = sess.run([outputs[i] for i in tensor_indices])
-                for i, j in enumerate(tensor_indices):
-                    outputs[j] = concrete_outputs[i]
+        outputs = []
+        for output_func in output_funcs:
+            output = output_func(*inputs)
+            if isinstance(output, tf.Tensor) and tf.executing_eagerly():
+                output = output.numpy()
+            outputs.append(output)
         if squeeze and len(outputs) == 1:
             return outputs[0]
         return tuple(outputs)
@@ -73,7 +58,14 @@ class TensorflowConverter(OperationVisitor):
                 except TensorflowConverterError:
                     raise
                 except Exception as e:
-                    raise TensorflowConverterError(f"{type(e).__name__}: {e.args[0]}")
+                    args_str = ""
+                    if len(e.args) == 1:
+                        args_str = e.args[0]
+                    elif len(e.args) > 1:
+                        args_str = str(e.args)
+                    raise TensorflowConverterError(
+                        f"{type(e).__name__}: {args_str}"
+                    ).with_traceback(e.__traceback__)
             return self._cache[func]
 
         return wrapped_func
@@ -129,14 +121,26 @@ class TensorflowConverter(OperationVisitor):
         @self._cached
         def avgpool_func(*inputs):
             x = _concretize([x_], inputs)
+            if operation.ceil_mode:
+                # TODO : add support
+                raise ValueError(
+                    "ceil_mode=True is not currently supported for AveragePool"
+                )
+            if any(p != 0 for p in operation.pads) and not operation.count_include_pad:
+                # TODO : add support
+                raise ValueError(
+                    "count_include_pad=False is not currently supported for AveragePool"
+                )
             kernel_shape = operation.kernel_shape
             strides = operation.strides
-            pad_top, pad_left, pad_bottom, pad_right = operation.pads
-
-            x = tf.transpose(x, (0, 2, 3, 1))
-            padded_x = tf.pad(
-                x, ((0, 0), (pad_top, pad_bottom), (pad_left, pad_right), (0, 0))
+            num_pads = len(operation.pads)
+            pads = tuple(
+                zip(operation.pads[: num_pads // 2], operation.pads[num_pads // 2 :])
             )
+
+            x_ndim = int(tf.rank(x))
+            x = tf.transpose(x, (0,) + tuple(range(2, x_ndim)) + (1,))
+            padded_x = tf.pad(x, ((0, 0),) + pads + ((0, 0),))
             result = tf.nn.pool(
                 padded_x,
                 kernel_shape,
@@ -144,7 +148,10 @@ class TensorflowConverter(OperationVisitor):
                 strides=strides,
                 padding="VALID",
             )
-            result = tf.transpose(result, (0, 3, 1, 2))
+            result_ndim = int(tf.rank(result))
+            result = tf.transpose(
+                result, (0, result_ndim - 1) + tuple(range(1, result_ndim - 1))
+            )
             return result
 
         return avgpool_func
@@ -163,26 +170,20 @@ class TensorflowConverter(OperationVisitor):
             variance = operation.variance
             epsilon = operation.epsilon
 
-            if len(x.shape) == 4:
-                x = tf.transpose(x, (0, 2, 3, 1))
-                result = tf.nn.batch_normalization(
-                    x,
-                    mean=mean,
-                    variance=variance,
-                    offset=bias,
-                    scale=scale,
-                    variance_epsilon=epsilon,
-                )
-                result = tf.transpose(result, (0, 3, 1, 2))
-            else:
-                result = tf.nn.batch_normalization(
-                    x,
-                    mean=mean,
-                    variance=variance,
-                    offset=bias,
-                    scale=scale,
-                    variance_epsilon=epsilon,
-                )
+            x_ndim = int(tf.rank(x))
+            x = tf.transpose(x, (0,) + tuple(range(2, x_ndim)) + (1,))
+            result = tf.nn.batch_normalization(
+                x,
+                mean=mean,
+                variance=variance,
+                offset=bias,
+                scale=scale,
+                variance_epsilon=epsilon,
+            )
+            result_ndim = int(tf.rank(result))
+            result = tf.transpose(
+                result, (0, result_ndim - 1) + tuple(range(1, result_ndim - 1))
+            )
             return result
 
         return batchnorm_func
@@ -234,12 +235,14 @@ class TensorflowConverter(OperationVisitor):
                 bias = np.zeros((weights.shape[0],), dtype=weights.dtype)
             assert np.all(operation.dilations == 1)
             assert np.all(operation.group == 1)
-            pad_top, pad_left, pad_bottom, pad_right = operation.pads
-
-            x = tf.transpose(x, (0, 2, 3, 1))
-            padded_x = tf.pad(
-                x, ((0, 0), (pad_top, pad_bottom), (pad_left, pad_right), (0, 0))
+            num_pads = len(operation.pads)
+            pads = tuple(
+                zip(operation.pads[: num_pads // 2], operation.pads[num_pads // 2 :])
             )
+
+            x_ndim = int(tf.rank(x))
+            x = tf.transpose(x, (0,) + tuple(range(2, x_ndim)) + (1,))
+            padded_x = tf.pad(x, ((0, 0),) + pads + ((0, 0),))
             result = tf.nn.bias_add(
                 tf.nn.conv2d(
                     padded_x,
@@ -249,7 +252,10 @@ class TensorflowConverter(OperationVisitor):
                 ),
                 bias,
             )
-            result = tf.transpose(result, (0, 3, 1, 2))
+            result_ndim = int(tf.rank(result))
+            result = tf.transpose(
+                result, (0, result_ndim - 1) + tuple(range(1, result_ndim - 1))
+            )
             return result
 
         return conv_func
@@ -262,23 +268,51 @@ class TensorflowConverter(OperationVisitor):
         @self._cached
         def convtranspose_func(*inputs):
             x = _concretize([x_], inputs)
-            if len(operation.kernel_shape) != 2:
+
+            if len(operation.kernel_shape) == 1:
+                conv_transpose = tf.nn.conv1d_transpose
+            elif len(operation.kernel_shape) == 2:
+                conv_transpose = tf.nn.conv2d_transpose
+            elif len(operation.kernel_shape) == 3:
+                conv_transpose = tf.nn.conv3d_transpose
+            else:
                 raise NotImplementedError(
-                    "Non 2d ConvTranspose operations are not currently supported."
+                    f"{len(operation.kernel_shape)}d ConvTranspose operations are not currently supported."
                 )
+            if (
+                operation.auto_pad != "NOTSET"
+                or operation.auto_pad == "VALID"
+                and any(p != 0 for p in operation.pads)
+            ):
+                raise NotImplementedError(
+                    f"Unsupported padding for ConvTranspose: {operation.auto_pad}"
+                )
+            if np.any(operation.dilations != 1):
+                raise NotImplementedError(
+                    f"Unsupported dilations for ConvTranspose: {operation.dilations}"
+                )
+
             weights = operation.w
             if operation.b is not None:
                 bias = operation.b
             else:
-                bias = np.zeros((weights.shape[0],), dtype=weights.dtype)
-            assert np.all(operation.dilations == 1)
+                bias = np.zeros((weights.shape[1],), dtype=weights.dtype)
             assert np.all(operation.group == 1)
-            pad_top, pad_left, pad_bottom, pad_right = operation.pads
+
+            num_pads = len(operation.pads)
+            pads = tuple(
+                zip(operation.pads[: num_pads // 2], operation.pads[num_pads // 2 :])
+            )
+            if any(p != 0 for p in operation.pads):
+                raise NotImplementedError(
+                    "Non 0 pads are not currently supported for ConvTranspose"
+                )
+
             output_shape = operation.output_shape
             if output_shape is None:
                 input_shape = [int(d) for d in x.shape[2:]]
-                start_pads = operation.pads[:2]
-                end_pads = operation.pads[2:]
+                start_pads = operation.pads[: num_pads // 2]
+                end_pads = operation.pads[num_pads // 2 :]
                 output_shape = (
                     [int(x.shape[0])]
                     + [
@@ -297,14 +331,14 @@ class TensorflowConverter(OperationVisitor):
                     + [weights.shape[1]]
                 )
 
-            x = tf.transpose(x, (0, 2, 3, 1))
-            padded_x = tf.pad(
-                x, ((0, 0), (pad_top, pad_bottom), (pad_left, pad_right), (0, 0))
-            )
+            x_ndim = int(tf.rank(x))
+            x = tf.transpose(x, (0,) + tuple(range(2, x_ndim)) + (1,))
+            padded_x = tf.pad(x, ((0, 0),) + pads + ((0, 0),))
+            weights_ndim = int(tf.rank(weights))
             result = tf.nn.bias_add(
-                tf.nn.conv2d_transpose(
+                conv_transpose(
                     padded_x,
-                    weights.transpose((2, 3, 1, 0)),
+                    weights.transpose(tuple(range(2, weights_ndim)) + (1, 0)),
                     output_shape,
                     strides=operation.strides,
                     padding="VALID",
@@ -312,7 +346,10 @@ class TensorflowConverter(OperationVisitor):
                 ),
                 bias,
             )
-            result = tf.transpose(result, (0, 3, 1, 2))
+            result_ndim = int(tf.rank(result))
+            result = tf.transpose(
+                result, (0, result_ndim - 1) + tuple(range(1, result_ndim - 1))
+            )
             return result
 
         return convtranspose_func
@@ -328,7 +365,7 @@ class TensorflowConverter(OperationVisitor):
         @self._cached
         def div_func(*inputs):
             a, b = _concretize([a_, b_], inputs)
-            result = tf.divide(a, b)
+            result = tf.convert_to_tensor(tf.divide(a, b))
             return result
 
         return div_func
@@ -421,22 +458,14 @@ class TensorflowConverter(OperationVisitor):
         @self._cached
         def gemm_func(*inputs):
             a, b, c = _concretize([a_, b_, c_], inputs)
-            if isinstance(a, np.ndarray) and isinstance(b, tf.Tensor):
-                a = a.astype(b.dtype.as_numpy_dtype)
-            if isinstance(b, np.ndarray) and isinstance(a, tf.Tensor):
-                b = b.astype(a.dtype.as_numpy_dtype)
-            if isinstance(a, np.ndarray) and isinstance(b, np.ndarray):
-                a = a.astype(b.dtype)
-            result = (
-                operation.alpha
-                * tf.matmul(
-                    a,
-                    b,
-                    transpose_a=operation.transpose_a,
-                    transpose_b=operation.transpose_b,
-                )
-                + operation.beta * c
+            result = operation.alpha * tf.matmul(
+                a,
+                b,
+                transpose_a=operation.transpose_a,
+                transpose_b=operation.transpose_b,
             )
+            if c is not None:
+                result = result + operation.beta * c
             return result
 
         return gemm_func
@@ -467,7 +496,7 @@ class TensorflowConverter(OperationVisitor):
         @self._cached
         def identity_func(*inputs):
             x = _concretize([x_], inputs)
-            return x
+            return tf.convert_to_tensor(x)
 
         return identity_func
 
@@ -489,7 +518,7 @@ class TensorflowConverter(OperationVisitor):
                     "Incorrect type, %s, for input %d. Expected type %s."
                     % (x.dtype, input_idx, operation.dtype)
                 )
-            return x
+            return tf.convert_to_tensor(x)
 
         self.input_count += 1
 
@@ -508,6 +537,19 @@ class TensorflowConverter(OperationVisitor):
 
         return leakyrelu_func
 
+    def visit_LogSoftmax(self, operation):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+
+        @self._cached
+        def softmax_func(*inputs):
+            x = _concretize([x_], inputs)
+            result = tf.nn.log_softmax(x, axis=operation.axis)
+            return result
+
+        return softmax_func
+
     def visit_MatMul(self, operation):
         a_ = operation.a
         if isinstance(a_, Operation):
@@ -519,12 +561,6 @@ class TensorflowConverter(OperationVisitor):
         @self._cached
         def matmul_func(*inputs):
             a, b = _concretize([a_, b_], inputs)
-            if isinstance(a, np.ndarray) and isinstance(b, tf.Tensor):
-                a = a.astype(b.dtype.as_numpy_dtype)
-            if isinstance(b, np.ndarray) and isinstance(a, tf.Tensor):
-                b = b.astype(a.dtype.as_numpy_dtype)
-            if isinstance(a, np.ndarray) and isinstance(b, np.ndarray):
-                a = a.astype(b.dtype)
 
             if len(a.shape) == 2 and len(b.shape) == 1:
                 result = tf.matmul(a, b[:, None])[:, 0]
@@ -544,22 +580,37 @@ class TensorflowConverter(OperationVisitor):
         @self._cached
         def maxpool_func(*inputs):
             x = _concretize([x_], inputs)
+
+            if operation.ceil_mode:
+                # TODO : add support
+                raise ValueError(
+                    "ceil_mode=True is not currently supported for MaxPool"
+                )
+
             kernel_shape = operation.kernel_shape
             strides = operation.strides
-            pad_top, pad_left, pad_bottom, pad_right = operation.pads
+            num_pads = len(operation.pads)
+            pads = tuple(
+                zip(operation.pads[: num_pads // 2], operation.pads[num_pads // 2 :])
+            )
 
-            x = tf.transpose(x, (0, 2, 3, 1))
+            x_ndim = int(tf.rank(x))
+            x = tf.transpose(x, (0,) + tuple(range(2, x_ndim)) + (1,))
             padded_x = tf.pad(
-                x, ((0, 0), (pad_top, pad_bottom), (pad_left, pad_right), (0, 0))
+                x, ((0, 0),) + pads + ((0, 0),), constant_values=x.dtype.min
             )
             result = tf.nn.pool(
                 padded_x,
                 kernel_shape,
                 pooling_type="MAX",
                 strides=strides,
+                dilations=operation.dilations,
                 padding="VALID",
             )
-            result = tf.transpose(result, (0, 3, 1, 2))
+            result_ndim = int(tf.rank(result))
+            result = tf.transpose(
+                result, (0, result_ndim - 1) + tuple(range(1, result_ndim - 1))
+            )
             return result
 
         return maxpool_func
@@ -598,13 +649,14 @@ class TensorflowConverter(OperationVisitor):
         @self._cached
         def pad_func(*inputs):
             x = _concretize([x_], inputs)
+            mode = operation.mode.upper()
+            if mode != "CONSTANT":
+                raise ValueError(f"{mode} padding is not currently supported")
             num_pads = len(operation.pads)
             pads = tuple(
                 zip(operation.pads[: num_pads // 2], operation.pads[num_pads // 2 :])
             )
-            result = tf.pad(
-                x, pads, mode=operation.mode, constant_values=operation.value
-            )
+            result = tf.pad(x, pads, mode=mode, constant_values=operation.value)
             return result
 
         return pad_func
@@ -633,6 +685,10 @@ class TensorflowConverter(OperationVisitor):
         @self._cached
         def reshape_func(*inputs):
             x, shape = _concretize([x_, shape_], inputs)
+            if not operation.allowzero:
+                for i, d in enumerate(shape):
+                    if d == 0:
+                        shape[i] = x.shape[i]
             result = tf.reshape(x, shape)
             return result
 
@@ -659,27 +715,29 @@ class TensorflowConverter(OperationVisitor):
                 "asymmetric",
                 "tf_crop_and_resize",
             ]
-            assert operation.mode == "nearest"
-            assert operation.nearest_mode == "floor"
+            assert operation.mode in ["nearest", "linear"]
             assert operation.exclude_outside == 0
-            if roi.size == 0:
+            if roi is None or roi.size == 0:
                 roi = np.array([[0, 0, 1, 1]])
             else:
                 assert operation.coordinate_transformation_mode == "tf_crop_and_resize"
                 assert roi.size == 8 and roi.ndim == 1
                 roi = roi[None, [2, 3, 6, 7]]
-            if sizes.size == 0:
+            if sizes is None or sizes.size == 0:
                 assert scales[0] == 1.0 and scales[1] == 1.0
                 sizes = (scales * [int(d) for d in x.shape]).astype(int)
             assert sizes.ndim == 1 and sizes.size == 4
             sizes = sizes[2:]
+            method = operation.mode
+            if method == "linear":
+                method = "bilinear"
             result = tf.transpose(x, (0, 2, 3, 1))
             result = tf.image.crop_and_resize(
                 result,
                 boxes=roi,
                 box_indices=np.arange(int(x.shape[0])),
                 crop_size=sizes,
-                method=operation.mode,
+                method=method,
                 extrapolation_value=operation.extrapolation_value,
             )
             result = tf.transpose(result, (0, 3, 1, 2))
@@ -713,6 +771,19 @@ class TensorflowConverter(OperationVisitor):
 
         return sigmoid_func
 
+    def visit_Sign(self, operation):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+
+        @self._cached
+        def sign_func(*inputs):
+            x = _concretize([x_], inputs)
+            result = tf.math.sign(x)
+            return result
+
+        return sign_func
+
     def visit_Softmax(self, operation):
         x_ = operation.x
         if isinstance(x_, Operation):
@@ -742,15 +813,30 @@ class TensorflowConverter(OperationVisitor):
 
         return sub_func
 
-    def visit_Tile(self, operation):
+    def visit_Tanh(self, operation):
         x_ = operation.x
         if isinstance(x_, Operation):
             x_ = self.visit(x_)
 
         @self._cached
-        def tile_func(*inputs):
+        def tanh_func(*inputs):
             x = _concretize([x_], inputs)
-            repeats = operation.repeats
+            result = tf.nn.tanh(x)
+            return result
+
+        return tanh_func
+
+    def visit_Tile(self, operation):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+        repeats_ = operation.repeats
+        if isinstance(repeats_, Operation):
+            repeats_ = self.visit(repeats_)
+
+        @self._cached
+        def tile_func(*inputs):
+            x, repeats = _concretize([x_, repeats_], inputs)
             result = tf.tile(x, repeats)
             return result
 
@@ -774,25 +860,15 @@ class TensorflowConverter(OperationVisitor):
         x_ = operation.x
         if isinstance(x_, Operation):
             x_ = self.visit(x_)
+        axes_ = operation.axes
+        if isinstance(axes_, Operation):
+            axes_ = self.visit(axes_)
 
         @self._cached
         def unsqueeze_func(*inputs):
-            x = _concretize([x_], inputs)
-            for axis in operation.axes:
+            x, axes = _concretize([x_, axes_], inputs)
+            for axis in sorted(axes):
                 x = tf.expand_dims(x, axis)
             return x
 
         return unsqueeze_func
-
-    def visit_Tanh(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
-
-        @self._cached
-        def tanh_func(*inputs):
-            x = _concretize([x_], inputs)
-            result = tf.nn.tanh(x)
-            return result
-
-        return tanh_func

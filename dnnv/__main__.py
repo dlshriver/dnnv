@@ -9,11 +9,11 @@ from pathlib import Path
 from typing import List, Optional
 
 from . import cli
+from . import errors
 from . import logging_utils as logging
 from . import nn
 from . import properties
 from . import utils
-from .verifiers.common import VerifierError, VerifierTranslatorError, SAT
 
 
 def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
@@ -75,19 +75,16 @@ def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
     try:
         params = args.verifier_parameters.get(verifier_name, {})
         result, cex = verifier.verify(phi, **params)
-    except VerifierTranslatorError as e:
+    except errors.DNNVError as e:
         result = f"{type(e).__name__}({e})"
-        logger.debug("Translation Error traceback:", exc_info=True)
-    except VerifierError as e:
-        result = f"{type(e).__name__}({e})"
-        logger.debug("Verifier Error traceback:", exc_info=True)
+        logger.debug("Error traceback:", exc_info=True)
     except SystemExit:
         if verifier.__module__ != "dnnv.verifiers.convert":
             logger.error(f"Verifier {verifier_name} called exit()")
             raise
         return 0
     end_t = time.time()
-    if result == SAT and args.save_violation is not None and cex is not None:
+    if args.save_violation is not None and cex is not None:
         np.save(args.save_violation, cex)
     print(f"{verifier.__module__}")
     print(f"  result: {result}")

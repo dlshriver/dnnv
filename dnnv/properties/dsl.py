@@ -11,7 +11,13 @@ from .visitors import ExpressionVisitor
 
 
 class PropertyParserError(Exception):
-    pass
+    def __init__(self, msg: str, *args: object, lineno=None, col_offset=None) -> None:
+        if lineno is not None:
+            prefix = f"line {lineno}"
+            if col_offset is not None:
+                prefix = f"{prefix}, col {col_offset}"
+            msg = f"{prefix}: {msg}"
+        super().__init__(msg, *args)
 
 
 class Py2PropertyTransformer(ast.NodeTransformer):
@@ -27,7 +33,9 @@ class Py2PropertyTransformer(ast.NodeTransformer):
     def visit_Assign(self, node: ast.Assign):
         if any(not isinstance(target, ast.Name) for target in node.targets):
             raise PropertyParserError(
-                "Assigning to non-identifiers is not currently supported"
+                "Assigning to non-identifiers is not currently supported",
+                lineno=node.lineno,
+                col_offset=node.col_offset,
             )
         if isinstance(node.value, ast.Lambda):
             assert isinstance(node.targets[0], ast.Name)
@@ -43,12 +51,22 @@ class Py2PropertyTransformer(ast.NodeTransformer):
         if isinstance(func, ast.Name):
             if func.id in ["Forall", "Exists"]:
                 if len(args) != 2:
-                    raise ValueError("%s takes 2 arguments." % func.id)
+                    raise PropertyParserError(
+                        f"{func.id} takes 2 arguments.",
+                        lineno=node.lineno,
+                        col_offset=node.col_offset,
+                    )
                 if len(kwargs) != 0:
-                    raise ValueError("%s does not take keyword arguments." % func.id)
+                    raise PropertyParserError(
+                        f"{func.id} does not take keyword arguments.",
+                        lineno=node.lineno,
+                        col_offset=node.col_offset,
+                    )
                 if not isinstance(args[0], ast.Name):
                     raise PropertyParserError(
-                        "The first argument to %s must be a variable name." % func.id
+                        f"The first argument to {func.id} must be a variable name.",
+                        lineno=node.lineno,
+                        col_offset=node.col_offset,
                     )
                 symbol_name = args[0]
                 sym_func = ast.Name("Symbol", ast.Load(), **attributes)
@@ -79,7 +97,9 @@ class Py2PropertyTransformer(ast.NodeTransformer):
                     )
                 else:
                     raise PropertyParserError(
-                        "Currently only Python versions 3.7+ are supported."
+                        "Currently only Python versions 3.7+ are supported.",
+                        lineno=node.lineno,
+                        col_offset=node.col_offset,
                     )
                 lambda_func = ast.Lambda(lambda_args, orig_expr, **attributes)
                 new_expr = ast.Call(lambda_func, [variable], [], **attributes)
@@ -147,40 +167,13 @@ class Py2PropertyTransformer(ast.NodeTransformer):
         const_func = ast.Name("Constant", ast.Load(), **attributes)
         return ast.Call(const_func, [node], [], **attributes)
 
-    def visit_Dict(self, node: ast.Dict):
-        attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
-        invalid_keys = [
-            key
-            for key in node.keys
-            if not isinstance(key, (ast.NameConstant, ast.Num, ast.Str))
-        ]
-        invalid_values = [
-            value
-            for value in node.values
-            if not isinstance(value, (ast.NameConstant, ast.Num, ast.Str))
-        ]
-        if len(invalid_keys) > 0:
-            raise PropertyParserError(
-                "We do not currently support definition of dicts containing non-primitive keys."
-            )
-        if len(invalid_values) > 0:
-            raise PropertyParserError(
-                "We do not currently support definition of dicts containing non-primitive values."
-            )
-        const_func = ast.Name("Constant", ast.Load(), **attributes)
-        return ast.Call(const_func, [node], [], **attributes)
-
     def _ensure_primitive(self, expr):
         if isinstance(
             expr,
             (
-                ast.Dict,
-                ast.List,
                 ast.NameConstant,
                 ast.Num,
-                ast.Set,
                 ast.Str,
-                ast.Tuple,
             ),
         ):
             return True
@@ -188,35 +181,62 @@ class Py2PropertyTransformer(ast.NodeTransformer):
             expr.operand, (ast.NameConstant, ast.Num, ast.Str)
         ):
             return True
+        elif isinstance(expr, ast.Dict):
+            for k in expr.keys:
+                if not self._ensure_primitive(k):
+                    return False
+            for v in expr.values:
+                if not self._ensure_primitive(v):
+                    return False
+            return True
+        elif isinstance(expr, (ast.List, ast.Set, ast.Tuple)):
+            for e in expr.elts:
+                if not self._ensure_primitive(e):
+                    return False
+            return True
         return False
+
+    def visit_Dict(self, node: ast.Dict):
+        attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
+        if not self._ensure_primitive(node):
+            raise PropertyParserError(
+                "We do not currently support definition of dicts containing non-primitive keys or values.",
+                lineno=node.lineno,
+                col_offset=node.col_offset,
+            )
+        const_func = ast.Name("Constant", ast.Load(), **attributes)
+        return ast.Call(const_func, [node], [], **attributes)
 
     def visit_List(self, node: ast.List):
         attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
-        for expr in node.elts:
-            if not self._ensure_primitive(expr):
-                raise PropertyParserError(
-                    "We do not currently support definition of lists containing non-primitive types."
-                )
+        if not self._ensure_primitive(node):
+            raise PropertyParserError(
+                "We do not currently support definition of lists containing non-primitive types.",
+                lineno=node.lineno,
+                col_offset=node.col_offset,
+            )
         const_func = ast.Name("Constant", ast.Load(), **attributes)
         return ast.Call(const_func, [node], [], **attributes)
 
     def visit_Set(self, node: ast.Set):
         attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
-        for expr in node.elts:
-            if not self._ensure_primitive(expr):
-                raise PropertyParserError(
-                    "We do not currently support definition of sets containing non-primitive types."
-                )
+        if not self._ensure_primitive(node):
+            raise PropertyParserError(
+                "We do not currently support definition of sets containing non-primitive types.",
+                lineno=node.lineno,
+                col_offset=node.col_offset,
+            )
         const_func = ast.Name("Constant", ast.Load(), **attributes)
         return ast.Call(const_func, [node], [], **attributes)
 
     def visit_Tuple(self, node: ast.Tuple):
         attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
-        for expr in node.elts:
-            if not self._ensure_primitive(expr):
-                raise PropertyParserError(
-                    "We do not currently support definition of tuples containing non-primitive types."
-                )
+        if not self._ensure_primitive(node):
+            raise PropertyParserError(
+                "We do not currently support definition of tuples containing non-primitive types.",
+                node.lineno,
+                node.col_offset,
+            )
         const_func = ast.Name("Constant", ast.Load(), **attributes)
         return ast.Call(const_func, [node], [], **attributes)
 
@@ -254,7 +274,9 @@ class Py2PropertyTransformer(ast.NodeTransformer):
         ]
         if len(dims) > 0:
             raise PropertyParserError(
-                "We do not currently support definition of slices containing non-primitive types."
+                "We do not currently support definition of slices containing non-primitive types.",
+                lineno=node.lineno,
+                col_offset=node.col_offset,
             )
         return self.generic_visit(node)
 
@@ -267,13 +289,25 @@ class Py2PropertyTransformer(ast.NodeTransformer):
         return self.generic_visit(node)
 
     def visit_Await(self, node: ast.Await):
-        raise PropertyParserError("We do not support await expressions.")
+        raise PropertyParserError(
+            "We do not support await expressions.",
+            lineno=node.lineno,
+            col_offset=node.col_offset,
+        )
 
     def visit_Yield(self, node: ast.Yield):
-        raise PropertyParserError("We do not support yield expressions.")
+        raise PropertyParserError(
+            "We do not support yield expressions.",
+            lineno=node.lineno,
+            col_offset=node.col_offset,
+        )
 
     def visit_YieldFrom(self, node: ast.YieldFrom):
-        raise PropertyParserError("We do not support yield from expressions.")
+        raise PropertyParserError(
+            "We do not support yield from expressions.",
+            lineno=node.lineno,
+            col_offset=node.col_offset,
+        )
 
     def visit_IfExp(self, node: ast.IfExp):
         attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
@@ -285,19 +319,39 @@ class Py2PropertyTransformer(ast.NodeTransformer):
         return new_node
 
     def visit_GeneratorExp(self, node: ast.GeneratorExp):
-        raise PropertyParserError("We do not currently support generator expressions.")
+        raise PropertyParserError(
+            "We do not currently support generator expressions.",
+            lineno=node.lineno,
+            col_offset=node.col_offset,
+        )
 
     def visit_DictComp(self, node: ast.DictComp):
-        raise PropertyParserError("We do not currently support dict comprehensions.")
+        raise PropertyParserError(
+            "We do not currently support dict comprehensions.",
+            lineno=node.lineno,
+            col_offset=node.col_offset,
+        )
 
     def visit_ListComp(self, node: ast.ListComp):
-        raise PropertyParserError("We do not currently support list comprehensions.")
+        raise PropertyParserError(
+            "We do not currently support list comprehensions.",
+            lineno=node.lineno,
+            col_offset=node.col_offset,
+        )
 
     def visit_SetComp(self, node: ast.SetComp):
-        raise PropertyParserError("We do not currently support set comprehensions.")
+        raise PropertyParserError(
+            "We do not currently support set comprehensions.",
+            lineno=node.lineno,
+            col_offset=node.col_offset,
+        )
 
     def visit_Starred(self, node: ast.Starred):
-        raise PropertyParserError("We do not currently support starred expressions.")
+        raise PropertyParserError(
+            "We do not currently support starred expressions.",
+            lineno=node.lineno,
+            col_offset=node.col_offset,
+        )
 
 
 class LimitQuantifiers(ExpressionVisitor):
@@ -319,19 +373,31 @@ class LimitQuantifiers(ExpressionVisitor):
 
     def visit_Exists(self, expr):
         if not self.at_top_level:
-            raise PropertyParserError("Quantifiers are only allowed at the top level.")
+            raise PropertyParserError(
+                "Quantifiers are only allowed at the top level.",
+                lineno=node.lineno,
+                col_offset=node.col_offset,
+            )
         if not isinstance(expr, self.top_level_quantifier):
             raise PropertyParserError(
-                "Quantifiers at the top level must be of the same type."
+                "Quantifiers at the top level must be of the same type.",
+                lineno=node.lineno,
+                col_offset=node.col_offset,
             )
         self.visit(expr.expression)
 
     def visit_Forall(self, expr):
         if not self.at_top_level:
-            raise PropertyParserError("Quantifiers are only allowed at the top level.")
+            raise PropertyParserError(
+                "Quantifiers are only allowed at the top level.",
+                lineno=node.lineno,
+                col_offset=node.col_offset,
+            )
         if not isinstance(expr, self.top_level_quantifier):
             raise PropertyParserError(
-                "Quantifiers at the top level must be of the same type."
+                "Quantifiers at the top level must be of the same type.",
+                lineno=node.lineno,
+                col_offset=node.col_offset,
             )
         self.visit(expr.expression)
 
@@ -379,11 +445,15 @@ def parse(path: Path, args: Optional[List[str]] = None) -> base.Expression:
             isinstance(node, ast.Expr) and isinstance(node.value, ast.Str)
         ):
             raise PropertyParserError(
-                f"Unsupported structure in property (line {node.lineno}): {node}"
+                f"Unsupported structure in property: {node}",
+                lineno=node.lineno,
+                col_offset=node.col_offset,
             )
     property_node = module.body[-1]
     if not isinstance(property_node, ast.Expr):
-        raise PropertyParserError()
+        raise PropertyParserError(
+            "No property expression found. A DNNP property specification must end with a property expression."
+        )
 
     module = Py2PropertyTransformer().visit(module)
 

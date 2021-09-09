@@ -12,21 +12,40 @@ requires-python = ">=3.7"
 dynamic = ["version", 'description']
 keywords = ["DNN", "neural network", "verification"]
 dependencies = [
-    "numpy >=1.18,<1.20",
-    "onnx >=1.7,<1.8",
-    "psutil >=5.6,<5.7",
-    "scipy >=1.4,<1.6",
-    "tensorflow >=1.15,<2.3",
-    "keras >=2.3,<2.4",
-    "simpleparse >=2.2,<2.3",
-    "torch >=1.5,<1.7",
-    "torchvision >=0.6,<0.8",
+    "numpy ~=1.18",
+    "onnx ~=1.8,<1.9",
+    "psutil ~=5.6",
+    "scipy ~=1.5",
+    "tensorflow ~=2.2,<2.3",
+    "simpleparse ~=2.2",
+    "torch ~=1.5",
+    "torchvision ~=0.6",
 ]
 
 [project.optional-dependencies]
-test = ["coverage >=5.0,<5.3"]
-doc = ["sphinx", "sphinx-rtd-theme"]
-dev = ["black", "mypy"]
+all = [
+    # default
+    "numpy ~=1.18",
+    "onnx ~=1.8,<1.9",
+    "psutil ~=5.6",
+    "scipy ~=1.5",
+    "tensorflow ~=2.2",
+    "simpleparse ~=2.2",
+    "torch ~=1.5",
+    "torchvision ~=0.6",
+    # test
+    "coverage~=5.5",
+    "pytest~=6.2",
+    "onnxruntime~=1.8",
+    # dev
+    "black~=21.7b0",
+    "mypy~=0.910",
+    # docs
+    "sphinx",
+]
+test = ["coverage~=5.5", "pytest~=6.2", "onnxruntime~=1.8"]
+dev = ["black~=21.7b0", "mypy~=0.910"]
+docs = ["sphinx", "sphinx-rtd-theme"]
 
 [project.urls]
 Documentation = "https://dnnv.readthedocs.io/en/latest/"
@@ -38,6 +57,13 @@ dnnv_manage = "dnnv._manage.__main__:_main"
 
 [tool.coverage.run]
 branch = true
-command_line = "-m unittest discover -v -p *_tests.py"
+command_line = "-m pytest tests/unit_tests tests/old_tests/properties_tests tests/old_tests/verifiers_tests --ff --verbose --import-mode=importlib --full-trace"
+# command_line = "-m pytest tests/unit_tests --ff -x --verbose --import-mode=importlib --full-trace"
 parallel = true
 source = ["dnnv"]
+omit = [
+    "dnnv/__main__.py",
+    "dnnv/cli/*",
+    "dnnv/logging_utils/*",
+    "dnnv/_manage/*",
+]

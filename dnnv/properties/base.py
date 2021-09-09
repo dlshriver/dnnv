@@ -1,6 +1,7 @@
 import inspect
 import numpy as np
 import types
+import warnings
 
 from abc import abstractmethod
 from functools import partial
@@ -9,6 +10,8 @@ from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Type, TypeVa
 from .context import Context, get_context
 
 T = TypeVar("T")
+
+# TODO : split into multiple files
 
 
 class Expression:
@@ -20,7 +23,16 @@ class Expression:
     def __init__(self, ctx: Optional[Context] = None):
         self.ctx = ctx or get_context()
 
-    def concretize(self, **kwargs) -> "Expression":
+    def concretize(self: T, *args, **kwargs) -> T:
+        nargs = len(args)
+        if nargs > 0 and not isinstance(self, Symbol):
+            raise ValueError(
+                f"Cannot concretize expression of type '{type(self).__name__}'"
+            )
+        elif nargs > 1:
+            raise ValueError("'concretize' expects at most 1 positional argument")
+        elif nargs == 1:
+            self._value = args[0]
         symbols = {s.identifier: s for s in find_symbols(self)}
         for name, value in kwargs.items():
             if name not in symbols:
@@ -58,6 +70,8 @@ class Expression:
             value = self.propagate_constants()
             if isinstance(value, Constant):
                 return value.value
+            # TODO : can this occur?
+            # when can we get non-Constants back from propagate_constants
             raise NotImplementedError(
                 f"Method 'value' is not implemented for type '{type(self).__name__}'"
             )
@@ -77,12 +91,18 @@ class Expression:
     def __bool__(self):
         if self.is_concrete:
             return bool(self.value)
+        warnings.warn(
+            "Using the bool representation of non-concrete expression can have unexpected results.",
+            RuntimeWarning,
+        )
         return True
 
     def __hash__(self):
         return hash(self.__class__) * hash(repr(self))
 
     def __getattr__(self, name) -> Union["Attribute", "Constant"]:
+        # TODO : why is this first case here? is it necessary?
+        # how to execute that path?
         if isinstance(name, str) and name.startswith("__"):
             return super().__getattribute__(name)
         if isinstance(name, str) and self.is_concrete:
@@ -110,8 +130,6 @@ class Expression:
         return Add(self, Constant(other))
 
     def __radd__(self, other) -> "Add":
-        if isinstance(other, Expression):
-            return Add(other, self)
         return Add(Constant(other), self)
 
     def __sub__(self, other) -> "Subtract":
@@ -120,8 +138,6 @@ class Expression:
         return Subtract(self, Constant(other))
 
     def __rsub__(self, other) -> "Subtract":
-        if isinstance(other, Expression):
-            return Subtract(other, self)
         return Subtract(Constant(other), self)
 
     def __mul__(self, other) -> "Multiply":
@@ -130,8 +146,6 @@ class Expression:
         return Multiply(self, Constant(other))
 
     def __rmul__(self, other) -> "Multiply":
-        if isinstance(other, Expression):
-            return Multiply(other, self)
         return Multiply(Constant(other), self)
 
     def __truediv__(self, other) -> "Divide":
@@ -140,14 +154,14 @@ class Expression:
         return Divide(self, Constant(other))
 
     def __rtruediv__(self, other) -> "Divide":
-        if isinstance(other, Expression):
-            return Divide(other, self)
         return Divide(Constant(other), self)
 
     def __neg__(self) -> "Negation":
         return Negation(self)
 
     def __eq__(self, other) -> "Equal":
+        if self is other:
+            return Constant(True)
         if isinstance(other, Expression):
             return Equal(self, other)
         return Equal(self, Constant(other))
@@ -178,16 +192,20 @@ class Expression:
         return LessThan(self, Constant(other))
 
     def __and__(self, other) -> "And":
-        return And(self, other)
+        if isinstance(other, Expression):
+            return And(self, other)
+        return And(self, Constant(other))
 
     def __rand__(self, other) -> "And":
-        return And(other, self)
+        return And(Constant(other), self)
 
     def __or__(self, other) -> "Or":
-        return Or(self, other)
+        if isinstance(other, Expression):
+            return Or(self, other)
+        return Or(self, Constant(other))
 
     def __ror__(self, other) -> "Or":
-        return Or(other, self)
+        return Or(Constant(other), self)
 
     def __invert__(self) -> "Not":
         return Not(self)
@@ -266,6 +284,8 @@ class Constant(CachedExpression):
     def initialize(self, value: Any):
         self._value = value
         self._id = len(self.ctx._instance_cache[Constant])
+        if isinstance(value, np.ndarray):
+            value.setflags(write=False)
 
     @classmethod
     def build_identifier(cls, value: Any):
@@ -277,6 +297,8 @@ class Constant(CachedExpression):
             value_identifier = value
         except:
             value_identifier = id(value)
+            if isinstance(value, np.ndarray):
+                value_identifier = (value.tobytes(), value.shape, value.dtype)
         return value_type, value_identifier
 
     @property
@@ -359,14 +381,6 @@ class Symbol(CachedExpression):
     def is_concrete(self):
         return self._value is not None
 
-    def concretize(self, value):
-        self._value = value
-
-    def __bool__(self):
-        if self.is_concrete:
-            return bool(self.value)
-        return True
-
     def __repr__(self):
         return f"Symbol({self.identifier!r})"
 
@@ -378,19 +392,18 @@ def _get_function_name(function: Callable) -> str:
     if isinstance(function, types.LambdaType) and (
         function.__name__ == "<lambda>" or function.__qualname__ == "<lambda>"
     ):
-        return f"{function.__module__}.{function.__name__}"
+        unique_name = f"<lambda id={hex(id(function))}>"
+        return f"{function.__module__}.{unique_name}"
     elif isinstance(function, types.BuiltinFunctionType):
-        return f"{function.__name__}"
+        return f"{function.__qualname__}"
     elif isinstance(function, types.FunctionType):
-        return f"{function.__module__}.{function.__name__}"
+        return f"{function.__module__}.{function.__qualname__}"
     elif isinstance(function, types.MethodType):
-        if function.__self__.__module__ == "__main__":
-            return f"{function.__self__.__class__.__name__}.{function.__name__}"
-        return f"{function.__self__.__module__}.{function.__self__.__class__.__name__}.{function.__name__}"
+        return f"{function.__self__.__module__}.{function.__qualname__}"
     elif isinstance(function, np.ufunc):
         return f"numpy.{function.__name__}"
     elif isinstance(function, type) and callable(function):
-        return f"{function.__module__}.{function.__name__}"
+        return f"{function.__module__}.{function.__qualname__}"
     else:
         raise ValueError(f"Unsupported function type: {type(function)}")
 
@@ -406,6 +419,8 @@ def _symbol_from_callable(symbol: Callable):
 
 def find_symbols(phi: Expression, symbol_class: Type[Symbol] = Symbol):
     symbols = set()
+    if isinstance(phi, symbol_class):
+        symbols.add(phi)
     for value in phi.__dict__.values():
         if isinstance(value, symbol_class):
             symbols.add(value)
@@ -486,8 +501,8 @@ class Network(Symbol):
             new_network.concretize(self.value[item])
             return new_network
         elif self.is_concrete and isinstance(item, slice):
-            start = item.start or ""
-            stop = item.stop or ""
+            start = item.start if item.start is not None else ""
+            stop = item.stop if item.stop is not None else ""
             s = f"{start}:{stop}"
             if item.step is not None:
                 s = f"{s}:{item.step}"
@@ -681,7 +696,7 @@ class Attribute(BinaryExpression):
     @property
     def value(self):
         if self.is_concrete:
-            return getattr(self.expr.value, self.index.value)
+            return getattr(self.expr.value, self.name.value)
         return super().value
 
     def __repr__(self):
@@ -722,20 +737,14 @@ class Slice(TernaryExpression):
         return super().value
 
     def __repr__(self):
-        start = "" if self.start.value is None else self.start
-        stop = "" if self.stop.value is None else self.stop
-        step = None if self.step.value is None else self.step
-        if step is None:
-            return f"{start!r}:{stop!r}"
-        return f"{start!r}:{stop!r}:{step!r}"
+        if self.step is None or (self.step.is_concrete and self.step.value is None):
+            return f"{self.start!r}:{self.stop!r}"
+        return f"{self.start!r}:{self.stop!r}:{self.step!r}"
 
     def __str__(self):
-        start = "" if self.start.value is None else self.start
-        stop = "" if self.stop.value is None else self.stop
-        step = None if self.step.value is None else self.step
-        if step is None:
-            return f"{start}:{stop}"
-        return f"{start}:{stop}:{step}"
+        if self.step is None or (self.step.is_concrete and self.step.value is None):
+            return f"{self.start}:{self.stop}"
+        return f"{self.start}:{self.stop}:{self.step}"
 
 
 class Subscript(BinaryExpression):
@@ -918,12 +927,12 @@ class Quantifier(LogicalExpression):
 
 class Forall(Quantifier):
     def __invert__(self):
-        return Exists(self.variable, lambda _: ~self.expression)
+        return Exists(self.variable, ~self.expression)
 
 
 class Exists(Quantifier):
     def __invert__(self):
-        return Forall(self.variable, lambda _: ~self.expression)
+        return Forall(self.variable, ~self.expression)
 
 
 argmax = np.argmax
@@ -933,7 +942,7 @@ argmin = np.argmin
 def __argcmp_helper(cmp_fn, A, Ai, i=0) -> Union[Constant, IfThenElse]:
     if i == len(Ai) - 1:
         return Constant(i)
-    cond = And(*[cmp_fn(A[Ai[i]], A[Ai[j]]) for j in range(len(Ai)) if j != i])
+    cond = And(*[cmp_fn(A[Ai[i]], A[Ai[j]]) for j in range(i + 1, len(Ai))])
     return IfThenElse(cond, Constant(i), __argcmp_helper(cmp_fn, A, Ai, i + 1))
 
 
@@ -976,7 +985,7 @@ def __argcmp_eq(
         Ai = list(np.ndindex(output_shape))
         if E.is_concrete:
             c = E.value
-            if c > len(Ai):
+            if c >= len(Ai):
                 return Constant(False)
             return And(*[cmp_fn(A[Ai[c]], A[Ai[i]]) for i in range(len(Ai)) if i != c])
         return And(*[Implies(F == c, E == c) for c in range(len(Ai))])
@@ -1002,6 +1011,8 @@ def __argcmp_neq(
         Ai = list(np.ndindex(output_shape))
         if E.is_concrete:
             c = E.value
+            if c >= len(Ai):
+                return Constant(True)
             return Or(*[~cmp_fn(A[Ai[c]], A[Ai[i]]) for i in range(len(Ai)) if i != c])
         return And(*[Or(F != c, E != c) for c in range(len(Ai))])
     return NotImplemented
@@ -1030,6 +1041,7 @@ _BUILTIN_FUNCTIONS = {
 }  # type: Dict[Callable, Callable[..., Expression]]
 
 # TODO : organize this list better
+# maybe split into smaller lists for better readability
 __all__ = [
     "Expression",
     "Symbol",
@@ -1060,8 +1072,10 @@ __all__ = [
     "Quantifier",
     "Forall",
     "Exists",
+    "ArithmeticExpression",
     "AssociativeExpression",
     "TernaryExpression",
     "BinaryExpression",
     "UnaryExpression",
+    "LogicalExpression",
 ]
