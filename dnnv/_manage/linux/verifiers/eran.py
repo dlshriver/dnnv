@@ -161,7 +161,7 @@ class ERANInstaller(Installer):
         verifier_venv_path = env.env_dir / "verifier_virtualenvs" / name
         verifier_venv_path.parent.mkdir(exist_ok=True, parents=True)
 
-        gurobi_path = LibraryDependency("libgurobi90").get_path(env).parent.parent
+        gurobi_path = LibraryDependency("libgurobi91").get_path(env).parent.parent
         elina_path = LibraryDependency("libzonoml").get_path(env).parent.parent
 
         python_major_version, python_minor_version = sys.version_info[:2]
@@ -213,7 +213,7 @@ def install(env: Environment):
     mpfr_installer = GNUInstaller(
         "mpfr", "4.1.0", "https://files.sri.inf.ethz.ch/eran/mpfr/mpfr-4.1.0.tar.xz"
     )
-    gurobi_installer = GurobiInstaller("9.0.2")
+    gurobi_installer = GurobiInstaller("9.1.2")
     cddlib_installer = GNUInstaller(
         "cddlib",
         "0.94j",
@@ -227,7 +227,7 @@ def install(env: Environment):
             dependencies=(
                 ProgramDependency("git"),
                 HeaderDependency("gurobi_c.h", installer=gurobi_installer),
-                LibraryDependency("libgurobi90", installer=gurobi_installer),
+                LibraryDependency("libgurobi91", installer=gurobi_installer),
                 ProgramDependency("grbgetkey", installer=gurobi_installer),
                 LibraryDependency(
                     "libzonoml",
@@ -289,7 +289,7 @@ def install(env: Environment):
                             ),
                         ),
                         HeaderDependency("gurobi_c.h", installer=gurobi_installer),
-                        LibraryDependency("libgurobi90", installer=gurobi_installer),
+                        LibraryDependency("libgurobi91", installer=gurobi_installer),
                         ProgramDependency("grbgetkey", installer=gurobi_installer),
                     ),
                 ),

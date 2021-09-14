@@ -78,7 +78,7 @@ if __name__ == "__main__":
 
 class MarabouInstaller(Installer):
     def run(self, env: Environment, dependency: Dependency):
-        commit_hash = "2a09b23"
+        commit_hash = "b0e29fb43b6722dfe9b5a90cc1353990aa732327"
 
         cache_dir = env.cache_dir / f"marabou-{commit_hash}"
         cache_dir.mkdir(exist_ok=True, parents=True)
