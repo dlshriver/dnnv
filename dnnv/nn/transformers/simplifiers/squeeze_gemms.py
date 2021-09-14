@@ -19,7 +19,14 @@ class SqueezeGemms(Simplifier):
             b_0 = input_op.b.T if input_op.transpose_b else input_op.b
             b_1 = operation.b.T if operation.transpose_b else operation.b
             b = np.matmul(b_0, b_1)
-            c = np.matmul(input_op.c, b_1) + operation.c
+            if input_op.c is not None and operation.c is not None:
+                c = np.matmul(input_op.c, b_1) + operation.c
+            elif operation.c is not None:
+                c = operation.c
+            elif input_op.c is not None:
+                c = np.matmul(input_op.c, b_1)
+            else:
+                c = None
             return operations.Gemm(
                 a,
                 b,

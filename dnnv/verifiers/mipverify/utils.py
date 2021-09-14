@@ -2,186 +2,238 @@ import numpy as np
 import scipy.io
 import tempfile
 
-from typing import Dict, IO, Iterable, List, Optional, Type
+from collections import defaultdict
+from pathlib import Path
+from typing import Dict, List, Optional, Set, Type
 
-from dnnv.nn.layers import Convolutional, FullyConnected, InputLayer, Layer
-from dnnv.verifiers.common import HyperRectangle, VerifierTranslatorError
+from dnnv import logging_utils as logging
+from dnnv.nn import operations, Operation, OperationGraph, OperationVisitor
+from dnnv.verifiers.common import VerifierTranslatorError
 
 
-def as_mipverify(
-    layers: List[Layer],
-    weights_file: IO,
-    sample_input: np.ndarray,
-    linf=None,
-    translator_error: Type[VerifierTranslatorError] = VerifierTranslatorError,
-) -> Iterable[str]:
-    yield "using MIPVerify, Gurobi, MAT"
-    yield f'parameters = matread("{weights_file.name}")'
-    layer_names = []  # type: List[str]
-    layer_parameters = {}  # type: Dict[str, np.ndarray]
-    input_layer = layers[0]
-    if not isinstance(input_layer, InputLayer):
-        raise translator_error(
-            f"Unsupported input layer type: {type(input_layer).__name__}"
+class MIPVerifyInputBuilder(OperationVisitor):
+    def __init__(self, translator_error=VerifierTranslatorError):
+        super().__init__()
+        self.lines = []
+        self.layers = []
+        self.params = {}
+        self.op_counts: Dict[str, int] = defaultdict(int)
+        self.visited: Set[Operation] = set()
+        self.translator_error = translator_error
+
+    def build(
+        self,
+        julia_file: tempfile.NamedTemporaryFile,
+        weights_file: tempfile.NamedTemporaryFile,
+        cex_file: tempfile.NamedTemporaryFile,
+        center: np.ndarray,
+        linf_ub: float,
+        tightening_algorithm: str = "mip",
+    ):
+        self.params["input"] = center
+        input_shape = tuple(center.shape)
+
+        scipy.io.savemat(weights_file.name, self.params)
+
+        weights_file_name = Path(weights_file.name).stem
+        lines = (
+            [
+                "using MIPVerify, Gurobi, JuMP, MAT, MathOptInterface",
+                f'param_dict = matread("{weights_file.name}")',
+            ]
+            + self.lines
+            + [
+                "nn = Sequential([",
+                ",\n".join(self.layers),
+                f'], "{weights_file_name}")',
+                f'input = reshape(collect(param_dict["input"]), {input_shape})',
+                # 'print(nn(input), "\\n")',
+                # class 1 (1-indexed) if property is FALSE
+                f"d = MIPVerify.find_adversarial_example(nn, input, 1, Gurobi.Optimizer, Dict(), pp=MIPVerify.LInfNormBoundedPerturbationFamily({linf_ub}),tightening_algorithm={tightening_algorithm}, norm_order=Inf, solve_if_predicted_in_targeted=false)",
+                "if (d[:PredictedIndex] == 1)",
+                f'    MAT.matwrite("{cex_file.name}", Dict("cex" => input))',
+                '    print("TRIVIAL\\n")',
+                "elseif (d[:SolveStatus] == MathOptInterface.OPTIMAL)",
+                f'    MAT.matwrite("{cex_file.name}", Dict("cex" => JuMP.value.(d[:PerturbedInput])))',
+                '    print(nn(JuMP.value.(d[:PerturbedInput])), "\\n")',
+                '    print(d[:SolveStatus], "\\n")',
+                "else",
+                '    print(d[:SolveStatus], "\\n")',
+                "end",
+            ]
         )
-    last_layer = layers[-1]
-    if not isinstance(last_layer, FullyConnected):
-        raise translator_error(
-            f"Unsupported output layer type: {type(last_layer).__name__}"
+        julia_file.write("\n".join(lines))
+
+    def visit(self, operation: Operation):
+        if operation in self.visited:
+            raise self.translator_error(
+                "Multiple computation paths is not currently supported"
+            )
+        self.visited.add(operation)
+        result = super().visit(operation)
+        return result
+
+    def generic_visit(self, operation: Operation):
+        if not hasattr(self, "visit_%s" % operation.__class__.__name__):
+            raise ValueError(
+                f"MIPVerify converter not implemented for operation type {type(operation).__name__}"
+            )
+        return super().generic_visit(operation)
+
+    def visit_Conv(self, operation: operations.Conv):
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        _ = self.visit(operation.x)
+        w = self.params[f"{opname}/weight"] = operation.w.transpose((2, 3, 1, 0))
+        b = self.params[f"{opname}/bias"] = operation.b
+
+        if any(s != operation.strides[0] for s in operation.strides):
+            raise self.translator_error("Multiple stride lengths are not supported")
+        assert operation.group == 1
+        assert np.all(operation.dilations == 1)
+        pads = (
+            operation.pads[0],
+            operation.pads[2],
+            operation.pads[1],
+            operation.pads[3],
         )
-    elif last_layer.bias.shape[0] == 1:
-        last_layer.bias = np.array([-last_layer.bias[0], last_layer.bias[0]])
-        last_layer.weights = np.stack(
-            [-last_layer.weights[:, 0], last_layer.weights[:, 0]], 1
+
+        self.lines.append(
+            f'{opname}_W = reshape(collect(param_dict["{opname}/weight"]), {tuple(w.shape)})'
         )
-    shape = np.asarray(input_layer.shape)
-    if len(shape) == 4:
-        shape = shape[[0, 2, 3, 1]]
-    input_shape = shape.copy()
-    seen_fullyconnected = False
-    for layer_id, layer in enumerate(layers[1:], 1):
-        layer_name = f"layer{layer_id}"
-        if isinstance(layer, FullyConnected):
-            if layer_id == 1:
-                layer_names.append(f"Flatten({sample_input.ndim})")
-            elif isinstance(layers[layer_id - 1], Convolutional):
-                layer_names.append(f"Flatten(4)")
-            weights = layer.weights.astype(np.float32)
-            weights = weights[layer.w_permutation]
-            if not seen_fullyconnected:
-                seen_fullyconnected = True
-                if len(shape) == 4:
-                    weights = weights[
-                        (
-                            np.arange(np.product(shape))
-                            .reshape(shape[[0, 3, 1, 2]])
-                            .transpose((0, 2, 3, 1))
-                            .flatten()
-                        )
-                    ]
-            layer_parameters[f"{layer_name}_weight"] = weights
-            yield f'{layer_name}_W = reshape(collect(parameters["{layer_name}_weight"]), {tuple(weights.shape)})'
-            layer_parameters[f"{layer_name}_bias"] = layer.bias
-            yield f'{layer_name}_b = reshape(collect(parameters["{layer_name}_bias"]), {tuple(layer.bias.shape)})'
-            yield f"{layer_name} = Linear({layer_name}_W, {layer_name}_b)"
-            layer_names.append(layer_name)
-            if layer.activation == "relu":
-                layer_names.append("ReLU()")
-            elif layer.activation is not None:
-                raise translator_error(
-                    f"{layer.activation} activation is currently unsupported"
-                )
-        elif isinstance(layer, Convolutional):
-            if any(s != layer.strides[0] for s in layer.strides):
-                raise translator_error(
-                    "Different strides in height and width are not supported"
-                )
-            in_shape = shape.copy()
-            shape[3] = layer.weights.shape[0]  # number of output channels
-            shape[1] = int(
-                np.ceil(
-                    float(
-                        in_shape[1]
-                        - layer.kernel_shape[0]
-                        + layer.pads[0]
-                        + layer.pads[2]
-                        + 1
-                    )
-                    / float(layer.strides[0])
-                )
-            )  # output height
-            shape[2] = int(
-                np.ceil(
-                    float(
-                        in_shape[2]
-                        - layer.kernel_shape[1]
-                        + layer.pads[1]
-                        + layer.pads[3]
-                        + 1
-                    )
-                    / float(layer.strides[1])
-                )
-            )  # output width
-            pads = (layer.pads[0], layer.pads[2], layer.pads[1], layer.pads[3])
-            weights = layer.weights.transpose((2, 3, 1, 0))
-            layer_parameters[f"{layer_name}_weight"] = weights
-            yield f'{layer_name}_W = reshape(collect(parameters["{layer_name}_weight"]), {tuple(weights.shape)})'
-            layer_parameters[f"{layer_name}_bias"] = layer.bias
-            yield f'{layer_name}_b = reshape(collect(parameters["{layer_name}_bias"]), {tuple(layer.bias.shape)})'
-            yield f"{layer_name} = Conv2d({layer_name}_W, {layer_name}_b, {layer.strides[0]}, {pads})"
-            layer_names.append(layer_name)
-            if layer.activation == "relu":
-                layer_names.append("ReLU()")
-            elif layer.activation is not None:
-                raise translator_error(
-                    f"{layer.activation} activation is currently unsupported"
-                )
-        elif hasattr(layer, "as_julia"):
-            for line in layer.as_julia(
-                layer_name, shape, translator_error=translator_error
-            ):
-                yield line
-            layer_names.append(layer_name)
+        self.lines.append(
+            f'{opname}_b = reshape(collect(param_dict["{opname}/bias"]), {tuple(b.shape)})'
+        )
+        self.lines.append(
+            f"{opname} = Conv2d({opname}_W, {opname}_b, {operation.strides[0]}, {pads})"
+        )
+        self.layers.append(f"{opname}")
+
+    def visit_Flatten(self, operation: operations.Flatten):
+        assert operation.axis == 1
+        _ = self.visit(operation.x)
+        output_shape = OperationGraph([operation.x]).output_shape[0]
+        if len(output_shape) == 4:
+            self.layers.append("Flatten(4, [1, 3, 2, 4])")
         else:
-            raise translator_error(f"Unsupported layer type: {type(layer).__name__}")
-    yield "nn = Sequential(["
-    for layer_name in layer_names:
-        yield f"\t{layer_name},"
-    yield f'], "{str(weights_file.name)[:-4]}")'
-    if sample_input.ndim == 4:
-        sample_input = sample_input.transpose((0, 2, 3, 1))
-    layer_parameters["input"] = sample_input
-    yield f'input = reshape(collect(parameters["input"]), {tuple(input_shape)})'
-    yield 'print(nn(input), "\\n")'
-    perturbation = ""
-    if linf is not None:
-        perturbation = (
-            f", pp=MIPVerify.LInfNormBoundedPerturbationFamily({linf}), norm_order=Inf"
-        )
-    # class 1 (1-indexed) if property is FALSE
-    yield f"d = MIPVerify.find_adversarial_example(nn, input, 1, Gurobi.Optimizer, Dict(){perturbation}, solve_if_predicted_in_targeted=false)"
-    yield 'print((d[:PredictedIndex] == 2) ? d[:SolveStatus] : "TRIVIAL", "\\n")'
+            self.layers.append(f"Flatten({len(output_shape)})")
 
-    scipy.io.savemat(weights_file.name, layer_parameters)
+    def visit_Gemm(self, operation: operations.Gemm):
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        assert operation.alpha == 1.0
+        assert operation.beta == 1.0
+        assert isinstance(operation.a, Operation) or isinstance(operation.b, Operation)
+        assert not isinstance(operation.a, Operation) or not isinstance(
+            operation.b, Operation
+        )
+        if isinstance(operation.a, Operation):
+            assert not operation.transpose_a
+            _ = self.visit(operation.a)
+
+            weights = operation.b
+            if operation.transpose_b:
+                weights = weights.T
+            self.params[f"{opname}/weight"] = weights
+
+            if operation.c is not None:
+                bias = operation.c
+            else:
+                bias = np.zeros(weights.shape[1], dtype=weights.dtype)
+            self.params[f"{opname}/bias"] = bias
+        else:
+            raise NotImplementedError()
+
+        self.lines.append(
+            f'{opname}_W = reshape(collect(param_dict["{opname}/weight"]), {tuple(weights.shape)})'
+        )
+        self.lines.append(
+            f'{opname}_b = reshape(collect(param_dict["{opname}/bias"]), {tuple(bias.shape)})'
+        )
+        self.lines.append(f"{opname} = Linear({opname}_W, {opname}_b)")
+        self.layers.append(f"{opname}")
+
+    def visit_Input(self, operation: operations.Input):
+        if len(operation.shape) == 2 and operation.shape[0] in [-1, 1]:
+            self.layers.append("Flatten(2)")
+
+    def visit_MaxPool(self, operation: operations.MaxPool):
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        if any(p != 0 for p in operation.pads):
+            raise self.translator_error("Padded max pooling is not supported.")
+        if any(k != s for k, s in zip(operation.kernel_shape, operation.strides)):
+            raise self.translator_error("Max pool stride must be equal to kernel size.")
+        s_h, s_w = operation.strides
+        self.lines.append(f"{opname} = MaxPool((1, {s_h}, {s_w}, 1))")
+        self.layers.append(f"{opname}")
+
+    def visit_Relu(self, operation: operations.Relu):
+        _ = self.visit(operation.x)
+        self.layers.append("ReLU()")
+
+    def visit_Reshape(self, operation: operations.Reshape):
+        assert len(operation.shape) == 2 or len(operation.shape) == 1
+        _ = self.visit(operation.x)
+        output_shape = OperationGraph([operation.x]).output_shape[0]
+        if len(output_shape) == 4:
+            self.layers.append("Flatten(4, [1, 3, 2, 4])")
+        else:
+            self.layers.append(f"Flatten({len(output_shape)})")
 
 
 def to_mipverify_inputs(
     lb: np.ndarray,
     ub: np.ndarray,
-    layers: List[Layer],
+    op_graph: OperationGraph,
     dirname: Optional[str] = None,
     translator_error: Type[VerifierTranslatorError] = VerifierTranslatorError,
 ) -> Dict[str, str]:
     mipverify_inputs = {}
 
     if lb.ndim == 4:
-        lb = lb.transpose((0, 2, 3, 1))
+        lb = lb.transpose((0, 3, 2, 1))
     if ub.ndim == 4:
-        ub = ub.transpose((0, 2, 3, 1))
+        ub = ub.transpose((0, 3, 2, 1))
     if np.any(lb < 0) or np.any(ub > 1):
         raise translator_error(
-            "Inputs intervals that extend outside of [0, 1] are not supported"
+            "Input intervals that extend outside of [0, 1] are not supported"
         )
-    sample_input = (lb + ub) / 2
-    linf = (ub.flatten() - lb.flatten()) / 2
-    if not np.allclose(linf, linf[0], atol=1e-5):
-        raise translator_error("Multiple epsilon values are not supported")
+    dtype = op_graph.input_details[0].dtype
+    radii = (ub - lb) / 2
+    max_radii = radii.max()
+    radii[(lb <= 0) | (ub >= 1)] = max_radii
+    if not np.allclose(radii.min(), radii.max()):
+        logging.getLogger(__name__).warn(
+            "MIPVerify does not officially support problems with non-hypercube input regions"
+        )
+    center = ((lb + ub) / 2).astype(dtype)
+    center[(lb <= 0)] = ub[(lb <= 0)] - max_radii
+    center[(ub >= 0)] = lb[(ub >= 0)] + max_radii
+    assert np.all(center >= 0)
+    assert np.all(center <= 1)
+
+    builder = MIPVerifyInputBuilder(translator_error=translator_error)
+    _ = op_graph.walk(builder)
 
     with tempfile.NamedTemporaryFile(
         dir=dirname, suffix=".mat", delete=False
-    ) as weights_file:
+    ) as cex_file:
         with tempfile.NamedTemporaryFile(
-            mode="w+", dir=dirname, suffix=".jl", delete=False
-        ) as prop_file:
-            for line in as_mipverify(
-                layers,
-                weights_file,
-                sample_input,
-                linf=linf[0],
-                translator_error=translator_error,
-            ):
-                prop_file.write(f"{line}\n")
-            mipverify_inputs["property_path"] = prop_file.name
-        mipverify_inputs["weights_path"] = weights_file.name
+            dir=dirname, suffix=".mat", delete=False
+        ) as weights_file:
+            with tempfile.NamedTemporaryFile(
+                mode="w+", dir=dirname, suffix=".jl", delete=False
+            ) as julia_file:
+                builder.build(julia_file, weights_file, cex_file, center, radii.max())
+                mipverify_inputs["julia_file_path"] = julia_file.name
+            mipverify_inputs["weights_file_path"] = weights_file.name
+        mipverify_inputs["cex_file_path"] = cex_file.name
 
     return mipverify_inputs

@@ -25,7 +25,7 @@ class Neurify(Verifier):
                 "Unsupported network: More than 1 input variable"
             )
         layers = as_layers(
-            prop.suffixed_op_graph(),
+            prop.suffixed_op_graph().simplify(),
             translator_error=self.translator_error,
         )
         neurify_inputs = to_neurify_inputs(

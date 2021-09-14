@@ -115,6 +115,8 @@ class FullyConnected(Layer):
     def __init__(self, weights, bias, activation=None, w_permutation=None):
         self.weights = weights
         self.bias = bias
+        if bias is None:
+            self.bias = np.zeros(weights.shape[1], dtype=weights.dtype)
         self.activation = activation
         self.w_permutation = (
             w_permutation
@@ -237,6 +239,8 @@ class Convolutional(Layer):
     ):
         self.weights = weights
         self.bias = bias
+        if bias is None:
+            self.bias = np.zeros(weights.shape[0], dtype=weights.dtype)
         self.activation = activation
         self.kernel_shape = kernel_shape
         if self.kernel_shape is None:
