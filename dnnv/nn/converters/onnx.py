@@ -12,21 +12,24 @@ from ..utils import NUMPY_TO_ONNX_DTYPE
 from ..visitors import OperationVisitor
 
 
-def convert(op_graph: OperationGraph):
-    converter = OnnxConverter(op_graph)
+def convert(op_graph: OperationGraph, *, add_missing_optional_inputs=False):
+    converter = OnnxConverter(
+        op_graph, add_missing_optional_inputs=add_missing_optional_inputs
+    )
     model = converter.convert()
 
     return model
 
 
 class OnnxConverter(OperationVisitor):
-    def __init__(self, op_graph: OperationGraph):
+    def __init__(self, op_graph: OperationGraph, add_missing_optional_inputs=False):
         self.op_graph = op_graph
         self.inputs: List[onnx.ValueInfoProto] = []
         self.outputs: List[onnx.ValueInfoProto] = []
         self.initializer: List[onnx.TensorProto] = []
         self.visited: Dict[Operation, onnx.NodeProto] = {}
         self.op_counts: Dict[str, int] = defaultdict(int)
+        self.add_missing_optional_inputs = add_missing_optional_inputs
 
     def convert(self, name="onnx_model") -> onnx.ModelProto:
         output_details = (
@@ -199,6 +202,10 @@ class OnnxConverter(OperationVisitor):
         if operation.b is not None:
             b = self._to_onnx_proto(operation.b, f"{opname}.b")
             inputs.append(b.name)
+        elif self.add_missing_optional_inputs:
+            b_ = np.zeros(w.shape[0], dtype=w.dtype)
+            b = self._to_onnx_proto(b_, f"{opname}.b")
+            inputs.append(b.name)
 
         node = onnx.helper.make_node(
             "Conv",
@@ -226,6 +233,10 @@ class OnnxConverter(OperationVisitor):
         inputs = [x.name, w.name]
         if operation.b is not None:
             b = self._to_onnx_proto(operation.b, f"{opname}.b")
+            inputs.append(b.name)
+        elif self.add_missing_optional_inputs:
+            b_ = np.zeros(w.shape[1], dtype=w.dtype)
+            b = self._to_onnx_proto(b_, f"{opname}.b")
             inputs.append(b.name)
 
         extra_attributes = {}
@@ -360,6 +371,11 @@ class OnnxConverter(OperationVisitor):
         inputs = [a.name, b.name]
         if operation.c is not None:
             c = self._to_onnx_proto(operation.c, f"{opname}.c")
+            inputs.append(c.name)
+        elif self.add_missing_optional_inputs:
+            output_details = OperationGraph([operation]).output_details[0]
+            c_ = np.zeros(output_details.shape[1], dtype=output_details.dtype)
+            c = self._to_onnx_proto(c_, f"{opname}.c")
             inputs.append(c.name)
 
         node = onnx.helper.make_node(

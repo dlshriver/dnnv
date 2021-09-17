@@ -37,7 +37,9 @@ class ERAN(Verifier):
         with tempfile.NamedTemporaryFile(
             mode="w+", suffix=".onnx", delete=False
         ) as onnx_model_file:
-            prop.suffixed_op_graph().export_onnx(onnx_model_file.name)
+            prop.suffixed_op_graph().export_onnx(
+                onnx_model_file.name, add_missing_optional_inputs=True
+            )
 
         input_interval = prop.input_constraint
         spec_lb = input_interval.lower_bounds[0]

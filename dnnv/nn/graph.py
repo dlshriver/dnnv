@@ -74,15 +74,20 @@ class OperationGraph:
         # for operations with multiple outputs
         return tuple(details.shape for details in self.output_details)
 
-    def export_onnx(self, filename):
+    def export_onnx(self, filename, *, add_missing_optional_inputs=False):
         import onnx
 
-        onnx.save(self.as_onnx(), filename)
+        onnx.save(
+            self.as_onnx(add_missing_optional_inputs=add_missing_optional_inputs),
+            filename,
+        )
 
-    def as_onnx(self):
+    def as_onnx(self, *, add_missing_optional_inputs=False):
         from .converters.onnx import convert as onnx_convert
 
-        return onnx_convert(self)
+        return onnx_convert(
+            self, add_missing_optional_inputs=add_missing_optional_inputs
+        )
 
     def as_tf(self):
         from .converters.tensorflow import convert as tf_convert
