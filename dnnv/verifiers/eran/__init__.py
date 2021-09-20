@@ -37,7 +37,7 @@ class ERAN(Verifier):
         with tempfile.NamedTemporaryFile(
             mode="w+", suffix=".onnx", delete=False
         ) as onnx_model_file:
-            prop.suffixed_op_graph().export_onnx(
+            prop.suffixed_op_graph().simplify().export_onnx(
                 onnx_model_file.name, add_missing_optional_inputs=True
             )
 
