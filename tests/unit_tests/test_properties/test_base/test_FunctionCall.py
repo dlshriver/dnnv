@@ -9,9 +9,6 @@ from dnnv.properties.base import *
 
 def test_value():
     func_call = FunctionCall(Constant(np.sign), (Constant(5),), {})
-    assert func_call._value is None
-    assert func_call.value == 1
-    assert func_call._value is not None
     assert func_call.value == 1
 
     func_call = FunctionCall(
@@ -53,7 +50,7 @@ def test_repr():
     func_call = FunctionCall(
         Constant(np.ones), (Constant((1, 5)),), {"dtype": Constant(np.float32)}
     )
-    assert repr(func_call).startswith("numpy.ones((1, 5), dtype=<class 'type'>(id=0x")
+    assert repr(func_call) == "numpy.ones((1, 5), dtype=numpy.float32)"
 
     func_call = FunctionCall(Network("N"), (Constant(5),), {})
     assert repr(func_call) == "Network('N')(5)"
@@ -61,8 +58,8 @@ def test_repr():
     func_call = FunctionCall(Constant(dict), (), {})
     assert repr(func_call) == "builtins.dict()"
 
-    func_call = FunctionCall(Constant(int), (), {"base": Constant(2)})
-    assert repr(func_call) == "builtins.int(base=2)"
+    func_call = FunctionCall(Constant(int), (Constant("11"),), {"base": Constant(2)})
+    assert repr(func_call) == "builtins.int('11', base=2)"
 
 
 def test_str():
@@ -72,7 +69,7 @@ def test_str():
     func_call = FunctionCall(
         Constant(np.ones), (Constant((1, 5)),), {"dtype": Constant(np.float32)}
     )
-    assert str(func_call) == "numpy.ones((1, 5), dtype=<class 'numpy.float32'>)"
+    assert str(func_call) == "numpy.ones((1, 5), dtype=numpy.float32)"
 
     func_call = FunctionCall(Network("N"), (Constant(5),), {})
     assert str(func_call) == "N(5)"
@@ -80,5 +77,5 @@ def test_str():
     func_call = FunctionCall(Constant(dict), (), {})
     assert str(func_call) == "builtins.dict()"
 
-    func_call = FunctionCall(Constant(int), (), {"base": Constant(2)})
-    assert str(func_call) == "builtins.int(base=2)"
+    func_call = FunctionCall(Constant(int), (Constant("11"),), {"base": Constant(2)})
+    assert str(func_call) == "builtins.int(11, base=2)"

@@ -66,15 +66,14 @@ class Expression:
     def value(self):
         if not self.is_concrete:
             raise ValueError("Cannot get value of non-concrete expression.")
-        else:
-            value = self.propagate_constants()
-            if isinstance(value, Constant):
-                return value.value
-            # TODO : can this occur?
-            # when can we get non-Constants back from propagate_constants
-            raise NotImplementedError(
-                f"Method 'value' is not implemented for type '{type(self).__name__}'"
-            )
+        value = self.propagate_constants()
+        if isinstance(value, Constant):
+            return value.value
+        # TODO : can this occur?
+        # when can we get non-Constants back from propagate_constants
+        raise NotImplementedError(
+            f"Method 'value' is not implemented for type '{type(self).__name__}'"
+        )
 
     @property
     def networks(self) -> List["Network"]:
@@ -88,6 +87,13 @@ class Expression:
     def variables(self) -> List["Symbol"]:
         return [s for s in find_symbols(self) if not s.is_concrete]
 
+    def is_equivalent(self, other) -> bool:
+        if self is other:
+            return True
+        elif self.is_concrete and other.is_concrete:
+            return bool(self.value == other.value)
+        return False
+
     def __bool__(self):
         if self.is_concrete:
             return bool(self.value)
@@ -98,7 +104,7 @@ class Expression:
         return True
 
     def __hash__(self):
-        return hash(self.__class__) * hash(repr(self))
+        return hash(self.__class__)
 
     def __getattr__(self, name) -> Union["Attribute", "Constant"]:
         # TODO : why is this first case here? is it necessary?
@@ -231,16 +237,6 @@ class Expression:
         return FunctionCall(self, args, kwargs)
 
 
-def hidesignature(func):
-    # hides the function signature from mypy
-    # used in CachedExpression to hide signatures of:
-    #   - initialize
-    #   - build_identifier
-    # which have more specific signatures in subclasses
-    # TODO : can we find a better way to do this?
-    return func
-
-
 class CachedExpression(Expression):
     __initialized = False
 
@@ -268,16 +264,34 @@ class CachedExpression(Expression):
         kwargs["ctx"] = ctx
         return args, kwargs
 
-    @hidesignature
     @abstractmethod
     def initialize(self, *args, **kwargs):
         raise NotImplementedError()
 
-    @hidesignature
     @classmethod
     @abstractmethod
     def build_identifier(cls, *args, **kwargs) -> str:
         raise NotImplementedError()
+
+
+def _get_callable_name(f: Callable) -> str:
+    if isinstance(f, types.LambdaType) and (
+        f.__name__ == "<lambda>" or f.__qualname__ == "<lambda>"
+    ):
+        unique_name = f"<lambda id={hex(id(f))}>"
+        return f"{f.__module__}.{unique_name}"
+    elif isinstance(f, types.BuiltinFunctionType):
+        return f"{f.__qualname__}"
+    elif isinstance(f, types.FunctionType):
+        return f"{f.__module__}.{f.__qualname__}"
+    elif isinstance(f, types.MethodType):
+        return f"{f.__self__.__module__}.{f.__qualname__}"
+    elif isinstance(f, np.ufunc):
+        return f"numpy.{f.__name__}"
+    elif isinstance(f, type) and callable(f):
+        return f"{f.__module__}.{f.__qualname__}"
+    else:
+        raise ValueError(f"Unsupported callable type: {type(f)}")
 
 
 class Constant(CachedExpression):
@@ -327,9 +341,12 @@ class Constant(CachedExpression):
     def __bool__(self):
         return bool(self.value)
 
+    def __hash__(self):
+        return super().__hash__() * hash(self._id)
+
     def __repr__(self):
         value = self.value
-        if isinstance(value, (str, int, float, tuple, list, set, dict)):
+        if isinstance(value, (str, int, float, dict, list, set, tuple)):
             return repr(value)
         elif isinstance(value, slice):
             start = value.start if value.start is not None else ""
@@ -337,6 +354,8 @@ class Constant(CachedExpression):
             if value.step is not None:
                 return f"{start}:{stop}:{value.step}"
             return f"{start}:{stop}"
+        elif callable(value):
+            return _get_callable_name(value)
         return f"{type(value)}(id={hex(self._id)})"
 
     def __str__(self):
@@ -353,6 +372,8 @@ class Constant(CachedExpression):
             if value.step is not None:
                 return f"{start}:{stop}:{value.step}"
             return f"{start}:{stop}"
+        elif callable(value):
+            return _get_callable_name(value)
         return str(value)
 
 
@@ -381,40 +402,14 @@ class Symbol(CachedExpression):
     def is_concrete(self):
         return self._value is not None
 
+    def __hash__(self):
+        return super().__hash__() * hash(self.identifier)
+
     def __repr__(self):
         return f"Symbol({self.identifier!r})"
 
     def __str__(self):
         return self.identifier
-
-
-def _get_function_name(function: Callable) -> str:
-    if isinstance(function, types.LambdaType) and (
-        function.__name__ == "<lambda>" or function.__qualname__ == "<lambda>"
-    ):
-        unique_name = f"<lambda id={hex(id(function))}>"
-        return f"{function.__module__}.{unique_name}"
-    elif isinstance(function, types.BuiltinFunctionType):
-        return f"{function.__qualname__}"
-    elif isinstance(function, types.FunctionType):
-        return f"{function.__module__}.{function.__qualname__}"
-    elif isinstance(function, types.MethodType):
-        return f"{function.__self__.__module__}.{function.__qualname__}"
-    elif isinstance(function, np.ufunc):
-        return f"numpy.{function.__name__}"
-    elif isinstance(function, type) and callable(function):
-        return f"{function.__module__}.{function.__qualname__}"
-    else:
-        raise ValueError(f"Unsupported function type: {type(function)}")
-
-
-def _symbol_from_callable(symbol: Callable):
-    if isinstance(symbol, Expression):
-        return symbol
-    name = _get_function_name(symbol)
-    new_symbol = Symbol(name)
-    new_symbol.concretize(symbol)
-    return new_symbol
 
 
 def find_symbols(phi: Expression, symbol_class: Type[Symbol] = Symbol):
@@ -449,11 +444,13 @@ class Parameter(Symbol):
     def initialize(
         self,
         identifier: Union[Constant, str],
-        type: Type[T],
+        type: Union[Constant, Type[T]],
         default: Optional[Union[Constant, T]] = None,
     ):
         super().initialize(identifier)
         self.name = str(identifier)
+        if isinstance(type, Constant):
+            type = type.value
         self.type = type
         if isinstance(default, Constant):
             self.default = default.value
@@ -475,13 +472,16 @@ class Parameter(Symbol):
             )
         return identifier
 
+    def __hash__(self):
+        return super().__hash__() * hash(self.identifier) * hash(self.type)
+
     def __repr__(self):
         return str(self)
 
     def __str__(self):
         if self.is_concrete:
             return repr(self.value)
-        return f"Parameter({self.name!r}, type={self.type.__name__}, default={self.default!r})"
+        return f"Parameter({self.name!r}, type={_get_callable_name(self.type)}, default={self.default!r})"
 
 
 class Network(Symbol):
@@ -532,7 +532,7 @@ class Image(Expression):
 
     @classmethod
     def load(cls, path: Expression):
-        if not isinstance(path, Constant):
+        if not path.is_concrete:
             return Image(path)
         # TODO : handle other image formats
         img = np.load(path.value)[None, :].astype(np.float32)
@@ -543,6 +543,9 @@ class Image(Expression):
         if self.is_concrete:
             return self.load(self.path).value
         return super().value
+
+    def __hash__(self):
+        return super().__hash__() * hash(self.path)
 
     def __repr__(self):
         return f"Image({self.path!r})"
@@ -564,25 +567,46 @@ class FunctionCall(Expression):
         self.function = function
         self.args = args
         self.kwargs = kwargs
-        self._value = None
 
     @property
     def value(self):
         if self.is_concrete:
             if getattr(self.function.value, "__func__", None) == Network.compose:
-                self._value = self.function.value(*self.args, **self.kwargs)
-            elif self._value is None:
-                args = tuple(arg.value for arg in self.args)
-                kwargs = {name: value.value for name, value in self.kwargs.items()}
-                self._value = self.function.value(*args, **kwargs)
-            return self._value
+                return self.function.value(*self.args, **self.kwargs)
+            args = tuple(arg.value for arg in self.args)
+            kwargs = {name: value.value for name, value in self.kwargs.items()}
+            return self.function.value(*args, **kwargs)
         return super().value
 
+    def is_equivalent(self, other):
+        if super().is_equivalent(other):
+            return True
+        elif (
+            isinstance(other, FunctionCall)
+            and self.function.is_equivalent(other.function)
+            and all(
+                arg1.is_equivalent(arg2) for arg1, arg2 in zip(self.args, other.args)
+            )
+            and all(
+                self.kwargs[k].is_equivalent(other.kwargs[k])
+                if k in self.kwargs and k in other.kwargs
+                else False
+                for k in set(self.kwargs.keys()).union(other.kwargs.keys())
+            )
+        ):
+            return True
+        return False
+
+    def __hash__(self):
+        args_hash = 1
+        for arg in self.args:
+            args_hash *= hash(arg)
+        for key, arg in self.kwargs.items():
+            args_hash *= hash(key) * hash(arg)
+        return super().__hash__() * hash(self.function) * args_hash
+
     def __repr__(self):
-        if not isinstance(self.function, Constant):
-            function_name = repr(self.function)
-        else:
-            function_name = _get_function_name(self.function.value)
+        function_name = repr(self.function)
         args_str = ", ".join(repr(arg) for arg in self.args)
         kwargs_str = ", ".join(
             f"{name}={value!r}" for name, value in self.kwargs.items()
@@ -596,10 +620,7 @@ class FunctionCall(Expression):
         return f"{function_name}()"
 
     def __str__(self):
-        if not isinstance(self.function, Constant):
-            function_name = str(self.function)
-        else:
-            function_name = _get_function_name(self.function.value)
+        function_name = str(self.function)
         args_str = ", ".join(str(arg) for arg in self.args)
         kwargs_str = ", ".join(f"{name}={value}" for name, value in self.kwargs.items())
         if args_str and kwargs_str:
@@ -620,6 +641,23 @@ class AssociativeExpression(Expression):
                 self.expressions.extend(expression.expressions)
             else:
                 self.expressions.append(expression)
+
+    def is_equivalent(self, other):
+        if super().is_equivalent(other):
+            return True
+        elif (
+            type(self) == type(other)
+            and len(self.expressions) == len(other.expressions)
+            and all(expr in other.expressions for expr in self.expressions)
+        ):
+            return True
+        return False
+
+    def __hash__(self):
+        exprs_hash = 1
+        for expr in self.expressions:
+            exprs_hash *= hash(expr)
+        return super().__hash__() * exprs_hash
 
     def __repr__(self):
         result_str = f", ".join(
@@ -650,6 +688,23 @@ class TernaryExpression(Expression):
         self.expr2 = expr2
         self.expr3 = expr3
 
+    def is_equivalent(self, other):
+        if super().is_equivalent(other):
+            return True
+        elif (
+            type(self) == type(other)
+            and self.expr1.is_equivalent(other.expr1)
+            and self.expr2.is_equivalent(other.expr2)
+            and self.expr3.is_equivalent(other.expr3)
+        ):
+            return True
+        return False
+
+    def __hash__(self):
+        return (
+            super().__hash__() * hash(self.expr1) * hash(self.expr2) * hash(self.expr3)
+        )
+
     def __repr__(self):
         return f"{type(self).__name__}({self.expr1!r}, {self.expr2!r}, {self.expr3!r})"
 
@@ -665,6 +720,20 @@ class BinaryExpression(Expression):
         self.expr1 = expr1
         self.expr2 = expr2
 
+    def is_equivalent(self, other):
+        if super().is_equivalent(other):
+            return True
+        elif (
+            type(self) == type(other)
+            and self.expr1.is_equivalent(other.expr1)
+            and self.expr2.is_equivalent(other.expr2)
+        ):
+            return True
+        return False
+
+    def __hash__(self):
+        return super().__hash__() * hash(self.expr1) * hash(self.expr2)
+
     def __repr__(self):
         return f"{type(self).__name__}({self.expr1!r}, {self.expr2!r})"
 
@@ -676,6 +745,16 @@ class UnaryExpression(Expression):
     def __init__(self, expr: Expression, *, ctx: Optional[Context] = None):
         super().__init__(ctx=ctx)
         self.expr = expr
+
+    def is_equivalent(self, other):
+        if super().is_equivalent(other):
+            return True
+        elif type(self) == type(other) and self.expr.is_equivalent(other.expr):
+            return True
+        return False
+
+    def __hash__(self):
+        return super().__hash__() * hash(self.expr)
 
     def __repr__(self):
         return f"{type(self).__name__}({self.expr!r})"
@@ -842,7 +921,9 @@ class Equal(BinaryExpression, LogicalExpression):
         return NotEqual(self.expr1, self.expr2)
 
     def __bool__(self):
-        return repr(self.expr1) == repr(self.expr2)
+        if self.is_concrete:
+            return bool(np.all(self.expr1.value == self.expr2.value))
+        return self.expr1.is_equivalent(self.expr2)
 
 
 class NotEqual(BinaryExpression, LogicalExpression):
@@ -852,7 +933,9 @@ class NotEqual(BinaryExpression, LogicalExpression):
         return Equal(self.expr1, self.expr2)
 
     def __bool__(self):
-        return repr(self.expr1) != repr(self.expr2)
+        if self.is_concrete:
+            return bool(np.any(self.expr1.value != self.expr2.value))
+        return not self.expr1.is_equivalent(self.expr2)
 
 
 class LessThan(BinaryExpression, LogicalExpression):

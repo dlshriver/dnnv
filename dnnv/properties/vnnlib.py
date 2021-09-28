@@ -46,7 +46,7 @@ def subtraction_helper(*args):
         return Negation(*args)
     elif len(args) == 2:
         return Subtract(*args)
-    raise ValueError("Subtraction not implemented for more than 2 args.")
+    raise VNNLibParseError("Subtraction not implemented for more than 2 args.")
 
 
 class ExpressionBuilder:
@@ -61,11 +61,13 @@ class ExpressionBuilder:
             ">=": GreaterThanOrEqual,
             "<": LessThan,
             "<=": LessThanOrEqual,
+            "=": Equal,
             "*": Multiply,
             "-": subtraction_helper,
             "or": Or,
             "and": And,
             "ite": IfThenElse,
+            "not": Not,
         }
         self.assertions: Set[Expression] = set()
         self.current_assertion: Optional[Expression] = None
@@ -87,7 +89,9 @@ class ExpressionBuilder:
             if len(index) == 1:
                 self.symbols[name] = Symbol("X")[
                     FunctionCall(
-                        np.unravel_index, (index[0], Network("N").input_shape[0]), {}
+                        Constant(np.unravel_index),
+                        (Constant(index[0]), Network("N").input_shape[0]),
+                        {},
                     )
                 ]
             else:
@@ -97,7 +101,9 @@ class ExpressionBuilder:
             if len(index) == 1:
                 self.symbols[name] = Network("N")(Symbol("X"))[
                     FunctionCall(
-                        np.unravel_index, (index[0], Network("N").output_shape[0]), {}
+                        Constant(np.unravel_index),
+                        (Constant(index[0]), Network("N").output_shape[0]),
+                        {},
                     )
                 ]
             else:

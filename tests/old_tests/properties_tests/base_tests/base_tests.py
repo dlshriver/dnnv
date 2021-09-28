@@ -60,10 +60,6 @@ class ExpressionTests(unittest.TestCase):
         self.assertIsInstance(add_e1_e3, Add)
         self.assertEqual(str(add_e1_e3), "(a + 5)")
 
-        radd_e2_e1 = e2.__radd__(e1)
-        self.assertIsInstance(radd_e2_e1, Add)
-        self.assertEqual(str(radd_e2_e1), "(a + b)")
-
     def test_subtract_expressions(self):
         e1 = Symbol("a")
         e2 = Symbol("b")
@@ -79,10 +75,6 @@ class ExpressionTests(unittest.TestCase):
         sub_e1_e3 = e1 - e3
         self.assertIsInstance(sub_e1_e3, Subtract)
         self.assertEqual(str(sub_e1_e3), "(a - 5)")
-
-        rsub_e2_e1 = e2.__rsub__(e1)
-        self.assertIsInstance(rsub_e2_e1, Subtract)
-        self.assertEqual(str(rsub_e2_e1), "(a - b)")
 
     def test_multiply_expressions(self):
         e1 = Symbol("a")
@@ -100,10 +92,6 @@ class ExpressionTests(unittest.TestCase):
         self.assertIsInstance(mul_e1_e3, Multiply)
         self.assertEqual(str(mul_e1_e3), "(a * 5)")
 
-        rmul_e2_e1 = e2.__rmul__(e1)
-        self.assertIsInstance(rmul_e2_e1, Multiply)
-        self.assertEqual(str(rmul_e2_e1), "(a * b)")
-
     def test_divide_expressions(self):
         e1 = Symbol("a")
         e2 = Symbol("b")
@@ -119,10 +107,6 @@ class ExpressionTests(unittest.TestCase):
         div_e1_e3 = e1 / e3
         self.assertIsInstance(div_e1_e3, Divide)
         self.assertEqual(str(div_e1_e3), "(a / 5)")
-
-        rdiv_e2_e1 = e2.__rtruediv__(e1)
-        self.assertIsInstance(rdiv_e2_e1, Divide)
-        self.assertEqual(str(rdiv_e2_e1), "(a / b)")
 
     def test_negate_expressions(self):
         e1 = Symbol("x")

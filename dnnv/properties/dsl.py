@@ -102,7 +102,6 @@ class Py2PropertyTransformer(ast.NodeTransformer):
                         col_offset=node.col_offset,
                     )
                 lambda_func = ast.Lambda(lambda_args, orig_expr, **attributes)
-                new_expr = ast.Call(lambda_func, [variable], [], **attributes)
 
                 new_args = [variable, lambda_func]
                 new_node = ast.Call(func, new_args, [], **attributes)
@@ -118,9 +117,28 @@ class Py2PropertyTransformer(ast.NodeTransformer):
                     return ast.Call(func, args, kwargs, **attributes)
                 if func.id in self._lambda_aliases:
                     return ast.Call(func, args, kwargs, **attributes)
-        make_func = ast.Name("_symbol_from_callable", ast.Load(), **attributes)
-        func_expr = ast.Call(make_func, [func], [], **attributes)
-        new_node = ast.Call(func_expr, args, kwargs, **attributes)
+        functioncall_name_node = ast.Name("FunctionCall", ast.Load(), **attributes)
+        args_list_node = ast.List(args, ast.Load(), **attributes)
+        kwards_dict_node = ast.Dict(
+            [ast.Str(kwarg.arg, **attributes) for kwarg in kwargs],
+            [kwarg.value for kwarg in kwargs],
+            **attributes,
+        )
+
+        new_node = ast.Call(
+            functioncall_name_node,
+            [func, args_list_node, kwards_dict_node],
+            [],
+            **attributes,
+        )
+
+        new_node = ast.Call(
+            ast.Attribute(new_node, "propagate_constants", ast.Load(), **attributes),
+            [],
+            [],
+            **attributes,
+        )
+
         return new_node
 
     def visit_Compare(self, node: ast.Compare):
@@ -373,31 +391,19 @@ class LimitQuantifiers(ExpressionVisitor):
 
     def visit_Exists(self, expr):
         if not self.at_top_level:
-            raise PropertyParserError(
-                "Quantifiers are only allowed at the top level.",
-                lineno=node.lineno,
-                col_offset=node.col_offset,
-            )
+            raise PropertyParserError("Quantifiers are only allowed at the top level.")
         if not isinstance(expr, self.top_level_quantifier):
             raise PropertyParserError(
-                "Quantifiers at the top level must be of the same type.",
-                lineno=node.lineno,
-                col_offset=node.col_offset,
+                "Quantifiers at the top level must be of the same type."
             )
         self.visit(expr.expression)
 
     def visit_Forall(self, expr):
         if not self.at_top_level:
-            raise PropertyParserError(
-                "Quantifiers are only allowed at the top level.",
-                lineno=node.lineno,
-                col_offset=node.col_offset,
-            )
+            raise PropertyParserError("Quantifiers are only allowed at the top level.")
         if not isinstance(expr, self.top_level_quantifier):
             raise PropertyParserError(
-                "Quantifiers at the top level must be of the same type.",
-                lineno=node.lineno,
-                col_offset=node.col_offset,
+                "Quantifiers at the top level must be of the same type."
             )
         self.visit(expr.expression)
 
@@ -407,7 +413,13 @@ class SymbolFactory(dict):
         if item not in self:
             assert isinstance(item, str)
             super().__setitem__(item, base.Symbol(item))
-        return super().__getitem__(item)
+        result = super().__getitem__(item)
+        if not isinstance(result, base.Expression) and (
+            not isinstance(result, type) or not issubclass(result, base.Expression)
+        ):
+            result = base.Constant(result)
+            super().__setitem__(item, result)
+        return result
 
 
 def parse_cli(phi: base.Expression, args):
@@ -467,7 +479,9 @@ def parse(path: Path, args: Optional[List[str]] = None) -> base.Expression:
 
     global_dict = SymbolFactory()
     global_dict.update(globals()["__builtins__"])
-    global_dict.update(base.__dict__)
+    base_dict = {name: base.__dict__[name] for name in base.__all__}
+    global_dict.update(base_dict)
+    global_dict["__path__"] = path
 
     with Context():
         code = compile(module, filename=path.name, mode="exec")
