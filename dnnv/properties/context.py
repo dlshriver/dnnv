@@ -1,4 +1,4 @@
-from typing import Dict, Optional, Type, TypeVar
+from typing import Dict, List, Type, TypeVar
 
 T = TypeVar("T")
 
@@ -11,28 +11,22 @@ class Context:
         self.id = Context.count
         Context.count += 1
         self._instance_cache: Dict[Type[T], Dict[str, T]] = {}
-        self._prev_context: Optional[Context] = None
+        self._prev_contexts: List[Context] = []
 
     def __repr__(self):
-        return f"Context(id={self.id}, _prev_context={self._prev_context!r})"
+        prev_contexts = ", ".join(str(ctx) for ctx in self._prev_contexts)
+        return f"Context(id={self.id}, prev_contexts=[{prev_contexts}])"
 
-    def __getstate__(self):
-        return {}
-
-    def __setstate__(self, state):
-        self.__init__(**state)
-        return self
+    def __str__(self):
+        return f"Context(id={self.id})"
 
     def __enter__(self):
-        if Context._current_context is self:
-            return self
-        self._prev_context = Context._current_context
+        self._prev_contexts.append(Context._current_context)
         Context._current_context = self
         return self
 
     def __exit__(self, *args):
-        if self._prev_context is not None:
-            Context._current_context = self._prev_context
+        Context._current_context = self._prev_contexts.pop()
 
     def reset(self):
         self._instance_cache = {}
@@ -43,3 +37,6 @@ Context._current_context = Context()
 
 def get_context() -> Context:
     return Context._current_context
+
+
+__all__ = ["get_context", "Context"]

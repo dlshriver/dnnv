@@ -16,25 +16,25 @@ def test_build_identifier():
 
 def test_repr():
     x = Parameter("param1", int)
-    assert repr(x) == "Parameter('param1', type=int, default=None)"
+    assert repr(x) == "Parameter('param1', type=builtins.int, default=None)"
     x.concretize(8)
     assert repr(x) == "8"
 
     x = Parameter("param2", float, 3.14)
-    assert repr(x) == "Parameter('param2', type=float, default=3.14)"
+    assert repr(x) == "Parameter('param2', type=builtins.float, default=3.14)"
 
     x = Parameter("param3", str, Constant("test"))
-    assert repr(x) == "Parameter('param3', type=str, default='test')"
+    assert repr(x) == "Parameter('param3', type=builtins.str, default='test')"
 
 
 def test_str():
     x = Parameter("param1", int)
-    assert str(x) == "Parameter('param1', type=int, default=None)"
+    assert str(x) == "Parameter('param1', type=builtins.int, default=None)"
     x.concretize(8)
     assert str(x) == "8"
 
     x = Parameter("param2", float, 3.14)
-    assert str(x) == "Parameter('param2', type=float, default=3.14)"
+    assert str(x) == "Parameter('param2', type=builtins.float, default=3.14)"
 
     x = Parameter("param3", str, Constant("test"))
-    assert str(x) == "Parameter('param3', type=str, default='test')"
+    assert str(x) == "Parameter('param3', type=builtins.str, default='test')"
