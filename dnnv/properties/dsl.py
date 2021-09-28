@@ -120,7 +120,7 @@ class Py2PropertyTransformer(ast.NodeTransformer):
         functioncall_name_node = ast.Name("FunctionCall", ast.Load(), **attributes)
         args_list_node = ast.List(args, ast.Load(), **attributes)
         kwards_dict_node = ast.Dict(
-            [ast.Constant(kwarg.arg, "str", **attributes) for kwarg in kwargs],
+            [ast.Str(kwarg.arg, **attributes) for kwarg in kwargs],
             [kwarg.value for kwarg in kwargs],
             **attributes,
         )
