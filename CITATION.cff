@@ -1,0 +1,41 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+- family-names: "Shriver"
+  given-names: "David"
+  orcid: "https://orcid.org/0000-0003-0208-6517"
+  website: "https://davidshriver.me"
+title: "DNNV"
+version: 0.4.8
+doi: 10.5281/zenodo.4900511
+date-released: 2021-06-04
+url: "https://github.com/dlshriver/DNNV"
+preferred-citation:
+  type: conference-paper
+  authors:
+  - family-names: "Shriver"
+    given-names: "David"
+    orcid: "https://orcid.org/0000-0003-0208-6517"
+    website: "https://davidshriver.me"
+  - family-names: "Elbaum"
+    given-names: "Sebastian"
+    orcid: "https://orcid.org/0000-0001-9592-1352"
+  - family-names: "Dwyer"
+    given-names: "Matthew"
+    orcid: "https://orcid.org/0000-0002-1937-1544"
+  doi: "10.1007/978-3-030-81685-8_6"
+  title: "DNNV: A Framework for Deep Neural Network Verification"
+  conference:
+    name: "Computer Aided Verification"
+  collection-title: "Computer Aided Verification - 33rd International Conference, CAV 2021, Virtual Event, July 20-23, 2021, Proceedings, Part I"
+  editors:
+  - family-names: "Silva"
+    given-names: "Alexandra"
+  - family-names: "Leino"
+    given-names: "K. Rustan M."
+  publisher: "Springer International Publishing"
+  volume: 12759
+  start: 137 # First page number
+  end: 150 # Last page number
+  month: 7
+  year: 2021
