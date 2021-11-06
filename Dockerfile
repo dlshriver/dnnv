@@ -6,51 +6,62 @@ RUN useradd -ms /bin/bash dnnv
 
 SHELL ["/bin/bash", "-c"]
 
-RUN apt-get -qq update
-RUN apt-get -qq install -y software-properties-common
-RUN apt-get -qq install -y build-essential
-RUN add-apt-repository -y ppa:deadsnakes/ppa
-RUN apt-get -qq update
-RUN apt-get -qq install -y python3.7 python3.7-dev python3.7-venv
-RUN apt-get -qq install -y cmake
-RUN apt-get -qq install -y wget
-RUN apt-get -qq install -y git
-RUN apt-get -qq install -y valgrind
+ENV TZ=America/New_York
+
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
+    && echo $TZ > /etc/timezone \
+    && apt-get -qq update \
+    && apt-get -qq install --no-install-recommends -y \
+    build-essential \
+    software-properties-common \
+    && add-apt-repository -y ppa:deadsnakes/ppa \
+    && apt-get -qq update \
+    && apt-get -qq install --no-install-recommends -y \
+    cmake \
+    git \
+    python3.8 \
+    python3.8-dev \
+    python3.8-venv \
+    valgrind \
+    wget \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 USER dnnv
 WORKDIR /home/dnnv/
 
 # create venv
-RUN python3.7 -m venv .venv
-RUN . .venv/bin/activate && pip install --upgrade pip flit
-# load venv on interactive shell
-RUN echo ". .venv/bin/activate" >>.bashrc
+RUN python3.8 -m venv .venv \
+    && . .venv/bin/activate \
+    # upgrade pip and flit
+    && pip install --upgrade pip flit \
+    # load venv on interactive shell
+    && echo ". .venv/bin/activate" >>.bashrc
 
 # install DNNV base
-COPY --chown=dnnv pyproject.toml .
-COPY --chown=dnnv README.md .
-COPY --chown=dnnv dnnv/__init__.py dnnv/__init__.py
-COPY --chown=dnnv dnnv/__version__.py dnnv/__version__.py
+COPY --chown=dnnv pyproject.toml README.md ./
+COPY --chown=dnnv dnnv/__init__.py dnnv/__version__.py dnnv/
 RUN . .venv/bin/activate && flit install -s
 
 # build test artifacts
-COPY --chown=dnnv tests/old_tests/artifacts/ tests/old_tests/artifacts/
+COPY --chown=dnnv tests/old_tests/artifacts/build_artifacts.py tests/old_tests/artifacts/build_artifacts.py
 RUN . .venv/bin/activate && python tests/old_tests/artifacts/build_artifacts.py
 
-# copy files to container
-COPY --chown=dnnv scripts/ scripts/
-COPY --chown=dnnv dnnv/ dnnv/
-COPY --chown=dnnv tests/ tests/
-COPY --chown=dnnv docs/ docs/
-COPY --chown=dnnv tools/ tools/
+# copy project files to container
+COPY --chown=dnnv . .
 
-# install verifiers
-# RUN . .venv/bin/activate && dnnv_manage install bab # requires gurobi
-# RUN . .venv/bin/activate && dnnv_manage install eran
-# RUN . .venv/bin/activate && dnnv_manage install marabou
-# RUN . .venv/bin/activate && dnnv_manage install mipverify # requires gurobi
-# RUN . .venv/bin/activate && dnnv_manage install neurify
-# RUN . .venv/bin/activate && dnnv_manage install nnenum
-# RUN . .venv/bin/activate && dnnv_manage install planet
-# RUN . .venv/bin/activate && dnnv_manage install reluplex
-# RUN . .venv/bin/activate && dnnv_manage install verinet # requires gurobi
+RUN . .venv/bin/activate \
+    # install verifiers
+    # verifiers that do not require gurobi
+    && dnnv_manage install eran \
+    && dnnv_manage install marabou \
+    && dnnv_manage install neurify \
+    && dnnv_manage install nnenum \
+    && dnnv_manage install planet \
+    && dnnv_manage install reluplex \
+    # verifiers that require gurobi license
+    && dnnv_manage install bab \
+    && dnnv_manage install mipverify \
+    && dnnv_manage install verinet \
+    # clean up cache
+    && rm -rf .cache

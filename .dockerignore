@@ -1,5 +1,6 @@
 # Byte-compiled / optimized / DLL files
 __pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 
@@ -107,19 +108,17 @@ ENV/
 /*.bat
 /tmp/
 
-# Project specific
-/bin/
-/include/
-/info/
-/libexec/
-/share/
-/data/
-/artifacts/
-/tests/artifacts/networks/*.onnx
-!/tests/artifacts/networks/dave.onnx
-!/tests/artifacts/networks/dronet.onnx
-!/tests/artifacts/networks/convSmallRELU__Point.onnx
-!/tests/artifacts/networks/mnist_relu_3_50.onnx
-
+# Docker
 Dockerfile
 .dockerignore
+
+# Git/GitHub
+.git/
+.gitignore
+.github/
+
+# Project Specific
+third_party/
+*.md
+!README.md
+requirements.txt
