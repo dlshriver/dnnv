@@ -51,17 +51,17 @@ RUN . .venv/bin/activate && python tests/old_tests/artifacts/build_artifacts.py
 COPY --chown=dnnv . .
 
 RUN . .venv/bin/activate \
-    # install verifiers
-    # verifiers that do not require gurobi
-    && dnnv_manage install eran \
-    && dnnv_manage install marabou \
-    && dnnv_manage install neurify \
-    && dnnv_manage install nnenum \
-    && dnnv_manage install planet \
-    && dnnv_manage install reluplex \
-    # verifiers that require gurobi license
-    && dnnv_manage install bab \
-    && dnnv_manage install mipverify \
-    && dnnv_manage install verinet \
+    # # install verifiers
+    # # verifiers that do not require gurobi
+    # && dnnv_manage install eran \
+    # && dnnv_manage install marabou \
+    # && dnnv_manage install neurify \
+    # && dnnv_manage install nnenum \
+    # && dnnv_manage install planet \
+    # && dnnv_manage install reluplex \
+    # # verifiers that require gurobi license
+    # && dnnv_manage install bab \
+    # && dnnv_manage install mipverify \
+    # && dnnv_manage install verinet \
     # clean up cache
     && rm -rf .cache
