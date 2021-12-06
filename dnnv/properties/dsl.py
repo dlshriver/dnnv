@@ -129,19 +129,19 @@ class Py2PropertyTransformer(ast.NodeTransformer):
         return ast.Call(const_func, [node], [], **attributes)
 
     def _ensure_primitive(self, expr):
+        primitive_type = (
+            ast.Constant,
+            ast.Ellipsis,
+            ast.NameConstant,
+            ast.Num,
+            ast.Str,
+        )
         if isinstance(
             expr,
-            (
-                ast.Constant,
-                ast.NameConstant,
-                ast.Num,
-                ast.Str,
-            ),
+            primitive_type,
         ):
             return True
-        elif isinstance(expr, ast.UnaryOp) and isinstance(
-            expr.operand, (ast.Constant, ast.NameConstant, ast.Num, ast.Str)
-        ):
+        elif isinstance(expr, ast.UnaryOp) and isinstance(expr.operand, primitive_type):
             return True
         elif isinstance(expr, ast.Dict):
             for k in expr.keys:
