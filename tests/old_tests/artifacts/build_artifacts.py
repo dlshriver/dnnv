@@ -1,5 +1,6 @@
 import shutil
 import tarfile
+import tempfile
 import urllib.request
 
 import numpy as np
@@ -235,26 +236,6 @@ def build_random_weight_artifacts():
             )
 
 
-def download_eran_benchmark():
-    # URL: http://cs.virginia.edu/~dls2fc/eranmnist_benchmark.tar.gz
-
-    artifact_dir = Path(__file__).parent / "networks"
-    artifact_dir.mkdir(parents=True, exist_ok=True)
-
-    if not Path("/tmp/eranmnist_benchmark.tar.gz").exists():
-        with open("/tmp/eranmnist_benchmark.tar.gz", "wb+") as f:
-            with urllib.request.urlopen(
-                "http://cs.virginia.edu/~dls2fc/eranmnist_benchmark.tar.gz"
-            ) as f_url:
-                f.write(f_url.read())
-        with tarfile.open("/tmp/eranmnist_benchmark.tar.gz") as tar:
-            tar.extractall("/tmp")
-            for member in tar.getmembers():
-                if member.name.endswith(".onnx"):
-                    shutil.copy(f"/tmp/{member.name}", str(artifact_dir))
-
-
 if __name__ == "__main__":
     build_known_behavior_artifacts()
     build_random_weight_artifacts()
-    # download_eran_benchmark()
