@@ -1,8 +1,7 @@
 import pytest
 
-from dnnv.properties.base import *
+from dnnv.properties.expressions import *
 from dnnv.properties.transformers import GenericExpressionTransformer
-from dnnv.utils import get_subclasses
 
 
 def test_missing():
@@ -40,6 +39,15 @@ def test_BinaryExpression():
     assert repr(new_expr) == repr(expr)
 
 
+def test_Call():
+    transformer = GenericExpressionTransformer()
+
+    expr = Call(Symbol("f"), (), {})
+    new_expr = transformer.visit(expr)
+    assert new_expr is not expr
+    assert repr(new_expr) == repr(expr)
+
+
 def test_Constant():
     transformer = GenericExpressionTransformer()
 
@@ -48,26 +56,17 @@ def test_Constant():
     assert new_expr is expr
 
 
-def test_FunctionCall():
-    transformer = GenericExpressionTransformer()
-
-    expr = FunctionCall(Symbol("f"), (), {})
-    new_expr = transformer.visit(expr)
-    assert new_expr is not expr
-    assert repr(new_expr) == repr(expr)
-
-
 def test_Image(tmp_path):
     transformer = GenericExpressionTransformer()
 
     expr = Image(tmp_path / "test.npy")
     new_expr = transformer.visit(expr)
-    assert new_expr is not expr
+    assert new_expr is expr
     assert repr(new_expr) == repr(expr)
 
     expr = Image(Constant(tmp_path / "test.npy"))
     new_expr = transformer.visit(expr)
-    assert new_expr is not expr
+    assert new_expr is expr
     assert repr(new_expr) == repr(expr)
 
 

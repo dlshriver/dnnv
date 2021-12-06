@@ -1,6 +1,7 @@
 import numpy as np
+import pytest
 
-from dnnv.properties.base import *
+from dnnv.properties.expressions import *
 from dnnv.properties.transformers import PropagateConstants
 
 
@@ -16,6 +17,7 @@ def test_NotEqual_symbols():
     assert new_expr.expr2 is Symbol("b")
 
 
+@pytest.mark.xfail
 def test_NotEqual_same_symbol():
     transformer = PropagateConstants()
 
@@ -53,14 +55,14 @@ def test_NotEqual_const_arrays():
     new_expr = transformer.visit(expr)
     assert new_expr is not expr
     assert isinstance(new_expr, Constant)
-    assert new_expr.value == True
+    assert np.all(new_expr.value == True)
 
     a, b = Constant(np.full((1, 5), 33)), Constant(np.full((1, 5), 33))
     expr = NotEqual(a, b)
     new_expr = transformer.visit(expr)
     assert new_expr is not expr
     assert isinstance(new_expr, Constant)
-    assert new_expr.value == False
+    assert np.all(new_expr.value == False)
 
     arr_a = np.array([1, 2, 3])
     arr_b = np.array([1, 4, 3])

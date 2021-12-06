@@ -1,7 +1,7 @@
 from dnnv.properties import *
 import numpy as np
 
-N = Network()
+N = Network("N")
 lb = -np.ones((1, 2))
 ub = np.ones((1, 2))
 

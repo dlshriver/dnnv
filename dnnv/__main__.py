@@ -40,7 +40,7 @@ def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
         for name, network in args.networks.items():
             print(f"{name}:")
             logger.debug("Parsing network (%s)", network)
-            dnn = nn.parse(network).simplify()
+            dnn = nn.parse(network)
             dnn.pprint()
             networks[name] = dnn
             print()

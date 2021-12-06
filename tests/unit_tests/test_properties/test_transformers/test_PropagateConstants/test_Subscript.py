@@ -1,6 +1,6 @@
 from dnnv.nn.graph import OperationGraph
 from dnnv.nn.operations import Input
-from dnnv.properties.base import *
+from dnnv.properties.expressions import *
 from dnnv.properties.transformers import PropagateConstants
 
 
@@ -32,6 +32,7 @@ def test_Subscript_concrete():
     expr = Subscript(Network("N"), Constant(0))
     expr.concretize(N=OperationGraph([Input(None, None)]))
     new_expr = transformer.visit(expr)
+    print(new_expr)
     assert new_expr is not expr
     assert isinstance(new_expr, Network)
     assert new_expr.is_concrete

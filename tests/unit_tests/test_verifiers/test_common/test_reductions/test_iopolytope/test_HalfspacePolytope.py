@@ -1,4 +1,3 @@
-from numpy.core.numeric import indices
 import numpy as np
 import pytest
 

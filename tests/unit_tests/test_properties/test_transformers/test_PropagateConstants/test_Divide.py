@@ -1,6 +1,7 @@
 import numpy as np
+import pytest
 
-from dnnv.properties.base import *
+from dnnv.properties.expressions import *
 from dnnv.properties.transformers import PropagateConstants
 
 
@@ -81,16 +82,12 @@ def test_Divide_by_zero():
     transformer = PropagateConstants()
 
     expr = Divide(Symbol("a"), Constant(0))
-    new_expr = transformer.visit(expr)
-    assert new_expr is not expr
-    assert isinstance(new_expr, Constant)
-    assert np.isnan(new_expr.value)
+    with pytest.raises(ZeroDivisionError, match="(a / 0)"):
+        new_expr = transformer.visit(expr)
 
     expr = Divide(Symbol("a"), Constant(0.0))
-    new_expr = transformer.visit(expr)
-    assert new_expr is not expr
-    assert isinstance(new_expr, Constant)
-    assert np.isnan(new_expr.value)
+    with pytest.raises(ZeroDivisionError, match="(a / 0)"):
+        new_expr = transformer.visit(expr)
 
 
 def test_Divide_by_one():

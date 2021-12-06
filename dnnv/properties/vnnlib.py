@@ -4,8 +4,7 @@ from pathlib import Path
 from simpleparse.parser import Parser
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
-from .base import *
-from .context import Context
+from .expressions import *
 from .dsl import LimitQuantifiers, parse_cli
 
 
@@ -88,7 +87,7 @@ class ExpressionBuilder:
             index = tuple(int(i) for i in name.split("_")[1:])
             if len(index) == 1:
                 self.symbols[name] = Symbol("X")[
-                    FunctionCall(
+                    Call(
                         Constant(np.unravel_index),
                         (Constant(index[0]), Network("N").input_shape[0]),
                         {},
@@ -100,7 +99,7 @@ class ExpressionBuilder:
             index = tuple(int(i) for i in name.split("_")[1:])
             if len(index) == 1:
                 self.symbols[name] = Network("N")(Symbol("X"))[
-                    FunctionCall(
+                    Call(
                         Constant(np.unravel_index),
                         (Constant(index[0]), Network("N").output_shape[0]),
                         {},
@@ -172,10 +171,10 @@ class ExpressionBuilder:
             return self.operators[tree[3][0]]
         else:
             try:
-                return int(tree[3][0])
+                return Constant(int(tree[3][0]))
             except ValueError:
                 try:
-                    return float(tree[3][0])
+                    return Constant(float(tree[3][0]))
                 except ValueError:
                     pass
             raise VNNLibParseError(f"Unknown identifier: {tree[3][0]}")

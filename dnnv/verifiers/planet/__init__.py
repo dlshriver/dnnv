@@ -22,7 +22,7 @@ class Planet(Verifier):
                 "Unsupported network: More than 1 input variable"
             )
         layers = as_layers(
-            prop.suffixed_op_graph(),
+            prop.suffixed_op_graph().simplify(),
             extra_layer_types=PLANET_LAYER_TYPES,
             translator_error=self.translator_error,
         )

@@ -1,4 +1,4 @@
-from .base import *
+from .expressions import *
 
 
 class ExpressionVisitor:

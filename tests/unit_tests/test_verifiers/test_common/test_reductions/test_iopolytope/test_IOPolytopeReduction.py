@@ -1,10 +1,9 @@
-from dnnv.verifiers.common.errors import VerifierTranslatorError
 import numpy as np
 import pytest
 
 from dnnv.nn.graph import OperationGraph
 from dnnv.nn import operations
-from dnnv.properties.base import *
+from dnnv.properties.expressions import *
 from dnnv.verifiers.common.reductions.iopolytope import *
 
 
@@ -42,6 +41,8 @@ def test_simple_property():
     op_graph = OperationGraph([output_op])
     phi.concretize(N=op_graph)
 
+    print(phi)
+
     properties = list(reduction.reduce_property(phi))
     assert len(properties) == 1
     prop = properties[0]
@@ -51,7 +52,5 @@ def test_simple_property():
     assert np.all(prop.input_constraint._lower_bound == np.array([-np.inf]))
     assert np.all(prop.input_constraint._upper_bound == np.array([np.inf]))
 
-    assert np.all(
-        prop.output_constraint._lower_bound == np.array([np.nextafter(0, 1)])
-    )
+    assert np.all(prop.output_constraint._lower_bound == np.array([np.nextafter(0, 1)]))
     assert np.all(prop.output_constraint._upper_bound == np.array([np.inf]))

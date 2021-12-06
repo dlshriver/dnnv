@@ -3,7 +3,7 @@ import unittest
 
 from dnnv import nn
 from dnnv import properties
-from dnnv.properties.context import get_context
+from dnnv.properties import get_context
 
 from dnnv.verifiers import SAT, UNSAT, UNKNOWN
 from dnnv.verifiers.bab import BaB
@@ -95,6 +95,7 @@ class MNISTTests(unittest.TestCase):
                 result, _ = verifier.verify(phi, **VERIFIER_KWARGS.get(name, {}))
                 self.check_results(result, results)
 
+    @unittest.skip("Too slow")
     def test_convSmallRELU__Point(self):
         excluded_verifiers = {
             "bab",  # too slow

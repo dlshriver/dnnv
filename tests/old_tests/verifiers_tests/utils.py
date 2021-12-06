@@ -2,7 +2,7 @@ import os
 
 from dnnv import nn
 from dnnv import properties
-from dnnv.properties.context import get_context
+from dnnv.properties import get_context
 from dnnv.verifiers import SAT, UNSAT, UNKNOWN
 
 from old_tests.utils import network_artifact_dir, property_artifact_dir

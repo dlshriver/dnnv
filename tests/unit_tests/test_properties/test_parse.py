@@ -1,7 +1,5 @@
-import numpy as np
-
 from dnnv.properties import parse
-from dnnv.properties.base import *
+from dnnv.properties.expressions import *
 
 
 def test_parse_dnnp(tmp_path):
@@ -18,7 +16,7 @@ Forall(x, Or(x < -1, x > 1, Network("N")(x) > 1))
     print(repr(phi))
     assert (
         repr(phi)
-        == "Forall(Symbol('x0'), Or(GreaterThan(Network('N')(Symbol('x0')), 1), GreaterThan(Symbol('x0'), 1), LessThan(Symbol('x0'), -1)))"
+        == "Forall(Symbol('x'), Or(GreaterThan(Network('N')(Symbol('x')), 1), GreaterThan(Symbol('x'), 1), LessThan(Symbol('x'), -1)))"
     )
 
 
@@ -39,6 +37,7 @@ def test_parse_vnnlib(tmp_path):
 
     phi = parse(vnnlib_path, format="vnnlib")
 
+    print(repr(phi))
     assert (
         repr(phi)
         == "Forall(Symbol('X'), Or(GreaterThan(Network('N')(Symbol('X'))[numpy.unravel_index(0, Network('N').'output_shape'[0])], -1.0), GreaterThan(Symbol('X')[numpy.unravel_index(0, Network('N').'input_shape'[0])], 1.0), LessThan(Symbol('X')[numpy.unravel_index(0, Network('N').'input_shape'[0])], -1.0)))"

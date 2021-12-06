@@ -2,11 +2,13 @@ from dnnv.properties import *
 import numpy as np
 import os
 
+rng = np.random.default_rng(int(os.environ.get("SEED", "0")))
+
 INPUT_LAYER = eval(os.environ.get("INPUT_LAYER", "None"))
 OUTPUT_LAYER = eval(os.environ.get("OUTPUT_LAYER", "None"))
-N = Network()[INPUT_LAYER:OUTPUT_LAYER]
+N = Network("N")[INPUT_LAYER:OUTPUT_LAYER]
 
-x = np.random.randn(1, N.input_shape[0][1]).astype(np.float32)
+x = rng.normal(size=N.input_shape[0][1])[None].astype(np.float32)
 x = x + eval(os.environ.get("SHIFT", "0"))
 y = np.argmax(N(x))
 epsilon = 3.0

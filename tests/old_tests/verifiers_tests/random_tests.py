@@ -3,7 +3,7 @@ import unittest
 
 from dnnv import nn
 from dnnv import properties
-from dnnv.properties.context import get_context
+from dnnv.properties import get_context
 
 from dnnv.verifiers import SAT, UNSAT, UNKNOWN
 from dnnv.verifiers.bab import BaB
@@ -63,17 +63,18 @@ class RandomTests(unittest.TestCase):
 
     def test_random_fc_0(self):
         os.environ["OUTPUT_LAYER"] = "-1"
+        excluded_configs = {
+            ("marabou", 0.5),  # numerical inconsistency
+            ("marabou", 1.0),  # numerical inconsistency
+            ("verinet", 0.5),  # too slow
+        }
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
             for i in range(RUNS_PER_PROP):
                 os.environ["SEED"] = str(i)
                 results = []
                 for name, verifier in VERIFIERS.items():
-                    if name == "marabou" and epsilon >= 0.5:
-                        # numerical inconsistencies # TODO : address these
-                        continue
-                    if name == "verinet" and epsilon == 0.5:
-                        # too slow
+                    if (name, epsilon) in excluded_configs:
                         continue
                     if not verifier.is_installed():
                         continue
@@ -86,14 +87,17 @@ class RandomTests(unittest.TestCase):
 
     def test_random_fc_1(self):
         os.environ["OUTPUT_LAYER"] = "-1"
+        excluded_configs = {
+            ("verinet", 0.5),  # too slow
+            ("verinet", 1.0),  # too slow
+        }
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
             for i in range(RUNS_PER_PROP):
                 os.environ["SEED"] = str(i)
                 results = []
                 for name, verifier in VERIFIERS.items():
-                    if name == "verinet" and (epsilon == 0.5 or epsilon == 1.0):
-                        # too slow
+                    if (name, epsilon) in excluded_configs:
                         continue
                     if not verifier.is_installed():
                         continue
@@ -106,14 +110,16 @@ class RandomTests(unittest.TestCase):
 
     def test_random_fc_2(self):
         os.environ["OUTPUT_LAYER"] = "-1"
+        excluded_configs = {
+            ("verinet", 0.5),  # too slow
+        }
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
             for i in range(RUNS_PER_PROP):
                 os.environ["SEED"] = str(i)
                 results = []
                 for name, verifier in VERIFIERS.items():
-                    if name == "verinet" and epsilon == 0.5:
-                        # too slow
+                    if (name, epsilon) in excluded_configs:
                         continue
                     if not verifier.is_installed():
                         continue
@@ -126,8 +132,16 @@ class RandomTests(unittest.TestCase):
 
     def test_random_conv_0(self):
         os.environ["OUTPUT_LAYER"] = "-1"
-        excluded_verifiers = {
-            "reluplex",
+        excluded_configs = {
+            ("mipverify", 0.01),  # too slow
+            ("mipverify", 0.1),  # too slow
+            ("mipverify", 0.5),  # too slow
+            ("mipverify", 1.0),  # too slow
+            ("reluplex", 0.01),  # conv unsupported
+            ("reluplex", 0.1),  # conv unsupported
+            ("reluplex", 0.5),  # conv unsupported
+            ("reluplex", 1.0),  # conv unsupported
+            ("nnenum", 0.5),  # too slow
         }
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
@@ -135,7 +149,7 @@ class RandomTests(unittest.TestCase):
                 os.environ["SEED"] = str(i)
                 results = []
                 for name, verifier in VERIFIERS.items():
-                    if name in excluded_verifiers:
+                    if (name, epsilon) in excluded_configs:
                         continue
                     if not verifier.is_installed():
                         continue
@@ -150,8 +164,16 @@ class RandomTests(unittest.TestCase):
 
     def test_random_conv_1(self):
         os.environ["OUTPUT_LAYER"] = "-1"
-        excluded_verifiers = {
-            "reluplex",
+        excluded_configs = {
+            ("mipverify", 0.01),  # too slow
+            ("mipverify", 0.1),  # too slow
+            ("mipverify", 0.5),  # too slow
+            ("mipverify", 1.0),  # too slow
+            ("reluplex", 0.01),  # conv unsupported
+            ("reluplex", 0.1),  # conv unsupported
+            ("reluplex", 0.5),  # conv unsupported
+            ("reluplex", 1.0),  # conv unsupported
+            ("verinet", 0.01),  # too slow
         }
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
@@ -159,10 +181,7 @@ class RandomTests(unittest.TestCase):
                 os.environ["SEED"] = str(i)
                 results = []
                 for name, verifier in VERIFIERS.items():
-                    if name == "verinet" and epsilon == 0.01:
-                        # too slow
-                        continue
-                    if name in excluded_verifiers:
+                    if (name, epsilon) in excluded_configs:
                         continue
                     if not verifier.is_installed():
                         continue
@@ -177,8 +196,15 @@ class RandomTests(unittest.TestCase):
 
     def test_random_conv_2(self):
         os.environ["OUTPUT_LAYER"] = "-1"
-        excluded_verifiers = {
-            "reluplex",
+        excluded_configs = {
+            ("mipverify", 0.01),  # too slow
+            ("mipverify", 0.1),  # too slow
+            ("mipverify", 0.5),  # too slow
+            ("mipverify", 1.0),  # too slow
+            ("reluplex", 0.01),  # conv unsupported
+            ("reluplex", 0.1),  # conv unsupported
+            ("reluplex", 0.5),  # conv unsupported
+            ("reluplex", 1.0),  # conv unsupported
         }
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
@@ -186,10 +212,7 @@ class RandomTests(unittest.TestCase):
                 os.environ["SEED"] = str(i)
                 results = []
                 for name, verifier in VERIFIERS.items():
-                    if name == "marabou" and (epsilon == 0.5 or epsilon == 1.0):
-                        # numerical inconsistencies # TODO : address these
-                        continue
-                    if name in excluded_verifiers:
+                    if (name, epsilon) in excluded_configs:
                         continue
                     if not verifier.is_installed():
                         continue

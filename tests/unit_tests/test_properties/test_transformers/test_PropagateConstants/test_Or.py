@@ -1,6 +1,7 @@
 import numpy as np
+import pytest
 
-from dnnv.properties.base import *
+from dnnv.properties.expressions import *
 from dnnv.properties.transformers import PropagateConstants
 
 
@@ -182,6 +183,7 @@ def test_Or_mixed_const_arrays():
         assert False
 
 
+@pytest.mark.xfail
 def test_Or_symbol_and_neg_symbol():
     transformer = PropagateConstants()
 

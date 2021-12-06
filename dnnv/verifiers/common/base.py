@@ -5,9 +5,9 @@ import tempfile
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from functools import partial
-from typing import Any, Dict, Generator, List, Optional, Tuple, Type, Union
+from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Type, Union
 
-from dnnv.properties import Expression
+from dnnv.properties import Expression, LogicalExpression
 
 from .errors import VerifierError, VerifierTranslatorError
 from .executors import VerifierExecutor, CommandLineExecutor
@@ -29,7 +29,7 @@ class Parameter:
         choices: Optional[List[Any]] = None,
         help: Optional[str] = None,
     ):
-        self.type = dtype
+        self.type: Callable[[Any], Any] = dtype
         if dtype == bool:
             self.type = lambda x: x not in ["False", "false", "0", "F", "f", False, 0]
         self.default = self.type(default) if default is not None else None
@@ -92,6 +92,7 @@ class Verifier(ABC):
         return self.parse_results(prop, results)
 
     def reduce_property(self) -> Generator[Property, None, None]:
+        assert isinstance(self.property, LogicalExpression)
         for subproperty in self.reduction().reduce_property(~self.property):
             yield subproperty
 

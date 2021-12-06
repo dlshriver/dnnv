@@ -67,7 +67,7 @@ class Convert(Verifier):
         paths = []
         if self.parameters.get("to") == "nnet":
             layers = as_layers(
-                prop.suffixed_op_graph(),
+                prop.suffixed_op_graph().simplify(),
                 translator_error=self.translator_error,
             )
             paths.append(
@@ -81,7 +81,7 @@ class Convert(Verifier):
             )
         elif self.parameters.get("to") == "rlv":
             layers = as_layers(
-                prop.suffixed_op_graph(),
+                prop.suffixed_op_graph().simplify(),
                 translator_error=self.translator_error,
             )
             paths.append(
@@ -97,7 +97,7 @@ class Convert(Verifier):
             paths.append(
                 Path(
                     to_vnnlib_onnx_file(
-                        prop.op_graph, translator_error=self.translator_error
+                        prop.op_graph.simplify(), translator_error=self.translator_error
                     )
                 )
             )

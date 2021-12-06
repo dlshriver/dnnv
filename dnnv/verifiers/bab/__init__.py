@@ -26,7 +26,7 @@ class BaB(Verifier):
                 "Unsupported network: More than 1 input variable"
             )
         layers = as_layers(
-            prop.suffixed_op_graph(),
+            prop.suffixed_op_graph().simplify(),
             translator_error=self.translator_error,
         )
         rlv_file_path = to_rlv_file(

@@ -1,4 +1,4 @@
-from dnnv.properties.base import *
+from dnnv.properties.expressions import *
 from dnnv.properties.vnnlib import parse
 
 
@@ -121,9 +121,9 @@ def test_parse_parameters(tmp_path):
     with open(vnnlib_path, "w+") as f:
         f.write(property)
 
-    phi = parse(vnnlib_path, ["--prop.epsilon=1.0"])
+    phi = parse(vnnlib_path, ["--prop.epsilon=1.0"]).propagate_constants()
 
     assert (
         repr(phi)
-        == "Forall(Symbol('X'), Or(GreaterThan(Symbol('X')[(0, 0)], 1.0), GreaterThan(Symbol('X')[(0, 1)], 1.0), LessThan(Symbol('X')[(0, 0)], Negation(1.0)), LessThan(Symbol('X')[(0, 1)], Negation(1.0)), LessThanOrEqual(Network('N')(Symbol('X'))[(0, 0)], 0.0)))"
+        == "Forall(Symbol('X'), Or(GreaterThan(Symbol('X')[(0, 0)], 1.0), GreaterThan(Symbol('X')[(0, 1)], 1.0), LessThan(Symbol('X')[(0, 0)], -1.0), LessThan(Symbol('X')[(0, 1)], -1.0), LessThanOrEqual(Network('N')(Symbol('X'))[(0, 0)], 0.0)))"
     )

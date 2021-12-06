@@ -1,8 +1,8 @@
 from pathlib import Path
 from typing import List, Optional
 
-from .base import Expression
 from .dsl import parse as parse_dsl
+from .expressions import Expression
 from .vnnlib import parse as parse_vnnlib
 
 

@@ -1,6 +1,6 @@
 import pytest
 
-from dnnv.properties.base import *
+from dnnv.properties.expressions import *
 from dnnv.properties.vnnlib import ExpressionBuilder, VNNLibParseError
 
 

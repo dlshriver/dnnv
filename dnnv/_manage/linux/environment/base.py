@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 
 from pathlib import Path
-from typing import Optional, Sequence
+from typing import List, Optional, Sequence
 
 from .dependencies import Dependency
 from ...errors import InstallError
@@ -32,9 +32,9 @@ class Environment:
             .resolve()
         )
         self.cache_dir.mkdir(exist_ok=True, parents=True)
-        self.paths: Sequence[Path] = []
-        self.ld_library_paths: Sequence[Path] = []
-        self.include_paths: Sequence[Path] = []
+        self.paths: List[Path] = []
+        self.ld_library_paths: List[Path] = []
+        self.include_paths: List[Path] = []
 
     def add_search_paths(
         self,

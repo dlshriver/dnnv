@@ -1,6 +1,6 @@
 import numpy as np
 
-from dnnv.properties.base import *
+from dnnv.properties.expressions import *
 from dnnv.properties.transformers import PropagateConstants
 
 
