@@ -79,7 +79,7 @@ jobs:
       - name: Prepare Test Artifacts
         run: |
           . .venv/bin/activate
-          python tests/old_tests/artifacts/build_artifacts.py
+          python tests/system_tests/artifacts/build_artifacts.py
 
       - name: Run DNNV Test Suite
         run: |

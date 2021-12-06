@@ -2,7 +2,7 @@ import unittest
 
 from dnnv.verifiers.neurify import Neurify
 
-from old_tests.verifiers_tests.utils import VerifierTests
+from system_tests.verifiers_tests.utils import VerifierTests
 
 
 @unittest.skipIf(not Neurify.is_installed(), "Neurify is not installed")

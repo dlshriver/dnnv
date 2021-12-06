@@ -44,8 +44,8 @@ COPY --chown=dnnv dnnv/__init__.py dnnv/__version__.py dnnv/
 RUN . .venv/bin/activate && flit install -s
 
 # build test artifacts
-COPY --chown=dnnv tests/old_tests/artifacts/build_artifacts.py tests/old_tests/artifacts/build_artifacts.py
-RUN . .venv/bin/activate && python tests/old_tests/artifacts/build_artifacts.py
+COPY --chown=dnnv tests/system_tests/artifacts/build_artifacts.py tests/system_tests/artifacts/build_artifacts.py
+RUN . .venv/bin/activate && python tests/system_tests/artifacts/build_artifacts.py
 
 # copy project files to container
 COPY --chown=dnnv . .

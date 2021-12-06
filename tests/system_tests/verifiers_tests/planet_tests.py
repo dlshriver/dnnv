@@ -2,7 +2,7 @@ import unittest
 
 from dnnv.verifiers.planet import Planet
 
-from old_tests.verifiers_tests.utils import VerifierTests
+from system_tests.verifiers_tests.utils import VerifierTests
 
 
 @unittest.skipIf(not Planet.is_installed(), "Planet is not installed")

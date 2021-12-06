@@ -62,7 +62,7 @@ dnnv_manage = "dnnv._manage.__main__:_main"
 
 [tool.coverage.run]
 branch = true
-command_line = "-m pytest tests/unit_tests tests/old_tests/verifiers_tests --ff --verbose --import-mode=importlib --full-trace"
+command_line = "-m pytest tests/unit_tests tests/system_tests --ff --verbose --import-mode=importlib --full-trace"
 parallel = true
 source = ["dnnv"]
 omit = [
