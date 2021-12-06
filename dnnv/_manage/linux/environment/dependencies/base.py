@@ -28,7 +28,7 @@ class Dependency:
 
         self.extra_search_paths = extra_search_paths or {}
 
-    def is_installed(self, env: Environment) -> bool:
+    def get_path(self, env: Environment) -> Optional[Path]:
         raise NotImplementedError()
 
     def install(self, env: Environment) -> None:
@@ -36,9 +36,14 @@ class Dependency:
             raise InstallError(f"Missing required dependency: {self.name}")
         self.installer.run(env, self)
 
+    def is_installed(self, env: Environment) -> bool:
+        if self.get_path(env) is None:
+            return False
+        return True
+
 
 class HeaderDependency(Dependency):
-    def is_installed(self, env: Environment) -> bool:
+    def get_path(self, env: Environment) -> Optional[Path]:
         header = self.name
         include_paths = " ".join([f"-I{p}" for p in env.include_paths])
         proc = sp.run(
@@ -53,8 +58,8 @@ class HeaderDependency(Dependency):
         new_paths = (Path(p.strip()) for p in output[start:end].split("\n"))
         for p in new_paths:
             if (p / header).exists():
-                return True
-        return False
+                return p / header
+        return None
 
 
 class LibraryDependency(Dependency):
@@ -86,11 +91,6 @@ class LibraryDependency(Dependency):
         if proc.returncode == 0:
             return Path(proc.stdout.split("=>")[-1].strip())
         return None
-
-    def is_installed(self, env: Environment) -> bool:
-        if self.get_path(env) is None:
-            return False
-        return True
 
 
 class ProgramDependency(Dependency):

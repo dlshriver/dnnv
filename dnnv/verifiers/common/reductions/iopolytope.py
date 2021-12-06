@@ -402,7 +402,7 @@ class IOPolytopeProperty(Property):
         return True, None
 
     def prefixed_and_suffixed_op_graph(
-        self,
+        self, return_new_bounds=True, return_prefixes=False
     ) -> Tuple[OperationGraph, Tuple[List[np.ndarray], List[np.ndarray]]]:
         if not isinstance(self.input_constraint, HyperRectangle):
             raise ValueError(
@@ -419,11 +419,11 @@ class IOPolytopeProperty(Property):
                 self._input_count = 0
                 self.final_lbs = []
                 self.final_ubs = []
+                self.prefix_ops = []
 
             def visit_Input(
                 self, operation: operations.Input
             ) -> Union[operations.Conv, operations.Gemm]:
-                shape = operation.shape
                 dtype = operation.dtype
                 new_op: Union[operations.Conv, operations.Gemm]
                 input_shape = self.lbs[self._input_count].shape
@@ -463,6 +463,7 @@ class IOPolytopeProperty(Property):
                         f"Cannot prefix network with input shape {input_shape}"
                     )
                 self._input_count += 1
+                self.prefix_ops.append(new_op)
                 return new_op
 
         prefix_transformer = PrefixTransformer(
@@ -470,17 +471,22 @@ class IOPolytopeProperty(Property):
             self.input_constraint.upper_bounds,
         )
         prefixed_op_graph = OperationGraph(suffixed_op_graph.walk(prefix_transformer))
-        return (
-            prefixed_op_graph.simplify(),
-            (prefix_transformer.final_lbs, prefix_transformer.final_ubs),
-        )
+        result = [prefixed_op_graph]
+        if return_new_bounds:
+            result.append((prefix_transformer.final_lbs, prefix_transformer.final_ubs))
+        if return_prefixes:
+            result.append(
+                tuple(OperationGraph([op]) for op in prefix_transformer.prefix_ops)
+            )
+        return tuple(result)
 
     def suffixed_op_graph(self) -> OperationGraph:
-        if len(self.op_graph.output_operations) == 1:
-            new_output_op = self.op_graph.output_operations[0]
+        op_graph = self.op_graph.copy()
+        if len(op_graph.output_operations) == 1:
+            new_output_op = op_graph.output_operations[0]
         else:
             output_operations = [
-                operations.Flatten(o) for o in self.op_graph.output_operations
+                operations.Flatten(o) for o in op_graph.output_operations
             ]
             new_output_op = operations.Concat(output_operations, axis=1)
         size = self.output_constraint.size()
@@ -493,15 +499,14 @@ class IOPolytopeProperty(Property):
                 b[n] += 1e-6  # TODO : remove magic number
             for i, c in zip(hs.indices, hs.coefficients):
                 W[i, n] = c
-        new_output_op = operations.Add(operations.MatMul(new_output_op, W), b)
+        new_output_op = operations.Gemm(new_output_op, W, b)
         new_output_op = operations.Relu(new_output_op)
 
         W_mask = np.zeros((k, 1), dtype=np.float32)
-        b_mask = np.zeros(1, dtype=np.float32)
         for i in range(k):
             W_mask[i, 0] = 1
-        new_output_op = operations.Add(operations.MatMul(new_output_op, W_mask), b_mask)
-        return OperationGraph([new_output_op]).simplify()
+        new_output_op = operations.Gemm(new_output_op, W_mask)
+        return OperationGraph([new_output_op])
 
 
 class IOPolytopeReduction(Reduction):

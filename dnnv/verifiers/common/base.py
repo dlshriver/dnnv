@@ -112,9 +112,11 @@ class Verifier(ABC):
                     subproperty_result, cex = self.check(subproperty)
                     result |= subproperty_result
                     if result == SAT:
-                        self.logger.debug("SAT! Validating counter example.")
                         if cex is not None:
+                            self.logger.debug("SAT! Validating counter example.")
                             self.validate_counter_example(subproperty, cex)
+                        else:
+                            self.logger.warn("SAT result without counter example.")
                         return result, cex
         finally:
             tempfile.tempdir = orig_tempdir

@@ -75,7 +75,7 @@ class Environment:
         envvars["CPLUS_INCLUDE_PATH"] = env_include_paths
 
         envvars["GUROBI_HOME"] = envvars.get(
-            "GUROBI_HOME", str(self.env_dir / "opt" / "gurobi902" / "linux64")
+            "GUROBI_HOME", str(self.env_dir / "opt" / "gurobi912" / "linux64")
         )
 
         return envvars

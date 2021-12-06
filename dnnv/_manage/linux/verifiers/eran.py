@@ -59,6 +59,12 @@ def parse_args():
     return parser.parse_args()
 
 
+def return_result(result, cex=None, output_file=None):
+    print(result)
+    if cex is not None and output_file is not None:
+        np.save(output_file, cex)
+
+
 def main():
     args = parse_args()
     model, is_conv = read_onnx_net(args.network)
@@ -80,15 +86,10 @@ def main():
     output_upper_bound = np.asarray(nub[-1]).item()
 
     if output_lower_bound > 0:
-        print("safe")
+        return return_result("safe")
     elif output_upper_bound <= 0:
-        print("unsafe")
-        if args.output is not None:
-            # all inputs violate property, choose center
-            cex = (spec_lb + spec_ub) / 2
-            np.save(args.output, cex)
-    else:
-        print("unknown")
+        return return_result("unsafe", (spec_lb + spec_ub) / 2, args.output)
+    return return_result("unknown")
 
 
 if __name__ == "__main__":
@@ -98,7 +99,7 @@ if __name__ == "__main__":
 
 class ELINAInstaller(Installer):
     def run(self, env: Environment, dependency: Dependency):
-        commit_hash = "499a334"
+        commit_hash = "7e0e6fef43c9676c869199782f4beadd542449f6"
         name = "elina"
 
         cache_dir = env.cache_dir / f"{name}-{commit_hash}"
@@ -116,7 +117,8 @@ class ELINAInstaller(Installer):
 
         mpfr_path = LibraryDependency("libmpfr").get_path(env).parent.parent
         gmp_path = LibraryDependency("libgmp").get_path(env).parent.parent
-        cdd_path = LibraryDependency("libcdd").get_path(env).parent.parent
+        # cdd_path = LibraryDependency("libcdd").get_path(env).parent.parent
+        cdd_prefix = HeaderDependency("cddlib/cdd.h").get_path(env).parent
 
         envvars = env.vars()
         commands = [
@@ -126,20 +128,22 @@ class ELINAInstaller(Installer):
             "git clone https://github.com/eth-sri/ELINA.git",
             "cd ELINA",
             f"git checkout {commit_hash}",
-            "git revert -n b347e3c",  # undoing commits that force reliance on local files
-            "git revert -n 16d2a6d --strategy=recursive -Xours",  # undoing commits that force reliance on local files
-            "git revert -n bda9f58",  # undoing commits that force reliance on local files
-            f'CFLAGS="{include_paths} {library_paths}" ./configure -prefix {cache_dir}/ELINA -gmp-prefix {gmp_path} -mpfr-prefix {mpfr_path} -cdd-prefix {cdd_path} -use-deeppoly -use-gurobi -use-fconv',
-            f"sed -i 's#CDD_PREFIX = .*$#CDD_PREFIX = {cdd_path}/include -L{cdd_path}/lib#' Makefile.config",
+            # "git revert -n b347e3c",  # undoing commits that force reliance on local files
+            # "git revert -n 16d2a6d --strategy=recursive -Xours",  # undoing commits that force reliance on local files
+            # "git revert -n bda9f58",  # undoing commits that force reliance on local files
+            f'CFLAGS="{include_paths} {library_paths}" ./configure -prefix {cache_dir}/ELINA -gmp-prefix {gmp_path} -mpfr-prefix {mpfr_path} -cdd-prefix {cdd_prefix} -use-deeppoly -use-gurobi -use-fconv',
+            # f"sed -i 's#CDD_PREFIX = .*$#CDD_PREFIX = {cdd_path}/include -L{cdd_path}/lib#' Makefile.config",
             "make",
             "make install",
             f"cd {installation_path}",
             "rm -rf ELINA",
-            "mkdir ELINA",
-            "cd ELINA",
-            f"cp -r {cache_dir}/ELINA/lib .",
-            f"cp -r {cache_dir}/ELINA/python_interface .",
-            f"cp -r {cdd_path}/lib .",
+            # "mkdir ELINA",
+            # "cd ELINA",
+            # f"cp -r {cache_dir}/ELINA/lib .",
+            # f"cp -r {cache_dir}/ELINA/python_interface .",
+            # f"cp -r {cdd_path}/lib .",
+            f"cp -r {cache_dir}/ELINA .",
+            f"cp -r {cdd_prefix.parent.parent}/lib ELINA/",
         ]
         install_script = "; ".join(commands)
         proc = sp.run(install_script, shell=True, env=envvars)
@@ -149,7 +153,7 @@ class ELINAInstaller(Installer):
 
 class ERANInstaller(Installer):
     def run(self, env: Environment, dependency: Dependency):
-        commit_hash = "7ef35c3"
+        commit_hash = "d60cf5767da31e7834b202fbcbb840e9c7d3ef5e"
         name = "eran"
 
         cache_dir = env.cache_dir / f"{name}-{commit_hash}"
@@ -161,7 +165,7 @@ class ERANInstaller(Installer):
         verifier_venv_path = env.env_dir / "verifier_virtualenvs" / name
         verifier_venv_path.parent.mkdir(exist_ok=True, parents=True)
 
-        gurobi_path = LibraryDependency("libgurobi90").get_path(env).parent.parent
+        gurobi_path = LibraryDependency("libgurobi91").get_path(env).parent.parent
         elina_path = LibraryDependency("libzonoml").get_path(env).parent.parent
 
         python_major_version, python_minor_version = sys.version_info[:2]
@@ -213,11 +217,11 @@ def install(env: Environment):
     mpfr_installer = GNUInstaller(
         "mpfr", "4.1.0", "https://files.sri.inf.ethz.ch/eran/mpfr/mpfr-4.1.0.tar.xz"
     )
-    gurobi_installer = GurobiInstaller("9.0.2")
+    gurobi_installer = GurobiInstaller("9.1.2")
     cddlib_installer = GNUInstaller(
         "cddlib",
-        "0.94j",
-        "https://github.com/cddlib/cddlib/releases/download/0.94j/cddlib-0.94j.tar.gz",
+        "0.94m",
+        "https://github.com/cddlib/cddlib/releases/download/0.94m/cddlib-0.94m.tar.gz",
     )
     elina_installer = ELINAInstaller()
     env.ensure_dependencies(
@@ -227,7 +231,7 @@ def install(env: Environment):
             dependencies=(
                 ProgramDependency("git"),
                 HeaderDependency("gurobi_c.h", installer=gurobi_installer),
-                LibraryDependency("libgurobi90", installer=gurobi_installer),
+                LibraryDependency("libgurobi91", installer=gurobi_installer),
                 ProgramDependency("grbgetkey", installer=gurobi_installer),
                 LibraryDependency(
                     "libzonoml",
@@ -249,7 +253,7 @@ def install(env: Environment):
                         ),
                         LibraryDependency("libmpfr", installer=mpfr_installer),
                         HeaderDependency(
-                            "cdd.h",
+                            "cddlib/cdd.h",
                             installer=cddlib_installer,
                             dependencies=(
                                 HeaderDependency(
@@ -289,7 +293,7 @@ def install(env: Environment):
                             ),
                         ),
                         HeaderDependency("gurobi_c.h", installer=gurobi_installer),
-                        LibraryDependency("libgurobi90", installer=gurobi_installer),
+                        LibraryDependency("libgurobi91", installer=gurobi_installer),
                         ProgramDependency("grbgetkey", installer=gurobi_installer),
                     ),
                 ),
@@ -301,9 +305,11 @@ def install(env: Environment):
 def uninstall(env: Environment):
     exe_path = env.env_dir / "bin" / "eran"
     verifier_venv_path = env.env_dir / "verifier_virtualenvs" / "eran"
+    elina_path = env.env_dir / "opt" / "ELINA"
     commands = [
         f"rm -f {exe_path}",
         f"rm -rf {verifier_venv_path}",
+        f"rm -rf {elina_path}",
     ]
     install_script = "; ".join(commands)
     proc = sp.run(install_script, shell=True, env=env.vars())

@@ -23,7 +23,7 @@ cd {venv_path}
 
 class MIPVerifyInstaller(Installer):
     def run(self, env: Environment, dependency: Dependency):
-        commit_hash = "36fd890"  # "2d58aec"
+        commit_hash = "36fd890"
 
         cache_dir = env.cache_dir / f"mipverify-{commit_hash}"
         cache_dir.mkdir(exist_ok=True, parents=True)
@@ -46,6 +46,8 @@ class MIPVerifyInstaller(Installer):
             f"cp -r {julia_dir} .",
             f"ln -s {julia_dir}/bin/julia julia",
             './julia --project=. -e \'using Pkg; Pkg.add("Gurobi"); Pkg.build("Gurobi")\'',
+            './julia --project=. -e \'using Pkg; Pkg.add("MathOptInterface"); Pkg.build("MathOptInterface")\'',
+            './julia --project=. -e \'using Pkg; Pkg.add("JuMP"); Pkg.build("JuMP")\'',
             './julia --project=. -e \'using Pkg; Pkg.add("MAT"); Pkg.build("MAT")\'',
             f'./julia --project=. -e \'using Pkg; Pkg.add(PackageSpec(url="https://github.com/vtjeng/MIPVerify.jl", rev="{commit_hash}"))\'',
             "./julia --project=. -e 'using Pkg; Pkg.update(); Pkg.precompile()'",
@@ -95,7 +97,7 @@ def install(env: Environment):
     zlib_installer = GNUInstaller(
         "zlib", "1.2.11", "https://www.zlib.net/zlib-1.2.11.tar.xz"
     )
-    gurobi_installer = GurobiInstaller("9.0.2")
+    gurobi_installer = GurobiInstaller("9.1.2")
     env.ensure_dependencies(
         ProgramDependency(
             "mipverify",
@@ -106,7 +108,7 @@ def install(env: Environment):
                 HeaderDependency("zlib.h", installer=zlib_installer),
                 LibraryDependency("libz", installer=zlib_installer),
                 HeaderDependency("gurobi_c.h", installer=gurobi_installer),
-                LibraryDependency("libgurobi90", installer=gurobi_installer),
+                LibraryDependency("libgurobi91", installer=gurobi_installer),
                 ProgramDependency("grbgetkey", installer=gurobi_installer),
             ),
         )
