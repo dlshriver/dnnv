@@ -3,7 +3,6 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import Callable, List, Optional
 
-from . import *
 from ....expressions import Expression
 
 

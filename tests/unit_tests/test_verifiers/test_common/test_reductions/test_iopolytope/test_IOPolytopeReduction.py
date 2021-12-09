@@ -7,10 +7,10 @@ from dnnv.properties.expressions import *
 from dnnv.verifiers.common.reductions.iopolytope import *
 
 
-def test_non_existential():
+def test_forall():
     reduction = IOPolytopeReduction()
 
-    phi = Constant(True)
+    phi = Forall(Symbol("x"), Symbol("x"))
     with pytest.raises(NotImplementedError):
         properties = list(reduction.reduce_property(phi))
 

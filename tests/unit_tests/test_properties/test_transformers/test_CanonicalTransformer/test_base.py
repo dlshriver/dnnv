@@ -5,17 +5,6 @@ from dnnv.properties.transformers import CanonicalTransformer
 from dnnv.utils import get_subclasses
 
 
-def test_missing():
-    class FakeExpression(Expression):
-        pass
-
-    with pytest.raises(
-        ValueError, match="Unimplemented expression type: FakeExpression"
-    ):
-        CanonicalTransformer().visit(FakeExpression())
-    del FakeExpression
-
-
 @pytest.mark.xfail
 def test_has_all_visitors():
     transformer = CanonicalTransformer()

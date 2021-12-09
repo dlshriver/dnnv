@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from .constant import Constant
 from .symbol import Symbol
+from ..call import Compose
 
 
 class Network(Symbol):
@@ -27,6 +28,9 @@ class Network(Symbol):
 
     def __repr__(self):
         return f"Network({self.identifier!r})"
+
+    def compose(self, other):
+        return Compose(self, other)
 
 
 __all__ = ["Network"]

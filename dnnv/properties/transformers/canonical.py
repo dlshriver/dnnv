@@ -1,37 +1,40 @@
 from __future__ import annotations
 
 import numpy as np
+import operator
 
 from collections import defaultdict
-from typing import List, Tuple
+from functools import reduce
+from typing import Dict, List, Tuple, Union
 
 from .cnf import CnfTransformer
+from .fol import FirstOrderLogicTransformer
 from .substitute_calls import SubstituteCalls
 from ..expressions import *
 
 
 def _extract_constants(expr: Add) -> Tuple[Add, Constant]:
     constants = []
-    expressions = expr.expressions
-    expr.expressions = []
-    for e in expressions:
+    expressions = []
+    for e in expr.expressions:
         if e.is_concrete:
-            constants.append(-e)
+            constants.append(-e.value)
         else:
-            expr.expressions.append(e)
-    return expr, Add(*constants).propagate_constants()
+            expressions.append(e)
+    return Add(*expressions), Constant(sum(constants))
 
 
 class CanonicalTransformer(CnfTransformer):
     def visit(self, expression: Expression) -> Expression:
         if self._top_level:
+            expression = FirstOrderLogicTransformer().visit(expression)
             expression = expression.propagate_constants()
             expression = SubstituteCalls().visit(expression)
         expr = super().visit(expression)
         return expr
 
     def visit_Add(self, expression: Add) -> Add:
-        expressions = defaultdict(lambda: Constant(0))
+        expressions: Dict[Expression, Union[int, float]] = defaultdict(lambda: 0)
         operands = [e for e in expression.expressions]
         while len(operands):
             expr = self.visit(operands.pop())
@@ -44,35 +47,34 @@ class CanonicalTransformer(CnfTransformer):
                 else:
                     continue
             symbol = expr
-            value = Constant(1)
+            value = 1
             if symbol.is_concrete:
-                symbol, value = value, symbol.propagate_constants()
+                symbol, value = Constant(value), symbol.value
             elif isinstance(expr, Multiply):
                 constants = []
                 symbols = []
                 for e in expr.expressions:
                     if e.is_concrete:
-                        constants.append(e)
+                        constants.append(e.value)
                     else:
                         symbols.append(e)
                 if len(symbols) == 1:
                     symbol = symbols[0]
                 else:
                     symbol = Multiply(*symbols)
-                value = Multiply(*constants).propagate_constants()
+                value = reduce(operator.mul, constants, 1)
             expressions[symbol] = expressions[symbol] + value
         products = []
         for v, c in expressions.items():
-            const = c.propagate_constants()
-            if np.all(const.value == 0):
+            if np.all(c == 0):
                 continue
-            products.append(Multiply(const, v))
+            products.append(Multiply(Constant(c), v))
         return Add(*products)
 
     def visit_Equal(self, expression: Equal) -> And:
         expr1 = expression.expr1
         expr2 = expression.expr2
-        return self.visit(And(expr1 <= expr2, expr2 <= expr1))
+        return self.visit_And(And(expr1 <= expr2, expr2 <= expr1))
 
     def visit_GreaterThan(self, expression: GreaterThan) -> GreaterThan:
         lhs = self.visit_Add(
@@ -125,24 +127,24 @@ class CanonicalTransformer(CnfTransformer):
                     e.append(expr)
         if len(expressions) <= 1:
             consts = []
-            symbols = [Constant(1)]
-            for e in expressions[0]:
-                if e.is_concrete:
-                    consts.append(e)
+            symbols: List[Expression] = [Constant(1)]
+            for expr in expressions[0]:
+                if expr.is_concrete:
+                    consts.append(expr.value)
                 else:
-                    symbols.append(e)
-            const = Multiply(*consts).propagate_constants()
+                    symbols.append(expr)
+            const = Constant(reduce(operator.mul, consts, 1))
             product = Multiply(*symbols).propagate_constants()
             return Add(Multiply(const, product))
-        return self.visit(Add(*[Multiply(*e) for e in expressions]))
+        return self.visit_Add(Add(*[Multiply(*e) for e in expressions]))
 
     def visit_Negation(self, expression: Negation) -> Add:
         return self.visit_Multiply(Multiply(Constant(-1), expression.expr))
 
-    def visit_NotEqual(self, expression: NotEqual) -> Or:
+    def visit_NotEqual(self, expression: NotEqual) -> And:
         expr1 = expression.expr1
         expr2 = expression.expr2
-        return self.visit(Or(expr1 > expr2, expr2 > expr1))
+        return self.visit_Or(Or(expr1 > expr2, expr2 > expr1))
 
     def visit_Subtract(self, expression: Subtract) -> Add:
         return self.visit_Add(

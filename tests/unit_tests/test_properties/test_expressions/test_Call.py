@@ -34,12 +34,12 @@ def test_value():
     op_graph_2 = OperationGraph([relu_op])
     Network("N2").concretize(op_graph_2)
     func_call = Call(
-        Network("N2").compose,
+        Constant(Network("N2").compose),
         (Network("N1"),),
         {},
     )
     N12 = func_call.value
-    assert isinstance(N12, OperationGraph)
+    assert isinstance(N12, Compose)
 
 
 def test_repr():

@@ -5,6 +5,8 @@ import types
 
 from typing import Callable
 
+from ..base import Expression
+
 
 def get_callable_name(f: Callable) -> str:
     if isinstance(f, types.LambdaType) and (
@@ -17,7 +19,9 @@ def get_callable_name(f: Callable) -> str:
     elif isinstance(f, types.FunctionType):
         return f"{f.__module__}.{f.__qualname__}"
     elif isinstance(f, types.MethodType):
-        return f"{f.__self__.__module__}.{f.__qualname__}"
+        if isinstance(f.__self__, Expression):
+            return f"{f.__self__!r}.{f.__name__}"
+        return f"{f.__self__.__module__}.{f.__qualname__}({f.__self__!r})"
     elif isinstance(f, np.ufunc):
         return f"numpy.{f.__name__}"
     elif isinstance(f, type) and callable(f):

@@ -8,3 +8,5 @@ from .logic import *
 from .slices import *
 from .subscript import *
 from .terms import *
+
+from .temporal import ltl

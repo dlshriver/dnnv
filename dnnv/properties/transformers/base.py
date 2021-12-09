@@ -37,27 +37,30 @@ class ExpressionTransformer(ExpressionVisitor):
 
 class GenericExpressionTransformer(ExpressionTransformer):
     def generic_visit(self, expression: Expression) -> Expression:
+        if not isinstance(expression, Expression):
+            return Constant(expression)
         if isinstance(expression, AssociativeExpression):
             return self.visit_AssociativeExpression(expression)
-        elif isinstance(expression, BinaryExpression):
+        if isinstance(expression, BinaryExpression):
             return self.visit_BinaryExpression(expression)
-        elif isinstance(expression, Constant):
+        if isinstance(expression, Constant):
             return expression
-        elif isinstance(expression, Call):
+        if isinstance(expression, Call):
             return self.visit_Call(expression)
-        elif isinstance(expression, Image):
+        if isinstance(expression, Image):
             return self.visit_Image(expression)
-        elif isinstance(expression, TernaryExpression):
+        if isinstance(expression, TernaryExpression):
             return self.visit_TernaryExpression(expression)
-        elif isinstance(expression, Quantifier):
+        if isinstance(expression, Quantifier):
             variable = self.visit(expression.variable)
             expr = self.visit(expression.expression)
+            assert isinstance(variable, Symbol)
             return type(expression)(variable, expr)
-        elif isinstance(expression, Symbol):
+        if isinstance(expression, Symbol):
             return expression
-        elif isinstance(expression, UnaryExpression):
+        if isinstance(expression, UnaryExpression):
             return self.visit_UnaryExpression(expression)
-        return super().generic_visit(expression)
+        return expression
 
     def visit_AssociativeExpression(
         self, expression: AssociativeExpression

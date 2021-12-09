@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Generator, Optional, Tuple, Type
+from typing import Any, Iterator, Optional, Tuple, Type
 
 from dnnv.errors import DNNVError
 from dnnv.properties import Expression
@@ -23,7 +23,7 @@ class Reduction(ABC):
         self.reduction_error = reduction_error
 
     @abstractmethod
-    def reduce_property(self, phi: Expression) -> Generator[Property, None, None]:
+    def reduce_property(self, phi: Expression) -> Iterator[Property]:
         raise NotImplementedError()
 
 

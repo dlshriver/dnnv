@@ -98,13 +98,13 @@ class Quantifier(LogicalExpression):
     def __init__(
         self,
         variable: Symbol,
-        formula: Expression,
+        expression: Expression,
         *,
         ctx: Optional[Context] = None,
     ):
         super().__init__(ctx=ctx)
         self.variable = variable
-        self.expression = formula
+        self.expression = expression
 
     def __repr__(self):
         return f"{type(self).__name__}({self.variable!r}, {self.expression!r})"

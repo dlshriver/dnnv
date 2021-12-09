@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+from dnnv.properties import Expression
 from dnnv.properties.expressions.terms.utils import get_callable_name
 
 
@@ -32,13 +33,32 @@ def test_method():
     name = get_callable_name(C.f)
     assert name == "test_get_callable_name.test_method.<locals>.C.f"
 
-    name = get_callable_name(C().f)
-    assert name == "test_get_callable_name.test_method.<locals>.C.f"
+    c = C()
+    name = get_callable_name(c.f)
+    assert (
+        name
+        == f"test_get_callable_name.test_method.<locals>.C.f(<test_get_callable_name.test_method.<locals>.C object at {hex(id(c))}>)"
+    )
+
+    C.__repr__ = lambda self: f"C({hex(id(self))})"
+    name = get_callable_name(c.f)
+    assert name == f"test_get_callable_name.test_method.<locals>.C.f(C({hex(id(c))}))"
 
     c = C()
     c.__module__ = "__main__"
     name = get_callable_name(c.f)
-    assert name == "__main__.test_method.<locals>.C.f"
+    assert name == f"__main__.test_method.<locals>.C.f(C({hex(id(c))}))"
+
+    class MockExpression(Expression):
+        def method(self):
+            return self
+
+        def __repr__(self):
+            return "MockExpression()"
+
+    e = MockExpression()
+    name = get_callable_name(e.method)
+    assert name == "MockExpression().method"
 
 
 def test_np_ufunc():

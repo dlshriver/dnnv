@@ -5,14 +5,13 @@ from dnnv.properties.transformers import RemoveIfThenElse
 
 
 def test_missing():
-    class FakeExpression(Expression):
+    class MockExpression(Expression):
         pass
 
-    with pytest.raises(
-        ValueError, match="Unimplemented expression type: FakeExpression"
-    ):
-        RemoveIfThenElse().visit(FakeExpression())
-    del FakeExpression
+    expr = MockExpression()
+    new_expr = RemoveIfThenElse().visit(expr)
+    assert new_expr is expr
+    del MockExpression
 
 
 def test_IfThenElse():

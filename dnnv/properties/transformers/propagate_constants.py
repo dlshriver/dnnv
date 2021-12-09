@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import numpy as np
+import types
 
 from typing import Union
+
+from dnnv.properties.expressions.call import Compose
 
 from ..expressions import (
     ArithmeticExpression,
@@ -92,6 +95,12 @@ class PropagateConstants(GenericExpressionTransformer):
         kwargs = {k: self.visit(v) for k, v in expression.kwargs.items()}
         if (
             _is_concrete(function)
+            and isinstance(function.value, types.MethodType)
+            and isinstance(function.value.__self__, Expression)
+        ):
+            return function.value(*args, **kwargs)
+        if (
+            _is_concrete(function)
             and all(_is_concrete(a) for a in args)
             and all(_is_concrete(a) for a in kwargs.values())
         ):
@@ -101,7 +110,45 @@ class PropagateConstants(GenericExpressionTransformer):
             if isinstance(result, Expression):
                 return result.propagate_constants()
             return Constant(result)
+        if (
+            len(args) == 1
+            and len(kwargs) == 0
+            and isinstance(args[0], Call)
+            and (
+                (
+                    isinstance(function, Network)
+                    and (
+                        isinstance(args[0].function, Network)
+                        or (
+                            isinstance(args[0].function, Compose)
+                            and isinstance(args[0].function.expr1, Network)
+                            and isinstance(args[0].function.expr2, Network)
+                        )
+                    )
+                )
+                or (
+                    isinstance(function, Constant)
+                    and isinstance(args[0].function, Constant)
+                )
+            )
+        ):
+            sub_call = args[0]
+            g = sub_call.function
+            return Call(Compose(function, g), sub_call.args, sub_call.kwargs)
         return Call(function, args, kwargs)
+
+    def visit_Compose(self, expression: Compose) -> Expression:
+        f = self.visit(expression.expr1)
+        g = self.visit(expression.expr2)
+        new_expr = type(expression)(f, g, ctx=expression.ctx)
+        if not _is_concrete(f) or not _is_concrete(g):
+            return new_expr
+        if isinstance(f, Network) and isinstance(g, Network):
+            composed_network = Network(str(expression))
+            if not composed_network.is_concrete:
+                composed_network.concretize(new_expr.value)
+            return composed_network
+        return Constant(new_expr.value)
 
     def visit_Constant(self, expression: Constant) -> Constant:
         return expression
@@ -130,11 +177,14 @@ class PropagateConstants(GenericExpressionTransformer):
             return Constant(expr1.value)
         return Divide(expr1, expr2)
 
-    def visit_Exists(self, expression: Exists) -> Union[Constant, Exists]:
+    def visit_Exists(self, expression: Exists) -> Expression:
         variable = self.visit(expression.variable)
         expr = self.visit(expression.expression)
         if isinstance(expr, Constant):
             return Constant(bool(expr.value))
+        elif variable not in expr.variables:
+            return expr
+        assert isinstance(variable, Symbol)
         return Exists(variable, expr)
 
     def visit_Forall(self, expression: Forall) -> Expression:
@@ -144,6 +194,7 @@ class PropagateConstants(GenericExpressionTransformer):
             return Constant(bool(expr.value))
         elif variable not in expr.variables:
             return expr
+        assert isinstance(variable, Symbol)
         return Forall(variable, expr)
 
     def visit_IfThenElse(self, expression: IfThenElse) -> Expression:

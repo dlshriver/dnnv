@@ -5,14 +5,13 @@ from dnnv.properties.transformers import GenericExpressionTransformer
 
 
 def test_missing():
-    class FakeExpression(Expression):
+    class MockExpression(Expression):
         pass
 
-    with pytest.raises(
-        ValueError, match="Unimplemented expression type: FakeExpression"
-    ):
-        GenericExpressionTransformer().visit(FakeExpression())
-    del FakeExpression
+    expr = MockExpression()
+    new_expr = GenericExpressionTransformer().visit(expr)
+    assert new_expr is expr
+    del MockExpression
 
 
 def test_non_expression():

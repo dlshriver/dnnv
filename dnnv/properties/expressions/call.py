@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Mapping, Optional, Tuple
 
 from .arithmetic import ArithmeticExpression
-from .base import Expression
+from .base import BinaryExpression, Expression
 from .context import Context
 from .logic import LogicalExpression
 
@@ -89,4 +89,26 @@ class Call(CallableExpression, ArithmeticExpression, LogicalExpression):
         return f"{function_name}()"
 
 
-__all__ = ["Call", "CallableExpression"]
+class Compose(BinaryExpression, CallableExpression):
+    OPERATOR_SYMBOL = "○"
+
+    def OPERATOR(self, f, g):
+        import types
+        from ...nn import OperationGraph
+
+        if isinstance(f, OperationGraph) and isinstance(g, OperationGraph):
+            return f.compose(g)
+        fg_lambda = lambda x: f(g(x))
+        fg = types.FunctionType(
+            code=fg_lambda.__code__,
+            globals=fg_lambda.__globals__,
+            name=f"{self}",
+            argdefs=None,
+            closure=(types.CellType(f), types.CellType(g)),
+        )
+        fg.__module__ = ""
+        fg.__qualname__ = f"({self})"
+        return fg
+
+
+__all__ = ["Call", "CallableExpression", "Compose"]

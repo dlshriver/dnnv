@@ -5,9 +5,7 @@ import tempfile
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from functools import partial
-from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Type, Union
-
-from dnnv.properties import Expression, LogicalExpression
+from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, Type, Union
 
 from .errors import VerifierError, VerifierTranslatorError
 from .executors import VerifierExecutor, CommandLineExecutor
@@ -19,6 +17,7 @@ from .reductions import (
     HyperRectangle,
 )
 from .results import SAT, UNSAT, UNKNOWN, PropertyCheckResult
+from ...properties import Expression, LogicalExpression
 
 
 class Parameter:
@@ -53,7 +52,7 @@ class Verifier(ABC):
         self.logger = logging.getLogger(
             f"{type(self).__module__}.{type(self).__qualname__}"
         )
-        self.property = dnn_property.propagate_constants()
+        self.property = dnn_property
         for key, value in kwargs.items():
             if key not in self.__class__.parameters:
                 raise self.verifier_error(f"Unknown parameter: {key}")
@@ -91,7 +90,7 @@ class Verifier(ABC):
             ).run()
         return self.parse_results(prop, results)
 
-    def reduce_property(self) -> Generator[Property, None, None]:
+    def reduce_property(self) -> Iterator[Property]:
         assert isinstance(self.property, LogicalExpression)
         for subproperty in self.reduction().reduce_property(~self.property):
             yield subproperty

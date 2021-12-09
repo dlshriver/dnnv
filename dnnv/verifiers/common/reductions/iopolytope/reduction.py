@@ -62,8 +62,9 @@ class IOPolytopeReduction(Reduction):
         yield prop
 
     def reduce_property(self, expression: Expression) -> Iterator[Property]:
-        if not isinstance(expression, Exists):
+        if isinstance(expression, Forall):
             raise NotImplementedError()  # TODO
+        assert isinstance(expression, LogicalExpression)
         dnf_expression = Or(~(~expression).canonical())
         self.logger.debug("DNF: %s", dnf_expression)
 
@@ -138,9 +139,9 @@ class IOPolytopeReduction(Reduction):
                 self.visit(arg)
             shape = self._network_output_shapes[expression.function]
             self.variables[expression] = self.variables[expression.function]
-            self.indices[expression] = np.array([i for i in np.ndindex(shape)]).reshape(
-                shape + (len(shape),)
-            )
+            self.indices[expression] = np.array(
+                [i for i in np.ndindex(*shape)]
+            ).reshape(shape + (len(shape),))
             self.coefs[expression] = np.ones(shape)
         else:
             raise self.reduction_error(
@@ -192,7 +193,11 @@ class IOPolytopeReduction(Reduction):
             )
 
         constraints: List[
-            Tuple[List[Tuple[Variable, Tuple[int, ...]]], List[float], float]
+            Tuple[
+                List[Tuple[Variable, Tuple[int, ...]]],
+                List[float],
+                np.ndarray,
+            ]
         ] = []
         for key, var, idx, coef in zip_dict_items(
             self.variables, self.indices, self.coefs
@@ -218,7 +223,7 @@ class IOPolytopeReduction(Reduction):
                 c_shape = shape
                 num_constraints = np.product(shape)
                 if len(constraints) == 0:
-                    constraints = [([], [], rhs[i]) for i in np.ndindex(rhs.shape)]
+                    constraints = [([], [], rhs[i]) for i in np.ndindex(*rhs.shape)]
                 elif len(constraints) == 1:
                     constraints = [
                         (
@@ -226,7 +231,7 @@ class IOPolytopeReduction(Reduction):
                             copy.deepcopy(constraints[0][1]),
                             rhs[i],
                         )
-                        for i in np.ndindex(rhs.shape)
+                        for i in np.ndindex(*rhs.shape)
                     ]
                 if not len(constraints) == num_constraints:
                     raise self.reduction_error(
@@ -330,7 +335,7 @@ class IOPolytopeReduction(Reduction):
         self.variables[expression] = Variable(
             self._network_input_shapes[expression], str(expression)
         )
-        self.indices[expression] = np.array([i for i in np.ndindex(shape)]).reshape(
+        self.indices[expression] = np.array([i for i in np.ndindex(*shape)]).reshape(
             shape + (len(shape),)
         )
         self.coefs[expression] = np.ones(shape)

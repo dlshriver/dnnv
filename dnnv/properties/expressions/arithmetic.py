@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import operator
 
-from typing import Type, TypeVar
+from typing import Set, Type, TypeVar
 
 from .base import (
     Expression,

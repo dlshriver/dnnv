@@ -5,14 +5,13 @@ from dnnv.properties.transformers import LiftIfThenElse
 
 
 def test_missing():
-    class FakeExpression(Expression):
+    class MockExpression(Expression):
         pass
 
-    with pytest.raises(
-        ValueError, match="Unimplemented expression type: FakeExpression"
-    ):
-        LiftIfThenElse().visit(FakeExpression())
-    del FakeExpression
+    expr = MockExpression()
+    new_expr = LiftIfThenElse().visit(expr)
+    assert new_expr is expr
+    del MockExpression
 
 
 def test_Associative_no_ite():

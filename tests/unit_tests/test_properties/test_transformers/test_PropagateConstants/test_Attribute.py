@@ -17,13 +17,3 @@ def test_Attribute():
     assert new_expr is not expr
     assert isinstance(new_expr, Constant)
     assert new_expr.value == "test".isalpha
-
-    N = Network("N")
-    fake_network = lambda x: x
-    fake_network.compose = lambda f, g: lambda y: f(g(y))
-    N.concretize(fake_network)
-    expr = Attribute(N, Constant("compose"))
-    new_expr = transformer.visit(expr)
-    assert new_expr is not expr
-    assert isinstance(new_expr, Constant)
-    assert new_expr.value == N.compose

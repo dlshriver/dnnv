@@ -48,7 +48,8 @@ class Nnenum(Verifier):
         with tempfile.NamedTemporaryFile(
             mode="w+", suffix=".onnx", delete=False
         ) as onnx_model_file:
-            prop.op_graph.simplify().export_onnx(onnx_model_file.name)
+            op_graph = prop.op_graph.simplify()
+            op_graph.export_onnx(onnx_model_file.name)
 
         lb, ub = prop.input_constraint.as_bounds()
         A_in, b_in = prop.input_constraint.as_matrix_inequality()

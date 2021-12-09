@@ -30,7 +30,7 @@ class Expression:
             raise TypeError("Expression may not be instantiated")
         return object.__new__(cls)
 
-    def __init__(self, ctx: Optional[Context] = None):
+    def __init__(self, *, ctx: Optional[Context] = None):
         self.ctx: Context = ctx or get_context()
 
     def __bool__(self):
@@ -171,7 +171,7 @@ class Expression:
                     "Method 'concretize' expects at most 1 positional argument"
                 )
             self._value = args[0]
-            return self
+            return self  # type: ignore
         elif len(kwargs) == 0:
             raise ValueError("Method 'concretize' expects at least 1 argument")
 

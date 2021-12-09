@@ -42,6 +42,8 @@ class Py2PropertyTransformer(ast.NodeTransformer):
 
         if isinstance(func, ast.Name):
             value = expressions.__dict__.get(func.id, None)
+            if value is None:
+                value = expressions.ltl.__dict__.get(func.id, None)
             if (
                 value is not None
                 and isinstance(value, type)
