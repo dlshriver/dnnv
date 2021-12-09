@@ -46,4 +46,4 @@ __all__ = [
     "install",
     "uninstall",
     "list_verifiers",
-] + verifiers.__all__
+]
