@@ -174,3 +174,6 @@ class OperationGraph:
             result = [result[i] for i in output_select]
         sliced_op_graph = OperationGraph(result)
         return sliced_op_graph
+
+
+__all__ = ["OperationGraph"]
