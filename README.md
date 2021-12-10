@@ -8,7 +8,7 @@ For detailed instructions on installing and using DNNV, see our [documentation](
 
 ### Installation
 
-DNNV requires python3.7 or later, and has only been tested on linux. To install the latest stable version run:
+DNNV requires python3.7 or python3.8, and has only been tested on linux. To install the latest stable version run:
 
 ```bash
 $ pip install dnnv
@@ -55,13 +55,15 @@ Verifiers can then be installed using the `dnnv_manage` tool as described above.
 
 #### Docker Installation
 
-We provide a docker image with DNNV and all non-Gurobi dependent verifiers. To obtain and use the latest pre-built image, run:
+We provide a docker image with DNNV and all non-Gurobi dependent verifiers. To obtain and use the latest pre-built image of the main branch, run:
 
 ```bash
 $ docker pull dlshriver/dnnv:latest
 $ docker run --rm -it dlshriver/dnnv:latest
 (.venv) dnnv@hostname:~$ dnnv -h
 ```
+
+The latest version of the develop branch is available as `dlshriver/dnnv:develop`, and tagged releases are available as `dlshriver/dnnv:vX.X.X` where `vX.X.X` is the desired version number.
 
 The docker image can also be built using the provided Dockerfile. The provided build file will install DNNV with all of the verifiers that do not require Gurobi. To build and run the docker image, run:
 
@@ -104,13 +106,13 @@ Forall(
 To check whether property holds for some network using the ERAN verifier, run:
 
 ```bash
-$ python -m dnnv property.prop --network N network.onnx --eran
+$ dnnv property.prop --network N network.onnx --eran
 ```
 
 Additionally, if the property defines parameters, using the `Parameter` keyword, they can be specified on the command line using the option `--prop.PARAMETER_NAME`, where `PARAMETER_NAME` is the name of the parameter. For the property defined above, a value for `epsilon` can be provided with a command line option as follows:
 
 ```bash
-$ python -m dnnv property.prop --network N network.onnx --eran --prop.epsilon=2.0
+$ dnnv property.prop --network N network.onnx --eran --prop.epsilon=2.0
 ```
 
 To save any counter-example found by the verifier, use the option `--save-violation /path/to/array.npy` when running DNNV. This will save any violation found as a numpy array at the path specified, which is useful for viewing counter-examples to properties and enables additional debugging and analysis later.
