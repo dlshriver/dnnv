@@ -5,9 +5,6 @@ import logging
 import os
 import sys
 
-from contextlib import contextmanager
-from functools import partial
-
 
 def add_arguments(parser: argparse.ArgumentParser):
     verbosity_group = parser.add_mutually_exclusive_group()
@@ -23,29 +20,7 @@ def add_arguments(parser: argparse.ArgumentParser):
     )
 
 
-@contextmanager
-def suppress(level=logging.DEBUG, filter_level=logging.WARNING):
-    if level >= filter_level:
-        yield
-        return
-    with open(os.dup(sys.stdout.fileno()), "wb") as stdout_copy:
-        with open(os.dup(sys.stderr.fileno()), "wb") as stderr_copy:
-            sys.stdout.flush()
-            sys.stderr.flush()
-            with open(os.devnull, "wb") as devnull:
-                os.dup2(devnull.fileno(), sys.stdout.fileno())
-                os.dup2(devnull.fileno(), sys.stderr.fileno())
-            try:
-                yield
-            finally:
-                sys.stdout.flush()
-                sys.stderr.flush()
-                os.dup2(stdout_copy.fileno(), sys.stdout.fileno())
-                os.dup2(stderr_copy.fileno(), sys.stderr.fileno())
-
-
-def initialize(name: str, args: argparse.Namespace):
-    global suppress
+def initialize(name: str, args: argparse.Namespace) -> logging.Logger:
     logger = logging.getLogger(name)
     logger.propagate = False
 
@@ -54,19 +29,15 @@ def initialize(name: str, args: argparse.Namespace):
     if args.debug:
         logger.setLevel(logging.DEBUG)
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = TF_CPP_MIN_LOG_LEVEL or "1"
-        suppress = partial(suppress, filter_level=logging.DEBUG)
     elif args.verbose:
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = TF_CPP_MIN_LOG_LEVEL or "2"
         logger.setLevel(logging.INFO)
-        suppress = partial(suppress, filter_level=logging.INFO)
     elif args.quiet:
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = TF_CPP_MIN_LOG_LEVEL or "2"
         logger.setLevel(logging.ERROR)
-        suppress = partial(suppress, filter_level=logging.ERROR)
     else:
         os.environ["TF_CPP_MIN_LOG_LEVEL"] = TF_CPP_MIN_LOG_LEVEL or "2"
         logger.setLevel(logging.WARNING)
-        suppress = partial(suppress, filter_level=logging.WARNING)
 
     formatter = logging.Formatter(f"%(levelname)-8s %(asctime)s (%(name)s) %(message)s")
 
@@ -78,5 +49,8 @@ def initialize(name: str, args: argparse.Namespace):
     return logger
 
 
-def getLogger(name: str):
+def getLogger(name: str) -> logging.Logger:
     return logging.getLogger(name)
+
+
+__all__ = ["add_arguments", "getLogger", "initialize"]
