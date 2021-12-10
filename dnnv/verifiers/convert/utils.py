@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import tempfile
 
 from dnnv.nn.graph import OperationGraph
@@ -6,7 +8,7 @@ from dnnv.verifiers.common import (
     IOPolytopeProperty,
     VerifierTranslatorError,
 )
-from typing import Iterable, Optional, Type
+from typing import Iterable, Optional, Type, Union
 
 
 def as_vnnlib(
@@ -51,7 +53,7 @@ def as_vnnlib(
             else:
                 summands.append(f"(* (- {abs(c):.12f}) X_{index_str})")
         if len(summands) == 0:
-            lhs = 0.0
+            lhs: Union[float, str] = 0.0
         elif len(summands) == 1:
             lhs = summands[0]
         else:
@@ -116,3 +118,6 @@ def to_vnnlib_onnx_file(
     ) as onnx_file:
         dnn.export_onnx(onnx_file.name)
         return onnx_file.name
+
+
+__all__ = ["as_vnnlib", "to_vnnlib_onnx_file", "to_vnnlib_property_file"]

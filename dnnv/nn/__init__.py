@@ -27,3 +27,12 @@ def parse(path: Path, net_format: Optional[str] = None) -> OperationGraph:
         raise ValueError("Unsupported network format: %s" % net_format)
 
     return _parse(path)
+
+
+__all__ = [
+    "Operation",
+    "OperationGraph",
+    "OperationTransformer",
+    "OperationVisitor",
+    "parse",
+]

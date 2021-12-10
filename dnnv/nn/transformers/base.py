@@ -1,4 +1,4 @@
-from copy import copy
+from __future__ import annotations
 
 from ..operations import Operation
 from ..visitors import OperationVisitor
