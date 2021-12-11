@@ -122,7 +122,6 @@ def test_parse_parameters(tmp_path):
         f.write(property)
 
     phi = parse(vnnlib_path, ["--prop.epsilon=1.0"]).propagate_constants()
-    print(repr(phi))
 
     assert (
         repr(phi)
