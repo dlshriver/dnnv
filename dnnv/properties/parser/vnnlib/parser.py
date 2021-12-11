@@ -239,4 +239,4 @@ def parse(path: Path, args: Optional[List[str]] = None) -> Expression:
     return parse_str(script_str, args=args)
 
 
-__all__ = ["parse"]
+__all__ = ["parse", "parse_str"]
