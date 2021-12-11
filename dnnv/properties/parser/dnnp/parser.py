@@ -367,4 +367,4 @@ def parse(path: Path, args: Optional[List[str]] = None) -> expressions.Expressio
     return parse_str(spec_str, path=path, args=args)
 
 
-__all__ = ["parse", "parse_str", "DNNPParserError"]
+__all__ = ["parse", "parse_str"]
