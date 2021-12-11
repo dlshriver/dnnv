@@ -37,7 +37,6 @@ def test_parse_vnnlib(tmp_path):
 
     phi = parse(vnnlib_path, format="vnnlib")
 
-    print(repr(phi))
     assert (
         repr(phi)
         == "Forall(Symbol('X'), Or(GreaterThan(Network('N')(Symbol('X'))[numpy.unravel_index(0, Network('N').'output_shape'[0])], -1.0), GreaterThan(Symbol('X')[numpy.unravel_index(0, Network('N').'input_shape'[0])], 1.0), LessThan(Symbol('X')[numpy.unravel_index(0, Network('N').'input_shape'[0])], -1.0)))"

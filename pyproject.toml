@@ -12,24 +12,24 @@ requires-python = ">=3.7"
 dynamic = ["version", 'description']
 keywords = ["DNN", "neural network", "verification"]
 dependencies = [
+    "lark~=1.0",
     "numpy>=1.18,<1.19",
     "onnx>=1.8,<1.9",
     "psutil~=5.6",
     "scikit-image>=0.18,<0.19",
     "scipy~=1.7",
-    "simpleparse~=2.2",
     "tensorflow>=2.2,<2.3",
 ]
 
 [project.optional-dependencies]
 all = [
     # default
+    "lark~=1.0",
     "numpy>=1.18,<1.19",
     "onnx>=1.8,<1.9",
     "psutil~=5.6",
     "scikit-image>=0.18,<0.19",
     "scipy~=1.7",
-    "simpleparse~=2.2",
     "tensorflow>=2.2,<2.3",
     # test
     "coverage~=5.5",
@@ -64,7 +64,7 @@ dnnv_manage = "dnnv._manage.__main__:_main"
 
 [tool.coverage.run]
 branch = true
-command_line = "-m pytest tests/unit_tests tests/system_tests --ff --verbose --import-mode=importlib --full-trace"
+command_line = "-m pytest tests/unit_tests tests/system_tests --ff --verbose --import-mode=importlib"
 parallel = true
 source = ["dnnv"]
 omit = [
