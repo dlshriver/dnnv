@@ -112,7 +112,7 @@ class NnenumInstaller(Installer):
             f"cd {name}",
             f"git checkout {commit_hash}",
             "pip install -r requirements.txt",
-            'pip install --upgrade "onnx<=1.11" "onnxruntime<=1.10"'
+            'pip install --upgrade "onnx<=1.11" "onnxruntime<=1.10"',
             f"cp -r src/nnenum {verifier_venv_path}/lib/python{python_major_version}.{python_minor_version}/site-packages/",
         ]
         install_script = "; ".join(commands)
