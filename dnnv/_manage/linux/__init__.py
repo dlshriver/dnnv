@@ -37,7 +37,7 @@ def list_verifiers():
         if ProgramDependency(verifier).is_installed(environment):
             installed_verifiers.append(verifier)
     print("verifier")
-    print("-" * max(len(vname) for vname in installed_verifiers))
+    print("-" * max(8, max((len(vname) for vname in installed_verifiers), default=0)))
     print("\n".join(installed_verifiers))
     return 0
 
