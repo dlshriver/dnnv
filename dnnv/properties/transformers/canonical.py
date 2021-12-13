@@ -27,7 +27,6 @@ def _extract_constants(expr: Add) -> Tuple[Add, Constant]:
 class CanonicalTransformer(CnfTransformer):
     def visit(self, expression: Expression) -> Expression:
         if self._top_level:
-            expression = FirstOrderLogicTransformer().visit(expression)
             expression = expression.propagate_constants()
             expression = SubstituteCalls().visit(expression)
         expr = super().visit(expression)

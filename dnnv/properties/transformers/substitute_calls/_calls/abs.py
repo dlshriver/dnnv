@@ -9,7 +9,7 @@ from .base import FunctionSubstitutor
 
 
 class Abs(FunctionSubstitutor):
-    __matches__ = {abs, np.abs}
+    __matches__ = {abs, np.abs}  # type: ignore
 
     def __call__(self, f, *args, **kwargs) -> Union[Constant, IfThenElse]:
         (x,) = args

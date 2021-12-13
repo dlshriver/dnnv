@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Optional, Set, Tuple
 
 from .base import GenericExpressionTransformer
+from .fol import FirstOrderLogicTransformer
 from .lift_ifthenelse import LiftIfThenElse
 from .remove_ifthenelse import RemoveIfThenElse
 from ..expressions import *
@@ -11,6 +12,8 @@ from ..expressions import *
 class CnfTransformer(GenericExpressionTransformer):
     def visit(self, expression: Expression) -> Expression:
         if self._top_level:
+            expression = expression.propagate_constants()
+            expression = FirstOrderLogicTransformer().visit(expression)
             expression = expression.propagate_constants()
             expression = LiftIfThenElse().visit(expression)
             expression = expression.propagate_constants()
@@ -39,8 +42,16 @@ class CnfTransformer(GenericExpressionTransformer):
         expr = self.visit(expression.expression)
         return expr
 
-    def visit_Implies(self, expression: Implies) -> And:
+    def visit_Implies(self, expression: Implies) -> Expression:
+        assert isinstance(expression.expr1, LogicalExpression)
         return self.visit(Or(~expression.expr1, expression.expr2))
+
+    def visit_Not(self, expression: Not) -> Expression:
+        assert isinstance(expression.expr, LogicalExpression)
+        if isinstance(expression.expr, Term):
+            return Not(expression.expr)
+        expr = self.visit(~expression.expr)
+        return expr
 
     def visit_Or(self, expression: Or) -> And:
         conjunction: Optional[And] = None

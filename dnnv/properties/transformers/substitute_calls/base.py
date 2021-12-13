@@ -8,7 +8,7 @@ from ._calls import FunctionSubstitutor
 
 
 class SubstituteCalls(GenericExpressionTransformer):
-    def visit_BinaryExpression(self, expression: BinaryExpression) -> BinaryExpression:
+    def visit_BinaryExpression(self, expression: BinaryExpression) -> Expression:
         expr_type = type(expression)
         expr1 = expression.expr1
         expr2 = expression.expr2

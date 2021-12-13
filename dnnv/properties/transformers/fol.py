@@ -27,7 +27,6 @@ class FirstOrderLogicTransformer(GenericExpressionTransformer):
             try:
                 next_v = v.next()
             except ltl.LTLUnwindingBoundReached:
-                # next_v = v.freeze()
                 return Constant(False)
             expr = SubstituteExpression(v, next_v).visit(expr)
         return self.visit(expr)
@@ -60,7 +59,8 @@ class FirstOrderLogicTransformer(GenericExpressionTransformer):
         return self.visit(
             Or(
                 ltl.Until(expression.expr1, expression.expr2),
-                ltl.Globally(expression.expr1),
+                # ltl.Globally(expression.expr1),
+                Not(ltl.Until(Constant(True), Not(expression.expr1))),
             )
         )
 

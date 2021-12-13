@@ -27,6 +27,22 @@ class FunctionSubstitutor:
         return NotImplemented
 
     @staticmethod
+    def substitute_GreaterThan(a: Expression, b: Expression) -> Expression:
+        return NotImplemented
+
+    @staticmethod
+    def substitute_GreaterThanOrEqual(a: Expression, b: Expression) -> Expression:
+        return NotImplemented
+
+    @staticmethod
+    def substitute_LessThan(a: Expression, b: Expression) -> Expression:
+        return NotImplemented
+
+    @staticmethod
+    def substitute_LessThanOrEqual(a: Expression, b: Expression) -> Expression:
+        return NotImplemented
+
+    @staticmethod
     def substitute_NotEqual(a: Expression, b: Expression) -> Expression:
         return NotImplemented
 
