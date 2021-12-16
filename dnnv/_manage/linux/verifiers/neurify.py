@@ -17,7 +17,7 @@ from ...errors import InstallError, UninstallError
 
 class NeurifyInstaller(Installer):
     def run(self, env: Environment, dependency: Dependency):
-        commit_hash = "45acc32b64cc8cbaecfd6ee51b3cf5093421f2d6"
+        commit_hash = "6218da8b7b7f7daacf6b5827200d03d60bbbb38b"
 
         cache_dir = env.cache_dir / f"neurify-{commit_hash}"
         cache_dir.mkdir(exist_ok=True, parents=True)
@@ -46,7 +46,7 @@ class NeurifyInstaller(Installer):
 
 
 def install(env: Environment):
-    lpsolve_installer = LpsolveInstaller("5.5.2.5")
+    lpsolve_installer = LpsolveInstaller("5.5.2.11")
     env.ensure_dependencies(
         ProgramDependency(
             "neurify",
