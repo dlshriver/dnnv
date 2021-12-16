@@ -4,22 +4,24 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from pathlib import Path
-from typing import Any, Callable, Dict, List
+from typing import Any, Callable, Dict, List, Sequence
 
 
 class Model(nn.Module):
-    def __init__(self, input_size, output_size):
+    def __init__(self, input_size: int, output_size: int, layer_sizes: Sequence[int]):
         super().__init__()
-        self.lin1 = nn.Linear(input_size, 4)
-        self.lin2 = nn.Linear(4, 4)
-        self.lin3 = nn.Linear(4, output_size)
+        self.layer_sizes = (input_size,) + tuple(layer_sizes) + (output_size,)
+        layers = []
+        for in_features, out_features in zip(self.layer_sizes, self.layer_sizes[1:]):
+            layers.append(nn.Linear(in_features, out_features))
+        self.layers = nn.ModuleList(layers)
+        self.num_layers = len(layers)
 
     def forward(self, x):
-        x = self.lin1(x)
-        x = F.relu(x)
-        x = self.lin2(x)
-        x = F.relu(x)
-        x = self.lin3(x)
+        for i, layer in enumerate(self.layers, 1):
+            x = layer(x)
+            if i != self.num_layers:
+                x = F.relu(x)
         return x
 
 
@@ -37,7 +39,7 @@ def train(
     early_stopping_error = args.early_stopping_error
     loss_history_window: int = args.loss_history_window
     loss_history: List[float] = []
-    for i in range(iterations):
+    for i in range(1, iterations + 1):
         optimizer.zero_grad()
         x = random_x(batch_size)
         y_true = labeller(x)
@@ -52,10 +54,12 @@ def train(
             avg_loss = float("inf")
         else:
             avg_loss = sum(loss_history) / loss_history_window
-        print(f"[ITERATION {i:9d}] loss={loss_val:.6f} avg_loss={avg_loss:.6f}")
         if avg_loss < early_stopping_error:
+            print(f"[ITERATION {i:9d}] loss={loss_val:.10f} avg_loss={avg_loss:.10f}")
             print(f"[STOPPING EARLY] loss is less than {early_stopping_error}")
             return model
+        if (i % args.log_frequency) == 0:
+            print(f"[ITERATION {i:9d}] loss={loss_val:.10f} avg_loss={avg_loss:.10f}")
         loss.backward()
         optimizer.step()
     return model
@@ -75,7 +79,9 @@ def main(args: argparse.Namespace) -> int:
 
     x = state_generator(1)
     y = transition_fn(x)
-    transition_model = Model(x.flatten(1).size(1), y.flatten(1).size(1))
+    transition_model = Model(
+        x.flatten(1).size(1), y.flatten(1).size(1), args.layer_sizes
+    )
 
     optimizer = get_optimizer(transition_model, args)
     train(
@@ -149,6 +155,17 @@ def parse_args():
         help="a function to generate states and control signals",
     )
 
+    # network construction
+    network_group = parser.add_argument_group("Network parameters")
+    network_group.add_argument(
+        "-L",
+        "--layer-sizes",
+        nargs="+",
+        type=int,
+        default=[16, 8],
+        help="sizes of the networks hidden layers",
+    )
+
     # training parameters
     training_group = parser.add_argument_group("Training parameters")
     training_group.add_argument(
@@ -181,6 +198,13 @@ def parse_args():
         type=float,
         default=float("-inf"),
         help="error at which to stop training early",
+    )
+    training_group.add_argument(
+        "--log-frequency",
+        "--log-freq",
+        type=int,
+        default=100,
+        help="frequency (in iterations) at which to display the current model error",
     )
 
     return parser.parse_args()
