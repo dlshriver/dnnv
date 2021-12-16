@@ -215,7 +215,8 @@ class Expression:
         from dnnv.properties.transformers import PropagateConstants
 
         with self.ctx:
-            return PropagateConstants().visit(self)
+            result = PropagateConstants().visit(self)
+        return result
 
     @property
     def value(self) -> Any:
