@@ -1,6 +1,8 @@
 import logging
+import numpy as np
 import os
 import tempfile
+import time
 
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
@@ -16,7 +18,7 @@ from .reductions import (
     HalfspacePolytope,
     HyperRectangle,
 )
-from .results import SAT, UNSAT, UNKNOWN, PropertyCheckResult
+from .results import SAT, UNSAT, UNKNOWN, PropertyCheckResult, VerificationResult
 from ...properties import Expression, LogicalExpression
 
 
@@ -77,50 +79,58 @@ class Verifier(ABC):
         yield
 
     @classmethod
-    def verify(
-        cls, phi: Expression, **kwargs
-    ) -> Tuple[PropertyCheckResult, Optional[Any]]:
+    def verify(cls, phi: Expression, **kwargs) -> VerificationResult:
         return cls(phi, **kwargs).run()
 
-    def check(self, prop: Property) -> Tuple[PropertyCheckResult, Optional[Any]]:
+    def check(self, prop: Property) -> VerificationResult:
         with self.contextmanager():
             executor_inputs = self.build_inputs(prop)
+            start_t = time.time()
             results = self.executor(
                 *executor_inputs, verifier_error=self.verifier_error
             ).run()
-        return self.parse_results(prop, results)
+            end_t = time.time()
+        result, cex = self.parse_results(prop, results)
+        return VerificationResult(result, cex=cex, vtime=(end_t - start_t))
 
     def reduce_property(self) -> Iterator[Property]:
         assert isinstance(self.property, LogicalExpression)
         for subproperty in self.reduction().reduce_property(~self.property):
             yield subproperty
 
-    def run(self) -> Tuple[PropertyCheckResult, Optional[Any]]:
+    def run(self) -> VerificationResult:
         if self.property.is_concrete:
             if self.property.value == True:
                 self.logger.warning("Property is trivially UNSAT.")
-                return UNSAT, None
+                return VerificationResult(UNSAT)
             else:
                 self.logger.warning("Property is trivially SAT.")
-                return SAT, None
+                return VerificationResult(SAT)
         orig_tempdir = tempfile.tempdir
         try:
             with tempfile.TemporaryDirectory() as tempdir:
                 tempfile.tempdir = tempdir
-                result = UNSAT
+                result = VerificationResult(UNSAT)
                 for subproperty in self.reduce_property():
-                    subproperty_result, cex = self.check(subproperty)
-                    result |= subproperty_result
-                    if result == SAT:
-                        if cex is not None:
+                    subproperty_result = self.check(subproperty)
+                    self.logger.warning("Sub-problem result: %s", subproperty_result)
+                    if subproperty_result.result == SAT:
+                        if subproperty_result.cex is not None:
                             self.logger.debug("SAT! Validating counter example.")
-                            self.validate_counter_example(subproperty, cex)
+                            if not self.validate_counter_example(
+                                subproperty, subproperty_result.cex
+                            ):
+                                subproperty_result = VerificationResult(
+                                    PropertyCheckResult("sat(unconfirmed)")
+                                )
                         else:
                             self.logger.warn("SAT result without counter example.")
-                        return result, cex
+                    result |= subproperty_result
+                    if result.result == SAT:
+                        return result
         finally:
             tempfile.tempdir = orig_tempdir
-        return result, None
+        return result
 
     def validate_counter_example(self, prop: Property, cex: Any) -> bool:
         is_valid, err_msg = prop.validate_counter_example(cex)
@@ -135,7 +145,7 @@ class Verifier(ABC):
     @abstractmethod
     def parse_results(
         self, prop: Property, results: Any
-    ) -> Tuple[PropertyCheckResult, Optional[Any]]:
+    ) -> Tuple[PropertyCheckResult, Optional[np.ndarray]]:
         raise NotImplementedError()
 
 

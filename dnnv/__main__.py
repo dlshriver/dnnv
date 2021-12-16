@@ -4,9 +4,10 @@ import argparse
 import numpy as np
 import os
 import time
+import typing
 
 from pathlib import Path
-from typing import List, Optional
+from typing import Collection, List, Optional, Type
 
 from . import cli
 from . import errors
@@ -14,6 +15,9 @@ from . import logging_utils as logging
 from . import nn
 from . import properties
 from . import utils
+
+if typing.TYPE_CHECKING:
+    from dnnv.verifiers.common.base import Verifier
 
 
 def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
@@ -69,15 +73,20 @@ def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
     elif len(args.verifiers) == 0:
         return 0
 
-    verifier = args.verifiers[0]
+    verifier: Type[Verifier] = args.verifiers[0]
     verifier_name = verifier.__name__.lower()
     start_t = time.time()
     try:
         params = args.verifier_parameters.get(verifier_name, {})
-        result, cex = verifier.verify(phi, **params)
+        verification_result = verifier.verify(phi, **params)
+        result_str = str(verification_result.result)
+        cex = verification_result.cex
+        vtimes: Optional[Collection[float]] = verification_result.vtimes
     except errors.DNNVError as e:
-        result = f"{type(e).__name__}({e})"
+        result_str = f"{type(e).__name__}({e})"
         logger.debug("Error traceback:", exc_info=True)
+        cex = None
+        vtimes = None
     except SystemExit:
         if verifier.__module__ != "dnnv.verifiers.convert":
             logger.error(f"Verifier {verifier_name} called exit()")
@@ -87,8 +96,15 @@ def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
     if args.save_violation is not None and cex is not None:
         np.save(args.save_violation, cex)
     print(f"{verifier.__module__}")
-    print(f"  result: {result}")
-    print(f"  time: {(end_t - start_t):.4f}")
+    print(f"  result: {result_str}")
+    print(f"  total time: {(end_t - start_t):.4f}")
+    if vtimes is not None:
+        print(f"  verification stats:")
+        print(f"    num solved subproblems: {len(vtimes)}")
+        print(f"    total time            : {sum(vtimes):.4f}")
+        print(f"    mean time             : {sum(vtimes)/len(vtimes):.4f}")
+        print(f"    min time              : {min(vtimes):.4f}")
+        print(f"    max time              : {max(vtimes):.4f}")
     return 0
 
 

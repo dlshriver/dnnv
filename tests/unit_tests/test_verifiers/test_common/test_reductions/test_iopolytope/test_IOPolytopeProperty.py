@@ -14,28 +14,33 @@ def setup_function():
 
 def test_init_merge():
     input_op_0 = operations.Input((1, 5), np.dtype(np.float32))
-    add_op_0 = operations.Add(input_op_0, 1)
+    add_op_0 = operations.Add(input_op_0, np.array(1, dtype=np.float32))
     op_graph_0 = OperationGraph([add_op_0])
     N0 = Network("N0").concretize(op_graph_0)
 
-    input_op_1 = operations.Input((1, 5), np.dtype(np.float32))
-    sub_op_1 = operations.Sub(input_op_1, 1)
+    input_op_1 = input_op_0
+    sub_op_1 = operations.Sub(input_op_1, np.array(1, dtype=np.float32))
     op_graph_1 = OperationGraph([sub_op_1])
     N1 = Network("N1").concretize(op_graph_1)
 
     input_constraint = HalfspacePolytope()
     output_constraint = HalfspacePolytope()
 
-    prop = IOPolytopeProperty([N0, N1], input_constraint, output_constraint)
-    assert len(prop.op_graph.output_operations) == 2
-    assert isinstance(prop.op_graph.output_operations[0], operations.Add)
-    assert isinstance(prop.op_graph.output_operations[1], operations.Sub)
+    prop = IOPolytopeProperty([N0, N1], input_constraint, output_constraint, False)
+    prop.op_graph.pprint()
+    assert len(prop.op_graph.output_operations) == 1
+    assert isinstance(prop.op_graph.output_operations[0], operations.Concat)
+    assert len(prop.op_graph.output_operations[0].x) == 2
+    assert isinstance(prop.op_graph.output_operations[0].x[0], operations.Flatten)
+    assert isinstance(prop.op_graph.output_operations[0].x[1], operations.Flatten)
+    assert isinstance(prop.op_graph.output_operations[0].x[0].x, operations.Add)
+    assert isinstance(prop.op_graph.output_operations[0].x[1].x, operations.Sub)
     assert len(prop.op_graph.input_details) == 1
 
 
 def test_str():
     input_op = operations.Input((1, 5), np.dtype(np.float32))
-    add_op = operations.Add(input_op, 1)
+    add_op = operations.Add(input_op, np.array(1, dtype=np.float32))
     op_graph = OperationGraph([add_op])
     N = Network("N").concretize(op_graph)
 
@@ -199,8 +204,8 @@ def test_suffixed_op_graph_multiple_output_ops():
     matmul_op = operations.MatMul(input_op, np.array([[1.0], [1.0]], dtype=np.float32))
     add_op = operations.Add(matmul_op, 1)
     relu_op = operations.Relu(add_op)
-    tanh_op = operations.Tanh(add_op)
-    op_graph = OperationGraph([relu_op, tanh_op])
+    add_op_2 = operations.Add(add_op, -0.5)
+    op_graph = OperationGraph([relu_op, add_op_2])
     N = Network("N").concretize(op_graph)
 
     vi = Variable((1, 2))

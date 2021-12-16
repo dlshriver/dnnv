@@ -1,9 +1,12 @@
 import os
 
+from typing import Optional
+
 from dnnv import nn
 from dnnv import properties
 from dnnv.properties import get_context
 from dnnv.verifiers import SAT, UNSAT, UNKNOWN
+from dnnv.verifiers.common.base import Verifier
 
 from system_tests.utils import network_artifact_dir, property_artifact_dir
 
@@ -13,7 +16,7 @@ RUNS_PER_PROP = int(os.environ.get("_DNNV_TEST_RUNS_PER_PROP", "1"))
 class VerifierTests:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.verifier = None
+        self.verifier: Optional[Verifier] = None
         self.is_complete = False
         self.initialize()
 
@@ -46,7 +49,7 @@ class VerifierTests:
                 property_artifact_dir / "regression_localrobustness_0.py"
             )
             phi.concretize(N=dnn.simplify())
-            result, _ = self.verifier.verify(phi)
+            result = self.verifier.verify(phi).result
             self.assertEqual(result, UNSAT)
 
     def test_sum_gt_one_localrobustness_shift_right_unsat(self):
@@ -59,7 +62,7 @@ class VerifierTests:
                 property_artifact_dir / "regression_localrobustness_0.py"
             )
             phi.concretize(N=dnn.simplify())
-            result, _ = self.verifier.verify(phi)
+            result = self.verifier.verify(phi).result
             self.assertEqual(result, UNSAT)
 
     def test_sum_gt_one_localrobustness_no_shift_sat(self):
@@ -72,7 +75,7 @@ class VerifierTests:
                 property_artifact_dir / "regression_localrobustness_0.py"
             )
             phi.concretize(N=dnn.simplify())
-            result, _ = self.verifier.verify(phi)
+            result = self.verifier.verify(phi).result
             if self.is_complete:
                 self.assertEqual(result, SAT)
             else:
@@ -87,7 +90,7 @@ class VerifierTests:
                 property_artifact_dir / "regression_localrobustness_0.py"
             )
             phi.concretize(N=dnn.simplify())
-            result, _ = self.verifier.verify(phi)
+            result = self.verifier.verify(phi).result
             self.assertEqual(result, UNSAT)
 
     def test_const_one_localrobustness(self):
@@ -99,7 +102,7 @@ class VerifierTests:
                 property_artifact_dir / "regression_localrobustness_0.py"
             )
             phi.concretize(N=dnn.simplify())
-            result, _ = self.verifier.verify(phi)
+            result = self.verifier.verify(phi).result
             self.assertEqual(result, UNSAT)
 
     def test_a_gt_b_localrobustness_unsat(self):
@@ -110,7 +113,7 @@ class VerifierTests:
             dnn = nn.parse(network_artifact_dir / "a_gt_b.onnx")
             phi = properties.parse(property_artifact_dir / "class_localrobustness_0.py")
             phi.concretize(N=dnn.simplify()[:-1])
-            result, _ = self.verifier.verify(phi)
+            result = self.verifier.verify(phi).result
             self.assertEqual(result, UNSAT)
         for i in range(RUNS_PER_PROP):
             os.environ["SEED"] = str(i + 1)
@@ -118,7 +121,7 @@ class VerifierTests:
             dnn = nn.parse(network_artifact_dir / "a_gt_b.onnx")
             phi = properties.parse(property_artifact_dir / "class_localrobustness_1.py")
             phi.concretize(N=dnn.simplify()[:-1])
-            result, _ = self.verifier.verify(phi)
+            result = self.verifier.verify(phi).result
             self.assertEqual(result, UNSAT)
         os.environ["SHIFT"] = "np.asarray([[0,100]], dtype=np.float32)"
         for i in range(RUNS_PER_PROP):
@@ -127,7 +130,7 @@ class VerifierTests:
             dnn = nn.parse(network_artifact_dir / "a_gt_b.onnx")
             phi = properties.parse(property_artifact_dir / "class_localrobustness_0.py")
             phi.concretize(N=dnn.simplify()[:-1])
-            result, _ = self.verifier.verify(phi)
+            result = self.verifier.verify(phi).result
             self.assertEqual(result, UNSAT)
         for i in range(RUNS_PER_PROP):
             os.environ["SEED"] = str(i + 1)
@@ -135,7 +138,7 @@ class VerifierTests:
             dnn = nn.parse(network_artifact_dir / "a_gt_b.onnx")
             phi = properties.parse(property_artifact_dir / "class_localrobustness_1.py")
             phi.concretize(N=dnn.simplify()[:-1])
-            result, _ = self.verifier.verify(phi)
+            result = self.verifier.verify(phi).result
             self.assertEqual(result, UNSAT)
 
     def test_a_gt_b_localrobustness_sat(self):
@@ -145,7 +148,7 @@ class VerifierTests:
             dnn = nn.parse(network_artifact_dir / "a_gt_b.onnx")
             phi = properties.parse(property_artifact_dir / "class_localrobustness_0.py")
             phi.concretize(N=dnn.simplify()[:-1])
-            result, _ = self.verifier.verify(phi)
+            result = self.verifier.verify(phi).result
             if self.is_complete:
                 self.assertEqual(result, SAT)
             else:
@@ -156,7 +159,7 @@ class VerifierTests:
             dnn = nn.parse(network_artifact_dir / "a_gt_b.onnx")
             phi = properties.parse(property_artifact_dir / "class_localrobustness_1.py")
             phi.concretize(N=dnn.simplify()[:-1])
-            result, _ = self.verifier.verify(phi)
+            result = self.verifier.verify(phi).result
             if self.is_complete:
                 self.assertEqual(result, SAT)
             else:
@@ -169,7 +172,7 @@ class VerifierTests:
             dnn = nn.parse(network_artifact_dir / "const_zero.onnx")
             phi = properties.parse(property_artifact_dir / "output_ge1_0.py")
             phi.concretize(N=dnn.simplify())
-            result, _ = self.verifier.verify(phi)
+            result = self.verifier.verify(phi).result
             if self.is_complete:
                 self.assertEqual(result, SAT)
             else:
@@ -180,7 +183,7 @@ class VerifierTests:
             dnn = nn.parse(network_artifact_dir / "const_zero.onnx")
             phi = properties.parse(property_artifact_dir / "output_ge1_1.py")
             phi.concretize(N=dnn.simplify())
-            result, _ = self.verifier.verify(phi)
+            result = self.verifier.verify(phi).result
             if self.is_complete:
                 self.assertEqual(result, SAT)
             else:
@@ -193,7 +196,7 @@ class VerifierTests:
             dnn = nn.parse(network_artifact_dir / "const_one.onnx")
             phi = properties.parse(property_artifact_dir / "output_ge1_0.py")
             phi.concretize(N=dnn.simplify())
-            result, _ = self.verifier.verify(phi)
+            result = self.verifier.verify(phi).result
             self.assertEqual(result, UNSAT)
         for i in range(RUNS_PER_PROP):
             os.environ["SEED"] = str(i + 1)
@@ -201,5 +204,5 @@ class VerifierTests:
             dnn = nn.parse(network_artifact_dir / "const_one.onnx")
             phi = properties.parse(property_artifact_dir / "output_ge1_1.py")
             phi.concretize(N=dnn.simplify())
-            result, _ = self.verifier.verify(phi)
+            result = self.verifier.verify(phi).result
             self.assertEqual(result, UNSAT)

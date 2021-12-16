@@ -42,7 +42,7 @@ def test_or():
     assert (UNSAT | SAT) == SAT
     assert (UNSAT | UNSAT) == UNSAT
     assert (UNSAT | UNKNOWN) == UNKNOWN
-    assert (PropertyCheckResult("NEW_RESULT_TYPE") | SAT) == UNKNOWN
+    assert (PropertyCheckResult("NEW_RESULT_TYPE") | SAT) == SAT
 
     with pytest.raises(TypeError):
         _ = SAT | 1

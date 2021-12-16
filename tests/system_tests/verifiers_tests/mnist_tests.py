@@ -92,7 +92,7 @@ class MNISTTests(unittest.TestCase):
                     property_artifact_dir / "mnist_localrobustness_rand.py"
                 )
                 phi.concretize(N=dnn)
-                result, _ = verifier.verify(phi, **VERIFIER_KWARGS.get(name, {}))
+                result = verifier.verify(phi, **VERIFIER_KWARGS.get(name, {})).result
                 self.check_results(result, results)
 
     @unittest.skip("Too slow")
@@ -120,7 +120,7 @@ class MNISTTests(unittest.TestCase):
                     property_artifact_dir / "mnist_localrobustness_rand.py"
                 )
                 phi.concretize(N=dnn)
-                result, _ = verifier.verify(phi, **VERIFIER_KWARGS.get(name, {}))
+                result = verifier.verify(phi, **VERIFIER_KWARGS.get(name, {})).result
                 self.check_results(result, results)
 
     def test_mnist_300_200_100(self):
@@ -142,7 +142,7 @@ class MNISTTests(unittest.TestCase):
             dnn = nn.parse(network_artifact_dir / "mnist_300_200_100.onnx").simplify()
             phi = properties.parse(property_artifact_dir / "mnist_localrobustness_x.py")
             phi.concretize(N=dnn)
-            result, _ = verifier.verify(phi, **VERIFIER_KWARGS.get(name, {}))
+            result = verifier.verify(phi, **VERIFIER_KWARGS.get(name, {})).result
             self.check_results(result, results)
 
 

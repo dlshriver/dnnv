@@ -82,7 +82,7 @@ class RandomTests(unittest.TestCase):
                     dnn = nn.parse(network_artifact_dir / "random_fc_0.onnx")
                     phi = properties.parse(property_artifact_dir / "localrobustness.py")
                     phi.concretize(N=dnn)
-                    result, _ = verifier.verify(phi)
+                    result = verifier.verify(phi).result
                     self.check_results(result, results)
 
     def test_random_fc_1(self):
@@ -105,7 +105,7 @@ class RandomTests(unittest.TestCase):
                     dnn = nn.parse(network_artifact_dir / "random_fc_1.onnx")
                     phi = properties.parse(property_artifact_dir / "localrobustness.py")
                     phi.concretize(N=dnn)
-                    result, _ = verifier.verify(phi)
+                    result = verifier.verify(phi).result
                     self.check_results(result, results)
 
     def test_random_fc_2(self):
@@ -127,7 +127,7 @@ class RandomTests(unittest.TestCase):
                     dnn = nn.parse(network_artifact_dir / "random_fc_2.onnx")
                     phi = properties.parse(property_artifact_dir / "localrobustness.py")
                     phi.concretize(N=dnn)
-                    result, _ = verifier.verify(phi)
+                    result = verifier.verify(phi).result
                     self.check_results(result, results)
 
     def test_random_conv_0(self):
@@ -159,7 +159,7 @@ class RandomTests(unittest.TestCase):
                     ).simplify()
                     phi = properties.parse(property_artifact_dir / "localrobustness.py")
                     phi.concretize(N=dnn)
-                    result, _ = verifier.verify(phi)
+                    result = verifier.verify(phi).result
                     self.check_results(result, results)
 
     def test_random_conv_1(self):
@@ -191,7 +191,7 @@ class RandomTests(unittest.TestCase):
                     ).simplify()
                     phi = properties.parse(property_artifact_dir / "localrobustness.py")
                     phi.concretize(N=dnn)
-                    result, _ = verifier.verify(phi)
+                    result = verifier.verify(phi).result
                     self.check_results(result, results)
 
     def test_random_conv_2(self):
@@ -222,7 +222,7 @@ class RandomTests(unittest.TestCase):
                     ).simplify()
                     phi = properties.parse(property_artifact_dir / "localrobustness.py")
                     phi.concretize(N=dnn)
-                    result, _ = verifier.verify(phi)
+                    result = verifier.verify(phi).result
                     self.check_results(result, results)
 
     def test_random_residual_0(self):
@@ -243,7 +243,7 @@ class RandomTests(unittest.TestCase):
                     dnn = nn.parse(network_artifact_dir / "random_residual_0.onnx")
                     phi = properties.parse(property_artifact_dir / "localrobustness.py")
                     phi.concretize(N=dnn)
-                    result, _ = verifier.verify(phi)
+                    result = verifier.verify(phi).result
                     self.check_results(result, results)
 
     def test_hyperlocal_random_conv_0(self):
@@ -274,7 +274,7 @@ class RandomTests(unittest.TestCase):
                         property_artifact_dir / "hyperlocalrobustness.py"
                     )
                     phi.concretize(N=dnn)
-                    result, _ = verifier.verify(phi)
+                    result = verifier.verify(phi).result
                     self.check_results(result, results)
 
 
