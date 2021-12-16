@@ -58,7 +58,10 @@ class Nnenum(Verifier):
         with tempfile.NamedTemporaryFile(
             mode="w+", suffix=".npy", delete=False
         ) as constraint_file:
-            np.save(constraint_file.name, ((lb, ub), (A_in, b_in), (A_out, b_out)))
+            np.save(
+                constraint_file.name,
+                np.asarray(((lb, ub), (A_in, b_in), (A_out, b_out)), dtype=object),
+            )
 
         with tempfile.NamedTemporaryFile(
             mode="w+", suffix=".npy", delete=False

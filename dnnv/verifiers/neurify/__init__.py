@@ -17,6 +17,7 @@ class Neurify(Verifier):
     parameters = {
         "max_depth": Parameter(int, help="Maximum search depth for neurify."),
         "max_thread": Parameter(int, help="Maximum number of threads to use."),
+        "err_node_size": Parameter(int, help="ERR_NODE value."),
     }
 
     def build_inputs(self, prop):
