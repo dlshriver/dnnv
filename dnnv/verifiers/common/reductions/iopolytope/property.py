@@ -5,6 +5,7 @@ import numpy as np
 from typing import List, Optional, Tuple, Union
 
 from .base import HalfspacePolytope, HyperRectangle
+from .utils import OpGraphMerger
 from ..base import Property
 from .....nn import OperationGraph, OperationTransformer, operations
 from .....properties import Network
@@ -16,6 +17,7 @@ class IOPolytopeProperty(Property):
         networks: List[Network],
         input_constraint: HalfspacePolytope,
         output_constraint: HalfspacePolytope,
+        require_linear_network: bool = True,
     ):
         self.networks = networks
         self.input_constraint = input_constraint
@@ -26,27 +28,12 @@ class IOPolytopeProperty(Property):
             "_varname",
             [f"{network}(x)" for network in self.networks],
         )
-        # TODO : move Merger out of this function
-        class Merger(OperationTransformer):
-            # TODO : merge common layers (e.g. same normalization, reshaping of input)
-            def __init__(self):
-                super().__init__()
-                self.output_operations = []
-                self.input_operations = {}
 
-            def merge(self, operation_graphs: List[OperationGraph]):
-                for op_graph in operation_graphs:
-                    for op in op_graph.output_operations:
-                        self.output_operations.append(self.visit(op))
-                return OperationGraph(self.output_operations)
+        self.op_graph = OpGraphMerger(*(n.value for n in self.networks)).merge()
+        if require_linear_network:
+            from dnnv.nn.transformers.mlp import MLPTransformer
 
-            def visit_Input(self, operation):
-                input_details = (operation.dtype, tuple(operation.shape))
-                if input_details not in self.input_operations:
-                    self.input_operations[input_details] = self.generic_visit(operation)
-                return self.input_operations[input_details]
-
-        self.op_graph = Merger().merge([n.value for n in self.networks])
+            self.op_graph = MLPTransformer().transform(self.op_graph)
 
     def __str__(self):
         strs = ["Property:"]

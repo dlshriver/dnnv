@@ -19,10 +19,12 @@ class IOPolytopeReduction(Reduction):
         input_constraint_type: Type[Constraint] = HyperRectangle,
         output_constraint_type: Type[Constraint] = HalfspacePolytope,
         reduction_error: Type[ReductionError] = IOPolytopeReductionError,
+        require_linear_network: bool = True,
     ):
         super().__init__(reduction_error=reduction_error)
         self.input_constraint_type = input_constraint_type
         self.output_constraint_type = output_constraint_type
+        self.require_linear_network = require_linear_network
         self.logger = logging.getLogger(__name__)
         self._stack: List[Expression] = []
         self._network_input_shapes: Dict[Expression, Tuple[int, ...]] = {}
@@ -40,7 +42,10 @@ class IOPolytopeReduction(Reduction):
 
     def build_property(self):
         return IOPolytopeProperty(
-            self.networks, self.input_constraint, self.output_constraint
+            self.networks,
+            self.input_constraint,
+            self.output_constraint,
+            self.require_linear_network,
         )
 
     def _reduce(self, expression: And) -> Iterator[Property]:
