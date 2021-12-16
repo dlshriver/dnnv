@@ -38,10 +38,11 @@ class Operation(metaclass=Op):
     __id = 0
 
     def __init__(self, name: Optional[str] = None):
-        self.name = name
         if name is None:
             self.name = f"{type(self).__name__}_{self.__id}"
             Operation.__id += 1
+        else:
+            self.name = name
 
     def __eq__(self, other):
         if type(other) != type(self):

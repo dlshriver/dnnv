@@ -3,7 +3,7 @@ from __future__ import annotations
 import itertools
 import numpy as np
 
-from typing import Dict, List
+from typing import Dict, List, Optional, Sequence, Tuple
 
 from .operations import Operation
 from .utils import TensorDetails
@@ -12,8 +12,8 @@ from .utils import TensorDetails
 class OperationGraph:
     def __init__(self, output_operations: List[Operation]):
         self.output_operations = tuple(output_operations)
-        self._input_details = None
-        self._output_details = None
+        self._input_details: Optional[Sequence[TensorDetails]] = None
+        self._output_details: Optional[Sequence[TensorDetails]] = None
 
     def walk(self, visitor):
         result = []
@@ -21,13 +21,17 @@ class OperationGraph:
             result.append(visitor.visit(output_operation))
         return result
 
-    def copy(self):
-        clone = self[:]
-        clone._input_details = self._input_details
-        clone._output_details = self._output_details
-        return clone
+    def copy(self) -> OperationGraph:
+        from .transformers.copy import Copier
 
-    def simplify(self):
+        copier = Copier()
+        output_operations = [copier.visit(op) for op in self.output_operations]
+        copy = OperationGraph(output_operations)
+        copy._input_details = self._input_details
+        copy._output_details = self._output_details
+        return copy
+
+    def simplify(self) -> OperationGraph:
         from .transformers import simplify
 
         return simplify(self.copy())
@@ -38,7 +42,7 @@ class OperationGraph:
         return self.walk(PrintVisitor())
 
     @property
-    def input_details(self):
+    def input_details(self) -> Sequence[TensorDetails]:
         if self._input_details is None:
             from .visitors import GetInputDetails
 
@@ -50,11 +54,11 @@ class OperationGraph:
         return self._input_details
 
     @property
-    def input_shape(self):
+    def input_shape(self) -> Sequence[Tuple[int, ...]]:
         return tuple(details.shape for details in self.input_details)
 
     @property
-    def output_details(self):
+    def output_details(self) -> Sequence[TensorDetails]:
         # TODO : fix output_details calculation
         # for operations with multiple outputs
         if self._output_details is None:
@@ -71,7 +75,7 @@ class OperationGraph:
         return self._output_details
 
     @property
-    def output_shape(self):
+    def output_shape(self) -> Sequence[Tuple[int, ...]]:
         # TODO : fix output_shape calculation
         # for operations with multiple outputs
         return tuple(details.shape for details in self.output_details)
@@ -130,7 +134,12 @@ class OperationGraph:
                 self.input_id += 1
                 return new_op
 
-        new_op_graph = OperationGraph(self.copy().walk(Composer(input_op_graph.copy())))
+            def generic_visit(self, operation: Operation) -> Operation:
+                operation = super().generic_visit(operation)
+                operation.name = operation.name + ":!"
+                return operation
+
+        new_op_graph = OperationGraph(self.walk(Composer(input_op_graph)))
 
         return new_op_graph
 
@@ -141,9 +150,9 @@ class OperationGraph:
 
     def __getitem__(self, index):
         if isinstance(index, slice):
-            index = (index,)
+            index = (index, list(range(len(self.output_operations))))
         elif isinstance(index, int):
-            index = (slice(None), index)
+            index = (slice(None), [index])
         elif not isinstance(index, tuple):
             raise TypeError(
                 f"Unsupported type for indexing operation graph: {type(index).__name__!r}"
@@ -164,14 +173,20 @@ class OperationGraph:
         start = index[0].start or 0
         stop = index[0].stop
 
+        output_select = index[1]
+        if isinstance(output_select, int):
+            output_select = [output_select]
+
+        if start is None or start == 0 and stop is None:
+            copy = self.copy()
+            output_ops = copy.output_operations
+            sliced_op_graph = OperationGraph([output_ops[i] for i in output_select])
+            return sliced_op_graph
+
         from .transformers import Slicer
 
         result = list(itertools.chain.from_iterable(self.walk(Slicer(start, stop))))
-        if len(index) > 1:
-            output_select = index[1]
-            if isinstance(output_select, int):
-                output_select = [output_select]
-            result = [result[i] for i in output_select]
+        result = [result[i] for i in output_select]
         sliced_op_graph = OperationGraph(result)
         return sliced_op_graph
 
