@@ -19,7 +19,7 @@ from .convert_matmul_to_gemm import *
 from .convert_mul import *
 from .convert_reshape_to_flatten import ConvertReshapeToFlatten
 from .convert_sub_to_add import *
-from .drop_identities import DropIdentity, DropUnnecessaryConcat, DropUnnecessaryFlatten
+from .drop_identities import *
 from .move_activations_back import MoveActivationsBackward
 from .squeeze_convs import SqueezeConvs
 from .squeeze_gemms import SqueezeGemms
@@ -35,29 +35,6 @@ class MatMulVectorArgsReorder(Simplifier):
         ):
             return operations.MatMul(operation.b, operation.a.T)
         return operation
-
-
-# @dlshriver: redundant with squeezegemms and matmuladdtogemm?
-# class SqueezeMatMulAdds(Simplifier):
-#     def visit_Add(self, operation: operations.Add):
-#         if (
-#             isinstance(operation.a, operations.MatMul)
-#             and isinstance(operation.a.a, operations.Add)
-#             and isinstance(operation.a.a.a, operations.MatMul)
-#         ):
-#             first_mm = operation.a.a.a
-#             second_mm = operation.a
-#             first_add = operation.a.a
-#             second_add = operation
-
-#             a = first_mm.a
-#             b_0 = first_mm.b
-#             b_1 = second_mm.b
-#             b = np.matmul(b_0, b_1)
-#             c = np.matmul(first_add.b, b_1) + second_add.b
-#             return operations.Add(operations.MatMul(a, b), c)
-#         # TODO : can also reduce in other cases, e.g., (MatMul >> MatMul >> Add)
-#         return operation
 
 
 def simplify(

@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import inspect
+
+from ..graph import OperationGraph
 from ..operations import Operation
 from ..visitors import OperationVisitor
 
@@ -8,6 +11,9 @@ class OperationTransformer(OperationVisitor):
     def __init__(self, cached=True):
         self.cached = cached
         self._cache = {}
+
+    def transform(self, op_graph: OperationGraph) -> OperationGraph:
+        return OperationGraph([self.visit(op) for op in op_graph.output_operations])
 
     def visit(self, operation: Operation):
         if not self.cached or operation not in self._cache:
@@ -21,10 +27,11 @@ class OperationTransformer(OperationVisitor):
         return result
 
     def generic_visit(self, operation: Operation) -> Operation:
-        for name, value in operation.__dict__.items():
+        parameters = {}
+        for name in inspect.signature(type(operation)).parameters:
+            value = getattr(operation, name)
             if isinstance(value, Operation):
-                new_value = self.visit(value)
-                setattr(operation, name, new_value)
+                value = self.visit(value)
             elif isinstance(value, (list, set, tuple)):
                 new_value = []
                 for value_ in value:
@@ -33,8 +40,9 @@ class OperationTransformer(OperationVisitor):
                         new_value.append(new_value_)
                     else:
                         new_value.append(value_)
-                setattr(operation, name, type(value)(new_value))
-        return operation
+                value = type(value)(new_value)
+            parameters[name] = value
+        return type(operation)(**parameters)
 
 
 __all__ = ["OperationTransformer"]

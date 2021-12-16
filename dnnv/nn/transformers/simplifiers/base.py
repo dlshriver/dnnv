@@ -20,10 +20,15 @@ class Simplifier(OperationTransformer):
             name: analysis(self.dnn) for name, analysis in self.ANALYSES.items()
         }
 
+    def simplify(self, operation: Operation) -> Operation:
+        if hasattr(self, f"visit_{type(operation)}"):
+            return getattr(self, f"visit_{type(operation)}")(operation)
+        return operation
+
     def visit(self, operation: Operation) -> Operation:
         if operation not in self._cache:
             operation = super().generic_visit(operation)
-            result = super().visit(operation)
+            result = self.simplify(operation)
             if result is not operation:
                 self._modified_graph = True
             self._cache[operation] = result
@@ -36,19 +41,22 @@ class ComposeSimplifiers(Simplifier):
         self.simplifiers = [simplifier(dnn) for simplifier in simplifiers]
 
     def visit(self, operation: Operation) -> Operation:
+        if operation in self._cache:
+            return self._cache[operation]
+        operation = super().generic_visit(operation)
         modified_graph = True
         while modified_graph:
             modified_graph = False
             for simplifier in self.simplifiers:
                 simplifier._modified_graph = False
-                simplifier._cache = {}
-                operation = simplifier.visit(operation)
-                modified_graph |= simplifier._modified_graph
-                if modified_graph:
+                result = simplifier.simplify(operation)
+                if result is not operation:
+                    modified_graph = True
                     for simplifier in self.simplifiers:
                         simplifier.run_analyses()
-                    break
+                operation = result
             self._modified_graph |= modified_graph
+        self._cache[operation] = operation
         return operation
 
 
