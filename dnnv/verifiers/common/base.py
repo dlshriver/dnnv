@@ -50,11 +50,12 @@ class Verifier(ABC):
     )
     parameters: Dict[str, Parameter] = {}
 
-    def __init__(self, dnn_property: Expression, **kwargs):
+    def __init__(self, dnn_property: Expression, eager_exit: bool = True, **kwargs):
         self.logger = logging.getLogger(
             f"{type(self).__module__}.{type(self).__qualname__}"
         )
         self.property = dnn_property
+        self.eager_exit = eager_exit
         for key, value in kwargs.items():
             if key not in self.__class__.parameters:
                 raise self.verifier_error(f"Unknown parameter: {key}")
@@ -90,8 +91,17 @@ class Verifier(ABC):
                 *executor_inputs, verifier_error=self.verifier_error
             ).run()
             end_t = time.time()
-        result, cex = self.parse_results(prop, results)
-        return VerificationResult(result, cex=cex, vtime=(end_t - start_t))
+        check_result, cex = self.parse_results(prop, results)
+        self.logger.debug("Check result: %s", check_result)
+        if check_result == SAT:
+            if cex is not None:
+                self.logger.debug("SAT! Validating counter example.")
+                if not self.validate_counter_example(prop, cex):
+                    return VerificationResult(PropertyCheckResult("sat(unconfirmed)"))
+            else:
+                self.logger.warn("SAT result without counter example.")
+                return VerificationResult(PropertyCheckResult("sat(unconfirmed)"))
+        return VerificationResult(check_result, cex=cex, vtime=(end_t - start_t))
 
     def reduce_property(self) -> Iterator[Property]:
         assert isinstance(self.property, LogicalExpression)
@@ -110,23 +120,12 @@ class Verifier(ABC):
         try:
             with tempfile.TemporaryDirectory() as tempdir:
                 tempfile.tempdir = tempdir
-                result = VerificationResult(UNSAT)
+                result = VerificationResult()
                 for subproperty in self.reduce_property():
-                    subproperty_result = self.check(subproperty)
-                    self.logger.warning("Sub-problem result: %s", subproperty_result)
-                    if subproperty_result.result == SAT:
-                        if subproperty_result.cex is not None:
-                            self.logger.debug("SAT! Validating counter example.")
-                            if not self.validate_counter_example(
-                                subproperty, subproperty_result.cex
-                            ):
-                                subproperty_result = VerificationResult(
-                                    PropertyCheckResult("sat(unconfirmed)")
-                                )
-                        else:
-                            self.logger.warn("SAT result without counter example.")
-                    result |= subproperty_result
-                    if result.result == SAT:
+                    subproblem_result = self.check(subproperty)
+                    self.logger.info("Sub-problem result: %s", subproblem_result)
+                    result |= subproblem_result
+                    if self.eager_exit and result.result == SAT:
                         return result
         finally:
             tempfile.tempdir = orig_tempdir
@@ -134,7 +133,7 @@ class Verifier(ABC):
 
     def validate_counter_example(self, prop: Property, cex: Any) -> bool:
         is_valid, err_msg = prop.validate_counter_example(cex)
-        if not is_valid:
+        if self.eager_exit and not is_valid:
             raise self.verifier_error(err_msg)
         return is_valid
 

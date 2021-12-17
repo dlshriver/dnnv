@@ -6,24 +6,27 @@ from typing import Any, Collection, Optional
 
 @dataclass
 class VerificationResult:
-    result: PropertyCheckResult
-    results: Collection[PropertyCheckResult] = field(default_factory=tuple, repr=False)
+    result: Optional[PropertyCheckResult] = None
+    results: Collection[PropertyCheckResult] = field(default_factory=tuple)
     cex: Optional[Any] = None
-    counter_examples: Collection[Any] = field(default_factory=tuple, repr=False)
+    counter_examples: Collection[Any] = field(default_factory=tuple)
     vtime: float = 0.0
-    vtimes: Collection[float] = field(default_factory=tuple, repr=False)
+    vtimes: Collection[float] = field(default_factory=tuple)
 
     def __post_init__(self):
-        if len(self.results) == 0:
-            self.results = (self.result,)
-        if len(self.counter_examples) == 0:
-            self.counter_examples = (self.cex,)
-        if len(self.vtimes) == 0:
-            self.vtimes = (self.vtime,)
+        if self.result is not None:
+            if len(self.results) == 0:
+                self.results = (self.result,)
+            if len(self.counter_examples) == 0:
+                self.counter_examples = (self.cex,)
+            if len(self.vtimes) == 0:
+                self.vtimes = (self.vtime,)
 
     def __or__(self, other):
         if not isinstance(other, VerificationResult):
             return NotImplemented
+        if self.result is None:
+            return other
         result = self.result | other.result
         results = tuple(self.results) + tuple(other.results)
         cex = self.cex if self.cex is not None else other.cex

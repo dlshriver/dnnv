@@ -78,6 +78,7 @@ def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
     start_t = time.time()
     try:
         params = args.verifier_parameters.get(verifier_name, {})
+        params["eager_exit"] = not args.no_eager_exit
         verification_result = verifier.verify(phi, **params)
         result_str = str(verification_result.result)
         cex = verification_result.cex

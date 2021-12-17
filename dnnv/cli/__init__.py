@@ -90,6 +90,11 @@ def parse_args():
         default=None,
         help="the path to save a found violation",
     )
+    parser.add_argument(
+        "--no-eager-exit",
+        action="store_true",
+        help="solve all sub-problems before exiting",
+    )
 
     prop_format_group = parser.add_mutually_exclusive_group()
     prop_format_group.add_argument(

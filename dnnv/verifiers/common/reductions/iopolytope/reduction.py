@@ -73,7 +73,7 @@ class IOPolytopeReduction(Reduction):
         dnf_expression = Or(~(~expression).canonical())
         self.logger.debug("DNF: %s", dnf_expression)
 
-        for conjunction in dnf_expression:
+        for conjunction in sorted(dnf_expression, key=lambda x: len(str(x))):
             self.logger.info("CONJUNCTION: %s", conjunction)
             yield from self._reduce(conjunction)
 
