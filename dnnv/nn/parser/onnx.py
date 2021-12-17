@@ -4,6 +4,7 @@ import onnx
 from pathlib import Path
 from typing import Set
 
+from .errors import OnnxParserError
 from .. import OperationGraph
 from ..operations import Operation
 from ..utils import as_numpy
@@ -70,4 +71,11 @@ def _parse_onnx_model(onnx_model: onnx.ModelProto) -> OperationGraph:
 
 def parse(path: Path) -> OperationGraph:
     onnx_model = onnx.load(str(path))
+    try:
+        onnx.checker.check_model(onnx_model, full_check=True)
+    except (onnx.checker.ValidationError, onnx.shape_inference.InferenceError) as exc:
+        raise OnnxParserError(f"Invalid ONNX model: {path}")
     return _parse_onnx_model(onnx_model)
+
+
+__all__ = ["parse"]
