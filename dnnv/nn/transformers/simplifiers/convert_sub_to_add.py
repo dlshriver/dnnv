@@ -15,9 +15,6 @@ class ConvertSubToAdd(Simplifier):
         elif isinstance(operation.a, operations.Operation):
             input_op = operation.a
             c = operation.b
-        elif isinstance(operation.b, operations.Operation):
-            input_op = operation.b
-            c = operation.a
         else:
             return operation
         return operations.Add(input_op, -c)

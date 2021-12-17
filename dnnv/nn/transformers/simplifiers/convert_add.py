@@ -36,6 +36,7 @@ class ConvertAdd(Simplifier):
             return operation
         elif len(input_shape) == 2:
             w = np.eye(input_shape[1 - transpose_a], dtype=input_dtype)
+            c = np.zeros(input_shape[1 - transpose_a], dtype=input_dtype) + c
         elif len(input_shape) == 4:
             return operation
         else:
