@@ -99,8 +99,6 @@ class TemporalSymbol(LTL):
             assert network.is_concrete
 
             stepper = Compose(self.transition_fn, network)
-            if self.state_map_fn is not None:
-                stepper = Compose(stepper, self.state_map_fn)
             self._stepper = stepper.propagate_constants()
         return self._stepper
 
