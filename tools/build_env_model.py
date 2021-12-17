@@ -1,8 +1,10 @@
 import argparse
+import inspect
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from functools import partial
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Sequence
 
@@ -69,13 +71,37 @@ def get_optimizer(model: nn.Module, args: argparse.Namespace) -> torch.optim.Opt
     return torch.optim.Adam(model.parameters(), args.learning_rate)
 
 
-def main(args: argparse.Namespace) -> int:
+def build_transition_fn(
+    transition_fn: Callable[..., torch.Tensor]
+) -> Callable[..., torch.Tensor]:
+    signature = inspect.signature(transition_fn)
+    parser = argparse.ArgumentParser(parents=[build_parser()], add_help=False)
+    parameters = {}
+    for name, param in signature.parameters.items():
+        if param.default is param.empty:
+            continue
+        parser.add_argument(
+            f"--transition_fn.{name}",
+            dest=name,
+            type=type(param.default),
+            default=param.default,
+        )
+        parameters[name] = param.default
+    args = vars(parser.parse_args())
+    parameters = {k: args[k] for k, v in parameters.items()}
+    transition_fn = partial(transition_fn, **parameters)
+    return transition_fn
+
+
+def main(args: argparse.Namespace, extra_args: List[str]) -> int:
     specs: Dict[str, Any] = {}
     with open(args.env_spec) as env_spec_file:
         exec(env_spec_file.read(), specs)
 
     state_generator: Callable[[int], torch.Tensor] = specs[args.state_generator]
-    transition_fn: Callable[[torch.Tensor], torch.Tensor] = specs[args.transition_fn]
+    transition_fn: Callable[..., torch.Tensor] = build_transition_fn(
+        specs[args.transition_fn]
+    )
 
     x = state_generator(1)
     y = transition_fn(x)
@@ -109,7 +135,7 @@ def main(args: argparse.Namespace) -> int:
     return 0
 
 
-def parse_args():
+def build_parser():
     parser = argparse.ArgumentParser(
         description="Construct neural network approximations of a given environment specification.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -206,9 +232,14 @@ def parse_args():
         default=100,
         help="frequency (in iterations) at which to display the current model error",
     )
+    return parser
 
-    return parser.parse_args()
+
+def parse_args():
+    parser = build_parser()
+
+    return parser.parse_known_args()
 
 
 if __name__ == "__main__":
-    exit(main(parse_args()))
+    exit(main(*parse_args()))
