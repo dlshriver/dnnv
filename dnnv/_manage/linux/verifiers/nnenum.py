@@ -84,7 +84,7 @@ if __name__ == "__main__":
 
 class NnenumInstaller(Installer):
     def run(self, env: Environment, dependency: Dependency):
-        commit_hash = "6854a6b0bb766806bb42570230adcbd0ecfab809"
+        commit_hash = "2ad47c186f8113e75f16d45db9e314b1a0b72827"
         name = "nnenum"
 
         cache_dir = env.cache_dir / f"{name}-{commit_hash}"
