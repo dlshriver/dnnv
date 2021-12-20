@@ -3,14 +3,14 @@ from __future__ import annotations
 import itertools
 import numpy as np
 
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import Dict, Optional, Sequence, Tuple
 
 from .operations import Operation
 from .utils import TensorDetails
 
 
 class OperationGraph:
-    def __init__(self, output_operations: List[Operation]):
+    def __init__(self, output_operations: Sequence[Operation]):
         self.output_operations = tuple(output_operations)
         self._input_details: Optional[Sequence[TensorDetails]] = None
         self._output_details: Optional[Sequence[TensorDetails]] = None
@@ -25,11 +25,7 @@ class OperationGraph:
         from .transformers.copy import Copier
 
         copier = Copier()
-        output_operations = [copier.visit(op) for op in self.output_operations]
-        copy = OperationGraph(output_operations)
-        copy._input_details = self._input_details
-        copy._output_details = self._output_details
-        return copy
+        return copier.transform(self)
 
     def simplify(self) -> OperationGraph:
         from .transformers import simplify
@@ -140,6 +136,8 @@ class OperationGraph:
                 return operation
 
         new_op_graph = OperationGraph(self.walk(Composer(input_op_graph)))
+        new_op_graph._input_details = input_op_graph.input_details
+        new_op_graph._output_details = self.output_details
 
         return new_op_graph
 

@@ -44,7 +44,9 @@ def simplify(
         simplifier = ComposeSimplifiers(
             dnn, *[c for c in get_subclasses(Simplifier) if not c is ComposeSimplifiers]
         )
-    simplified_graph = OperationGraph(dnn.walk(simplifier))
+    simplified_graph = simplifier.transform(dnn)
+    simplified_graph._input_details = dnn._input_details
+    simplified_graph._output_details = dnn._output_details
     return simplified_graph
 
 

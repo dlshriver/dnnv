@@ -233,6 +233,8 @@ class Py2PropertyTransformer(ast.NodeTransformer):
             raise DNNPParserError(
                 "DNNP does not currently support definition of slices containing non-primitive types"
             )
+        return node
+        # TODO: address this
         return self.generic_visit(node)
 
     def visit_Await(self, node: ast.Await):

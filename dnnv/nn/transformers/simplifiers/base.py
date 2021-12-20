@@ -11,7 +11,6 @@ class Simplifier(OperationTransformer):
 
     def __init__(self, dnn: OperationGraph):
         super().__init__()
-        self._modified_graph = False
         self.dnn = dnn
         self.run_analyses()
 
@@ -29,8 +28,6 @@ class Simplifier(OperationTransformer):
         if operation not in self._cache:
             operation = super().generic_visit(operation)
             result = self.simplify(operation)
-            if result is not operation:
-                self._modified_graph = True
             self._cache[operation] = result
         return self._cache[operation]
 
@@ -48,14 +45,12 @@ class ComposeSimplifiers(Simplifier):
         while modified_graph:
             modified_graph = False
             for simplifier in self.simplifiers:
-                simplifier._modified_graph = False
                 result = simplifier.simplify(operation)
                 if result is not operation:
                     modified_graph = True
                     for simplifier in self.simplifiers:
                         simplifier.run_analyses()
                 operation = result
-            self._modified_graph |= modified_graph
         self._cache[operation] = operation
         return operation
 
