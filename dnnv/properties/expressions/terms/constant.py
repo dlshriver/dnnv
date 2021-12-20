@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import numpy as np
 
-from fractions import Fraction
 from typing import Any, Optional
 
 from ..context import Context
