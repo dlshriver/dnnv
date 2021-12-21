@@ -132,8 +132,15 @@ def install(env: Environment):
             "marabou",
             installer=MarabouInstaller(),
             dependencies=(
+                ProgramDependency("make"),
+                ProgramDependency("gcc"),
                 ProgramDependency("git"),
-                LibraryDependency("libopenblas", installer=OpenBLASInstaller("0.3.9")),
+                ProgramDependency("curl", min_version="7.16.0"),
+                LibraryDependency(
+                    "libopenblas",
+                    installer=OpenBLASInstaller("0.3.9"),
+                    allow_from_system=False,
+                ),
                 ProgramDependency(
                     "cmake",
                     installer=GNUInstaller(
@@ -141,6 +148,7 @@ def install(env: Environment):
                         "3.18.2",
                         "https://github.com/Kitware/CMake/releases/download/v3.18.2/cmake-3.18.2.tar.gz",
                     ),
+                    min_version="3.12.0",
                 ),
             ),
         )

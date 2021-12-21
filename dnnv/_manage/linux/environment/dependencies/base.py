@@ -21,12 +21,14 @@ class Dependency:
         installer: Optional[Installer] = None,
         dependencies: Optional[Sequence[Dependency]] = None,
         extra_search_paths: Optional[Dict[str, Sequence[Path]]] = None,
+        allow_from_system: bool = True,
     ):
         self.name = name
         self.installer = installer
         self.dependencies = dependencies or []
 
         self.extra_search_paths = extra_search_paths or {}
+        self.allow_from_system = allow_from_system
 
     def get_path(self, env: Environment) -> Optional[Path]:
         raise NotImplementedError()
@@ -70,6 +72,8 @@ class LibraryDependency(Dependency):
                 return path / f"{self.name}.so"
             if (path / f"{self.name}.a").exists():
                 return path / f"{self.name}.a"
+        if not self.allow_from_system:
+            return None
         proc = sp.run(
             f"ldconfig -p | grep /{self.name}.so$",
             shell=True,
@@ -94,6 +98,27 @@ class LibraryDependency(Dependency):
 
 
 class ProgramDependency(Dependency):
+    def __init__(
+        self,
+        name,
+        *,
+        installer: Optional[Installer] = None,
+        dependencies: Optional[Sequence[Dependency]] = None,
+        extra_search_paths: Optional[Dict[str, Sequence[Path]]] = None,
+        allow_from_system: bool = True,
+        min_version: Optional[str] = None,
+        version_arg: str = "--version",
+    ):
+        super().__init__(
+            name,
+            installer=installer,
+            dependencies=dependencies,
+            extra_search_paths=extra_search_paths,
+            allow_from_system=allow_from_system,
+        )
+        self.min_version = min_version
+        self.version_arg = version_arg
+
     def is_installed(self, env: Environment) -> bool:
         proc = sp.run(
             f"command -v {self.name}",
@@ -103,6 +128,26 @@ class ProgramDependency(Dependency):
             env=env.vars(),
         )
         if proc.returncode == 0:
+            if self.min_version:
+                import re
+
+                version_proc = sp.run(
+                    f"{self.name} {self.version_arg}",
+                    shell=True,
+                    stdout=sp.PIPE,
+                    stderr=sp.STDOUT,
+                    encoding="utf8",
+                    env=env.vars(),
+                )
+                min_version = tuple(int(v) for v in self.min_version.split("."))
+                version_pattern = re.compile(
+                    ".".join(r"(\d+)" for _ in range(len(min_version)))
+                )
+                match = re.search(version_pattern, version_proc.stdout)
+                if match is None:
+                    return False
+                version = tuple(int(v) for v in match.groups())
+                return version >= min_version
             return True
         return False
 

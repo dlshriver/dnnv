@@ -149,6 +149,7 @@ def install(env: Environment):
             installer=BaBInstaller(),
             dependencies=(
                 ProgramDependency("git"),
+                ProgramDependency("curl", min_version="7.16.0"),
                 HeaderDependency("gurobi_c.h", installer=gurobi_installer),
                 LibraryDependency("libgurobi91", installer=gurobi_installer),
                 ProgramDependency("grbgetkey", installer=gurobi_installer),

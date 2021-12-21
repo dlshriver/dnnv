@@ -74,6 +74,7 @@ def install(env: Environment):
                 ProgramDependency("make"),
                 ProgramDependency("gcc"),
                 ProgramDependency("git"),
+                ProgramDependency("curl", min_version="7.16.0"),
                 HeaderDependency(
                     "gmp.h",
                     installer=gmp_installer,

@@ -84,7 +84,7 @@ class JuliaInstaller(Installer):
         commands = [
             "set -ex",
             f"cd {cache_dir}",
-            f"wget -O julia-{version}.tar.gz https://julialang-s3.julialang.org/bin/linux/x64/{major_minor}/julia-{version}-linux-x86_64.tar.gz",
+            f"curl -o julia-{version}.tar.gz -L https://julialang-s3.julialang.org/bin/linux/x64/{major_minor}/julia-{version}-linux-x86_64.tar.gz",
             f"tar xf julia-{version}.tar.gz",
         ]
         install_script = "; ".join(commands)
