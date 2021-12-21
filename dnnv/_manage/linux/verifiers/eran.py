@@ -115,10 +115,17 @@ class ELINAInstaller(Installer):
         library_paths = " ".join(f"-L{p}" for p in env.ld_library_paths)
         include_paths = " ".join(f"-I{p}" for p in env.include_paths)
 
-        mpfr_path = LibraryDependency("libmpfr").get_path(env).parent.parent
-        gmp_path = LibraryDependency("libgmp").get_path(env).parent.parent
-        # cdd_path = LibraryDependency("libcdd").get_path(env).parent.parent
-        cdd_prefix = HeaderDependency("cddlib/cdd.h").get_path(env).parent
+        libmpfr_path = LibraryDependency("libmpfr").get_path(env)
+        assert libmpfr_path is not None
+        mpfr_path = libmpfr_path.parent.parent
+
+        libgmp_path = LibraryDependency("libgmp").get_path(env)
+        assert libgmp_path is not None
+        gmp_path = libgmp_path.parent.parent
+
+        cdd_h_path = HeaderDependency("cddlib/cdd.h").get_path(env)
+        assert cdd_h_path is not None
+        cdd_prefix = cdd_h_path.parent
 
         envvars = env.vars()
         commands = [
@@ -165,8 +172,13 @@ class ERANInstaller(Installer):
         verifier_venv_path = env.env_dir / "verifier_virtualenvs" / name
         verifier_venv_path.parent.mkdir(exist_ok=True, parents=True)
 
-        gurobi_path = LibraryDependency("libgurobi91").get_path(env).parent.parent
-        elina_path = LibraryDependency("libzonoml").get_path(env).parent.parent
+        libgurobi_path = LibraryDependency("libgurobi91").get_path(env)
+        assert libgurobi_path is not None
+        gurobi_path = libgurobi_path.parent.parent
+
+        libzonoml_path = LibraryDependency("libzonoml").get_path(env)
+        assert libzonoml_path is not None
+        elina_path = libzonoml_path.parent.parent
 
         python_major_version, python_minor_version = sys.version_info[:2]
 
@@ -230,6 +242,7 @@ def install(env: Environment):
             installer=ERANInstaller(),
             dependencies=(
                 ProgramDependency("git"),
+                ProgramDependency("curl", min_version="7.16.0"),
                 HeaderDependency("gurobi_c.h", installer=gurobi_installer),
                 LibraryDependency("libgurobi91", installer=gurobi_installer),
                 ProgramDependency("grbgetkey", installer=gurobi_installer),

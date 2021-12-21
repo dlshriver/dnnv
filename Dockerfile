@@ -23,7 +23,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
     python3.8-dev \
     python3.8-venv \
     valgrind \
-    wget \
+    curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

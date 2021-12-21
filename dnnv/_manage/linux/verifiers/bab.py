@@ -97,7 +97,9 @@ class BaBInstaller(Installer):
         verifier_venv_path = env.env_dir / "verifier_virtualenvs" / "bab"
         verifier_venv_path.parent.mkdir(exist_ok=True, parents=True)
 
-        gurobi_path = LibraryDependency("libgurobi91").get_path(env).parent.parent
+        libgurobi_path = LibraryDependency("libgurobi91").get_path(env)
+        assert libgurobi_path is not None
+        gurobi_path = libgurobi_path.parent.parent
 
         envvars = env.vars()
         commands = [
@@ -149,6 +151,7 @@ def install(env: Environment):
             installer=BaBInstaller(),
             dependencies=(
                 ProgramDependency("git"),
+                ProgramDependency("curl", min_version="7.16.0"),
                 HeaderDependency("gurobi_c.h", installer=gurobi_installer),
                 LibraryDependency("libgurobi91", installer=gurobi_installer),
                 ProgramDependency("grbgetkey", installer=gurobi_installer),
