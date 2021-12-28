@@ -47,6 +47,7 @@ class NeurifyInstaller(Installer):
 
 def install(env: Environment):
     lpsolve_installer = LpsolveInstaller("5.5.2.5")
+    openblas_installer = OpenBLASInstaller("0.3.9")
     env.ensure_dependencies(
         ProgramDependency(
             "neurify",
@@ -55,9 +56,11 @@ def install(env: Environment):
                 ProgramDependency("make"),
                 ProgramDependency("gcc"),
                 ProgramDependency("git"),
+                ProgramDependency("curl", min_version="7.16.0"),
                 HeaderDependency("lpsolve/lp_lib.h", installer=lpsolve_installer),
                 LibraryDependency("liblpsolve55", installer=lpsolve_installer),
-                LibraryDependency("libopenblas", installer=OpenBLASInstaller("0.3.9")),
+                HeaderDependency("cblas.h", installer=openblas_installer),
+                LibraryDependency("libopenblas", installer=openblas_installer),
             ),
         )
     )
