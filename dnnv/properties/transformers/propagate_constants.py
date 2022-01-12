@@ -135,6 +135,7 @@ class PropagateConstants(GenericExpressionTransformer):
         expr = self.visit(expression.expression)
         if isinstance(expr, Constant):
             return Constant(bool(expr.value))
+        assert isinstance(variable, Symbol)
         return Exists(variable, expr)
 
     def visit_Forall(self, expression: Forall) -> Expression:
@@ -144,6 +145,7 @@ class PropagateConstants(GenericExpressionTransformer):
             return Constant(bool(expr.value))
         elif variable not in expr.variables:
             return expr
+        assert isinstance(variable, Symbol)
         return Forall(variable, expr)
 
     def visit_IfThenElse(self, expression: IfThenElse) -> Expression:

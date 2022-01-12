@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Callable, Optional, TypeVar, Union
 
+from ..base import Expression
 from ..context import Context
 from .constant import Constant
 from .symbol import Symbol
@@ -15,7 +16,7 @@ class Parameter(Symbol):
         self,
         identifier: Union[Constant, str],
         type: Union[Constant, Callable[[str], T]],
-        default: Optional[Union[Constant, T]] = None,
+        default: Optional[Union[Expression, T]] = None,
         ctx: Optional[Context] = None,
     ):
         super().__init__(identifier, ctx=ctx)
@@ -24,10 +25,12 @@ class Parameter(Symbol):
             self.type: Callable[[str], T] = type.value
         else:
             self.type = type
-        if isinstance(default, Constant):
-            self.default = default.value
-        else:
+        if default is None:
             self.default = default
+        elif isinstance(default, Expression):
+            self.default = default
+        else:
+            self.default = Constant(default)
 
     def __hash__(self):
         return super().__hash__() * hash(self.identifier) * hash(self.type)

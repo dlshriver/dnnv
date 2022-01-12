@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import List, Optional
 
+from dnnv.properties.expressions.terms.constant import Constant
+
 from .errors import ParserError
 from .. import expressions
 from ..visitors import ExpressionVisitor
@@ -61,6 +63,10 @@ def parse_cli(
         args.extend(unknown_args)
     for parameter in parameters:
         parameter_value = getattr(known_args, f"prop.{parameter.name}")
+        if isinstance(parameter_value, expressions.Expression):
+            if not parameter_value.is_concrete:
+                raise ParserError(f"Parameter with non-concrete value: {parameter.name}")
+            parameter_value = parameter_value.value
         if parameter_value is None:
             raise ParserError(
                 f"No argument was provided for parameter '{parameter.name}'. "
