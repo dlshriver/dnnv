@@ -98,7 +98,7 @@ class Compose(BinaryExpression, CallableExpression):
 
         if isinstance(f, OperationGraph) and isinstance(g, OperationGraph):
             return f.compose(g)
-        fg_lambda = lambda x: f(g(x))
+        fg_lambda = lambda *args, **kwargs: f(g(*args, **kwargs))
         fg = types.FunctionType(
             code=fg_lambda.__code__,
             globals=fg_lambda.__globals__,
@@ -107,7 +107,7 @@ class Compose(BinaryExpression, CallableExpression):
             closure=(types.CellType(f), types.CellType(g)),
         )
         fg.__module__ = ""
-        fg.__qualname__ = f"({self})"
+        fg.__qualname__ = f"{self}"
         return fg
 
 

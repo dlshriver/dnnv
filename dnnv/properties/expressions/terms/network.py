@@ -32,5 +32,12 @@ class Network(Symbol):
     def compose(self, other):
         return Compose(self, other)
 
+    @classmethod
+    def from_op_graph(cls, op_graph):
+        name = getattr(op_graph, "_dnnv_network_id", f"N_{id(op_graph):x}")
+        new = cls(name)
+        new.concretize(op_graph)
+        return new
+
 
 __all__ = ["Network"]

@@ -4,12 +4,20 @@ import numpy as np
 
 from typing import Any, Optional
 
-from ..context import Context
 from .base import Term
 from .utils import get_callable_name
+from ..context import Context
+from ....nn import OperationGraph
 
 
 class Constant(Term):
+    def __new__(cls, value: Any, ctx: Optional[Context] = None):
+        if isinstance(value, OperationGraph):
+            from .network import Network
+
+            return Network.from_op_graph(value)
+        return super(Constant, cls).__new__(cls, value, ctx=ctx)
+
     def __init__(self, value: Any, ctx: Optional[Context] = None):
         super().__init__(ctx=ctx)
         self._value = value

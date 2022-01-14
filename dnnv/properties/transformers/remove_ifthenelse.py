@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import List, Union
-
 from ..expressions import And, IfThenElse, Implies
 from .base import GenericExpressionTransformer
 

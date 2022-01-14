@@ -96,6 +96,7 @@ class TemporalSymbol(LTL):
             if self.state_map_fn is not None:
                 op_graph: OperationGraph = self.state_map_fn.value
             else:
+                self.network = self.network.propagate_constants()
                 op_graph = self.network.value
             state_details = op_graph.input_details
             assert len(state_details) == 1
@@ -107,6 +108,7 @@ class TemporalSymbol(LTL):
 
     def control_details(self):
         if "control_details" not in self._cache:
+            self.network = self.network.propagate_constants()
             op_graph: OperationGraph = self.network.value
             control_details = op_graph.output_details
             assert len(control_details) == 1
@@ -142,8 +144,10 @@ class TemporalSymbol(LTL):
     def controller(self):
         if "controller" not in self._cache:
             assert self.network.is_concrete
+            self.network = self.network.propagate_constants()
             if self.state_map_fn is not None:
                 assert self.state_map_fn.is_concrete
+                self.state_map_fn.value = self.state_map_fn.propagate_constants()
                 op_graph = self.network.value.compose(self.state_map_fn.value)
             else:
                 op_graph = self.network.value
@@ -196,6 +200,7 @@ class TemporalSymbol(LTL):
 
     def plant(self):
         if "plant" not in self._cache:
+            self.transition_fn = self.transition_fn.propagate_constants()
             plant_op_graph = self.transition_fn.value
             if self.control_period > 1:
                 plant_inputs = GetInputs().walk(plant_op_graph).inputs

@@ -4,6 +4,7 @@ from dnnv.properties.expressions import *
 
 def test_parse_dnnp(tmp_path):
     property = """\
+from dnnv.properties.expressions import *
 Forall(x, Or(x < -1, x > 1, Network("N")(x) > 1))
 """
     dnnp_path = tmp_path / "test.dnnp"

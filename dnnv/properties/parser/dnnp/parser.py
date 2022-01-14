@@ -1,4 +1,5 @@
 import ast
+import importlib
 import types
 
 from pathlib import Path
@@ -10,8 +11,9 @@ from ... import expressions
 
 
 class Py2PropertyTransformer(ast.NodeTransformer):
-    def __init__(self):
+    def __init__(self, import_dict={}):
         self._lambda_aliases = set()
+        self.import_dict = import_dict
 
     def visit_Assign(self, node: ast.Assign):
         if any(not isinstance(target, ast.Name) for target in node.targets):
@@ -32,9 +34,7 @@ class Py2PropertyTransformer(ast.NodeTransformer):
         kwargs = [self.visit(keyword) for keyword in node.keywords]
 
         if isinstance(func, ast.Name):
-            value = expressions.__dict__.get(func.id, None)
-            if value is None:
-                value = expressions.ltl.__dict__.get(func.id, None)
+            value = self.import_dict.get(func.id, None)
             if (
                 value is not None
                 and isinstance(value, type)
@@ -324,8 +324,24 @@ def parse_str(
     spec_str: str, *, path: Path = Path(), args: Optional[List[str]] = None
 ) -> expressions.Expression:
     ast_root = ast.parse(spec_str)
+    import_dict = {}
     for node in ast_root.body[:-1]:
-        if not isinstance(node, (ast.Assign, ast.Import, ast.ImportFrom)) and not (
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                module = importlib.import_module(alias.name)
+                asname = alias.asname or module
+                import_dict[asname] = module
+        elif isinstance(node, ast.ImportFrom):
+            module = importlib.import_module(node.module)
+            for alias in node.names:
+                if alias.name == "*":
+                    exported_names = set(getattr(module, "__all__", dir(module)))
+                    module_dict = {k: getattr(module, k) for k in exported_names}
+                    import_dict.update(module_dict)
+                else:
+                    asname = alias.asname or alias.name
+                    import_dict[asname] = getattr(module, alias.name)
+        elif not isinstance(node, ast.Assign) and not (
             isinstance(node, ast.Expr) and isinstance(node.value, ast.Str)
         ):
             raise DNNPParserError(
@@ -337,7 +353,7 @@ def parse_str(
     if not isinstance(property_node, ast.Expr):
         raise DNNPParserError("No property expression found")
 
-    module = Py2PropertyTransformer().visit(ast_root)
+    module = Py2PropertyTransformer(import_dict).visit(ast_root)
 
     attributes = {
         "lineno": property_node.lineno,
