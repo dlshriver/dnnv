@@ -33,7 +33,7 @@ class IOPolytopeProperty(Property):
             self.op_graph = OpGraphMerger(*(n.value for n in self.networks)).merge()
         else:
             self.op_graph = self.networks[0].value
-        if require_linear_network:
+        if require_linear_network and not self.op_graph.is_linear():
             from dnnv.nn.transformers.mlp import MLPTransformer
 
             self.op_graph = MLPTransformer().transform(self.op_graph)

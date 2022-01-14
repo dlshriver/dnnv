@@ -14,6 +14,7 @@ class OperationGraph:
         self.output_operations = tuple(output_operations)
         self._input_details: Optional[Sequence[TensorDetails]] = None
         self._output_details: Optional[Sequence[TensorDetails]] = None
+        self._is_linear: Optional[bool] = None
 
     def walk(self, visitor):
         result = []
@@ -36,6 +37,35 @@ class OperationGraph:
         from .visitors import PrintVisitor
 
         return self.walk(PrintVisitor())
+
+    def is_linear(self):
+        if self._is_linear is None:
+            from .operations import Input
+            from .visitors import OperationVisitor
+
+            LinearPattern = (Operation >> Operation) | Input
+            result = True
+
+            class IsLinear(OperationVisitor):
+                def generic_visit(self, operation):
+                    nonlocal result
+
+                    matches = LinearPattern.match([operation])
+                    found_match = False
+                    for match in matches:
+                        found_match = True
+                        result &= len(match) <= 1
+                        if not result:
+                            continue
+                    result &= found_match
+                    if not result:
+                        return False
+                    return super().generic_visit(operation)
+
+            linearity_visitor = IsLinear()
+            self.walk(linearity_visitor)
+            self._is_linear = result
+        return self._is_linear
 
     @property
     def input_details(self) -> Sequence[TensorDetails]:

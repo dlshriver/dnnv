@@ -16,12 +16,12 @@ class ConvertAdd(Simplifier):
             return operation
         elif isinstance(a, operations.Operation):
             input_op = a
-            c = b
+            c = np.asarray(b)
             if np.all(c == 0):
                 return input_op
         elif isinstance(b, operations.Operation):
             input_op = b
-            c = a
+            c = np.asarray(a)
             transpose_a = True
             if np.all(c == 0):
                 return input_op
