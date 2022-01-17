@@ -1,4 +1,5 @@
 import argparse
+import importlib
 import inspect
 import torch
 import torch.nn as nn
@@ -94,13 +95,13 @@ def build_transition_fn(
 
 
 def main(args: argparse.Namespace, extra_args: List[str]) -> int:
-    specs: Dict[str, Any] = {}
-    with open(args.env_spec) as env_spec_file:
-        exec(env_spec_file.read(), specs)
+    spec = importlib.util.spec_from_file_location("env", args.env_spec)
+    env = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(env)
 
-    state_generator: Callable[[int], torch.Tensor] = specs[args.state_generator]
+    state_generator: Callable[[int], torch.Tensor] = getattr(env, args.state_generator)
     transition_fn: Callable[..., torch.Tensor] = build_transition_fn(
-        specs[args.transition_fn]
+        getattr(env, args.transition_fn)
     )
 
     x = state_generator(1)
