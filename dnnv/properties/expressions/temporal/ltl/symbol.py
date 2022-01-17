@@ -147,7 +147,7 @@ class TemporalSymbol(LTL):
             self.network = self.network.propagate_constants()
             if self.state_map_fn is not None:
                 assert self.state_map_fn.is_concrete
-                self.state_map_fn.value = self.state_map_fn.propagate_constants()
+                self.state_map_fn = self.state_map_fn.propagate_constants()
                 op_graph = self.network.value.compose(self.state_map_fn.value)
             else:
                 op_graph = self.network.value
