@@ -65,7 +65,9 @@ def parse_cli(
         parameter_value = getattr(known_args, f"prop.{parameter.name}")
         if isinstance(parameter_value, expressions.Expression):
             if not parameter_value.is_concrete:
-                raise ParserError(f"Parameter with non-concrete value: {parameter.name}")
+                raise ParserError(
+                    f"Parameter with non-concrete value: {parameter.name}"
+                )
             parameter_value = parameter_value.value
         if parameter_value is None:
             raise ParserError(

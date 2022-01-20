@@ -20,7 +20,10 @@ class Parameter(Symbol):
         ctx: Optional[Context] = None,
     ):
         super().__init__(identifier, ctx=ctx)
-        self.name = str(identifier)
+        if isinstance(identifier, Constant):
+            self.name = identifier.value
+        else:
+            self.name = identifier
         if isinstance(type, Constant):
             self.type: Callable[[str], T] = type.value
         else:
