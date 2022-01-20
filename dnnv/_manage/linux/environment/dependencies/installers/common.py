@@ -37,7 +37,7 @@ class GNUInstaller(Installer):
         commands = [
             "set -ex",
             f"cd {cache_dir}",
-            f"wget -O {identifier}.tar.gz {self.url}",
+            f"curl -o {identifier}.tar.gz -L {self.url}",
             f"tar xf {identifier}.tar.gz",
             f"cd {identifier}",
             f'CFLAGS="{include_paths} {library_paths}" ./configure --prefix={cache_dir}',
@@ -89,7 +89,7 @@ class GurobiInstaller(Installer):
         commands = [
             "set -ex",
             f"cd {cache_dir}",
-            f"wget -O {identifier}.tar.gz https://packages.gurobi.com/{major_version}.{minor_version}/gurobi{self.version}_linux64.tar.gz",
+            f"curl -o {identifier}.tar.gz -L https://packages.gurobi.com/{major_version}.{minor_version}/gurobi{self.version}_linux64.tar.gz",
             f"tar xf {identifier}.tar.gz",
             f"cp -r gurobi{nondot_version} {installation_path}/gurobi{nondot_version}",
         ]
@@ -116,7 +116,7 @@ class LpsolveInstaller(Installer):
         commands = [
             "set -ex",
             f"cd {cache_dir}",
-            f"wget -O {name}.tar.gz https://downloads.sourceforge.net/project/lpsolve/lpsolve/{self.version}/lp_solve_{self.version}_dev_ux64.tar.gz",
+            f"curl -o {name}.tar.gz -L https://downloads.sourceforge.net/project/lpsolve/lpsolve/{self.version}/lp_solve_{self.version}_dev_ux64.tar.gz",
             f"tar xf {name}.tar.gz",
             "mkdir -p lpsolve",
             "cp *.h lpsolve/",
@@ -144,7 +144,7 @@ class OpenBLASInstaller(Installer):
         commands = [
             "set -ex",
             f"cd {cache_dir}",
-            f"wget -O {name}.tar.gz https://github.com/xianyi/OpenBLAS/archive/v{self.version}.tar.gz",
+            f"curl -o {name}.tar.gz -L https://github.com/xianyi/OpenBLAS/archive/v{self.version}.tar.gz",
             f"tar xf {name}.tar.gz",
             f"cd {name}",
             "make",

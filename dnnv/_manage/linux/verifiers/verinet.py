@@ -98,7 +98,9 @@ class VeriNetInstaller(Installer):
         verifier_venv_path = env.env_dir / "verifier_virtualenvs" / name
         verifier_venv_path.parent.mkdir(exist_ok=True, parents=True)
 
-        gurobi_path = LibraryDependency("libgurobi91").get_path(env).parent.parent
+        libgurobi_path = LibraryDependency("libgurobi91").get_path(env)
+        assert libgurobi_path is not None
+        gurobi_path = libgurobi_path.parent.parent
 
         python_major_version, python_minor_version = sys.version_info[:2]
 
@@ -115,7 +117,7 @@ class VeriNetInstaller(Installer):
             "python setup.py install",
             f"cd {cache_dir}",
             f"rm -rf {name}",
-            f"wget https://github.com/dlshriver/DNNV/archive/refs/tags/{dnnv_version}.tar.gz",
+            f"curl -O -L https://github.com/dlshriver/DNNV/archive/refs/tags/{dnnv_version}.tar.gz",
             f"tar xf {dnnv_version}.tar.gz --wildcards */third_party/VeriNet --strip-components=2",
             f"cp -r VeriNet/src {verifier_venv_path}/lib/python{python_major_version}.{python_minor_version}/site-packages/",
         ]

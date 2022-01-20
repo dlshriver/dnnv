@@ -8,8 +8,8 @@ import logging
 from typing import List
 
 from .environment import Environment, ProgramDependency
-from ..errors import *
 from .verifiers import *
+from ..errors import *
 
 
 def install(verifiers: List[str]) -> int:
@@ -46,5 +46,6 @@ __all__ = [
     "install",
     "uninstall",
     "list_verifiers",
+    "import_verifier_module",
     "verifier_choices",
 ]

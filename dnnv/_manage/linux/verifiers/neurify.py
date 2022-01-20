@@ -17,7 +17,7 @@ from ...errors import InstallError, UninstallError
 
 class NeurifyInstaller(Installer):
     def run(self, env: Environment, dependency: Dependency):
-        commit_hash = "6218da8b7b7f7daacf6b5827200d03d60bbbb38b"
+        commit_hash = "5987db4f3015ec4f53619171ae4b4480eadaa989"
 
         cache_dir = env.cache_dir / f"neurify-{commit_hash}"
         cache_dir.mkdir(exist_ok=True, parents=True)
@@ -47,6 +47,7 @@ class NeurifyInstaller(Installer):
 
 def install(env: Environment):
     lpsolve_installer = LpsolveInstaller("5.5.2.11")
+    openblas_installer = OpenBLASInstaller("0.3.19")
     env.ensure_dependencies(
         ProgramDependency(
             "neurify",
@@ -55,9 +56,11 @@ def install(env: Environment):
                 ProgramDependency("make"),
                 ProgramDependency("gcc"),
                 ProgramDependency("git"),
+                ProgramDependency("curl", min_version="7.16.0"),
                 HeaderDependency("lpsolve/lp_lib.h", installer=lpsolve_installer),
                 LibraryDependency("liblpsolve55", installer=lpsolve_installer),
-                LibraryDependency("libopenblas", installer=OpenBLASInstaller("0.3.9")),
+                HeaderDependency("cblas.h", installer=openblas_installer),
+                LibraryDependency("libopenblas", installer=openblas_installer),
             ),
         )
     )

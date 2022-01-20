@@ -89,7 +89,9 @@ class MarabouInstaller(Installer):
         verifier_venv_path = env.env_dir / "verifier_virtualenvs" / "marabou"
         verifier_venv_path.parent.mkdir(exist_ok=True, parents=True)
 
-        openblas_path = LibraryDependency("libopenblas").get_path(env).parent.parent
+        libopenblas_path = LibraryDependency("libopenblas").get_path(env)
+        assert libopenblas_path is not None
+        openblas_path = libopenblas_path.parent.parent
 
         python_major_version, python_minor_version = sys.version_info[:2]
 
@@ -132,8 +134,15 @@ def install(env: Environment):
             "marabou",
             installer=MarabouInstaller(),
             dependencies=(
+                ProgramDependency("make"),
+                ProgramDependency("gcc"),
                 ProgramDependency("git"),
-                LibraryDependency("libopenblas", installer=OpenBLASInstaller("0.3.9")),
+                ProgramDependency("curl", min_version="7.16.0"),
+                LibraryDependency(
+                    "libopenblas",
+                    installer=OpenBLASInstaller("0.3.9"),
+                    allow_from_system=False,
+                ),
                 ProgramDependency(
                     "cmake",
                     installer=GNUInstaller(
@@ -141,6 +150,7 @@ def install(env: Environment):
                         "3.18.2",
                         "https://github.com/Kitware/CMake/releases/download/v3.18.2/cmake-3.18.2.tar.gz",
                     ),
+                    min_version="3.12.0",
                 ),
             ),
         )
