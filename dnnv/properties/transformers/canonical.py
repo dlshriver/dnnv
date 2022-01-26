@@ -7,8 +7,7 @@ from collections import defaultdict
 from functools import reduce
 from typing import Dict, List, Tuple, Union
 
-from .cnf import CnfTransformer
-from .fol import FirstOrderLogicTransformer
+from .dnf import DnfTransformer
 from .substitute_calls import SubstituteCalls
 from ..expressions import *
 
@@ -18,13 +17,13 @@ def _extract_constants(expr: Add) -> Tuple[Add, Constant]:
     expressions = []
     for e in expr.expressions:
         if e.is_concrete:
-            constants.append(-e.value)
+            constants.append(e.value)
         else:
             expressions.append(e)
-    return Add(*expressions), Constant(sum(constants))
+    return Add(*expressions), Constant(-sum(constants))
 
 
-class CanonicalTransformer(CnfTransformer):
+class CanonicalTransformer(DnfTransformer):
     def visit(self, expression: Expression) -> Expression:
         if self._top_level:
             expression = expression.propagate_constants()
@@ -32,81 +31,74 @@ class CanonicalTransformer(CnfTransformer):
         expr = super().visit(expression)
         return expr
 
-    def visit_Add(self, expression: Add) -> Add:
-        expressions: Dict[Expression, Union[int, float]] = defaultdict(lambda: 0)
-        operands = [e for e in expression.expressions]
-        while len(operands):
-            expr = self.visit(operands.pop())
+    def _extract_coefficients(self, expression: Add) -> Dict[Expression, Expression]:
+        coefficients: Dict[Expression, Constant] = defaultdict(lambda: Constant(0))
+        for expr in expression.expressions:
+            expr = self.visit(expr)
             if isinstance(expr, Add):
-                if len(expr.expressions) > 1:
-                    operands.extend(expr.expressions)
+                if len(expr.expressions) != 1:
+                    for expr, coeff in self._extract_coefficients(expr).items():
+                        coefficients[expr] = coefficients[expr] + coeff
                     continue
-                elif len(expr.expressions) == 1:
-                    expr = expr.expressions[0]
-                else:
-                    continue
-            symbol = expr
+                expr = expr.expressions[0]
             value = 1
-            if symbol.is_concrete:
-                symbol, value = Constant(value), symbol.value
+            if expr.is_concrete:
+                expr, value = Constant(value), expr.value
             elif isinstance(expr, Multiply):
-                constants = []
                 symbols = []
                 for e in expr.expressions:
                     if e.is_concrete:
-                        constants.append(e.value)
+                        value = value * e.value
                     else:
                         symbols.append(e)
                 if len(symbols) == 1:
-                    symbol = symbols[0]
+                    expr = symbols[0]
                 else:
-                    symbol = Multiply(*symbols)
-                value = reduce(operator.mul, constants, 1)
-            expressions[symbol] = expressions[symbol] + value
-        products = []
-        for v, c in expressions.items():
-            if np.all(c == 0):
-                continue
-            products.append(Multiply(Constant(c), v))
-        return Add(*products)
+                    expr = Multiply(*symbols)
+            coefficients[expr] = coefficients[expr] + Constant(value)
+        return coefficients
 
-    def visit_Equal(self, expression: Equal) -> And:
+    def visit_Add(self, expression: Add) -> Add:
+        coefficients = self._extract_coefficients(expression)
+        summands = []
+        for expr, coefficient in coefficients.items():
+            coeff = coefficient.value
+            if np.all(coeff == 0):
+                continue
+            summands.append(Multiply(Constant(coeff), expr))
+        return Add(*summands)
+
+    def visit_Equal(self, expression: Equal) -> Or:
         expr1 = expression.expr1
         expr2 = expression.expr2
-        return self.visit_And(And(expr1 <= expr2, expr2 <= expr1))
+        return self.visit(Or(And(expr1 <= expr2, expr2 <= expr1)))
 
-    def visit_GreaterThan(self, expression: GreaterThan) -> GreaterThan:
-        lhs = self.visit_Add(
-            Add(expression.expr1, Multiply(Constant(-1), expression.expr2))
+    def visit_GreaterThan(self, expression: GreaterThan) -> Or:
+        lhs, rhs = _extract_constants(
+            self.visit(Add(Multiply(Constant(-1), expression.expr1), expression.expr2))
         )
-        lhs, rhs = _extract_constants(lhs)
-        expr = GreaterThan(lhs, rhs)
+        expr = Or(And(LessThan(lhs, rhs)))
         return expr
 
-    def visit_GreaterThanOrEqual(
-        self, expression: GreaterThanOrEqual
-    ) -> GreaterThanOrEqual:
-        lhs = self.visit_Add(
-            Add(expression.expr1, Multiply(Constant(-1), expression.expr2))
+    def visit_GreaterThanOrEqual(self, expression: GreaterThanOrEqual) -> Or:
+        lhs, rhs = _extract_constants(
+            self.visit(Add(Multiply(Constant(-1), expression.expr1), expression.expr2))
         )
-        lhs, rhs = _extract_constants(lhs)
-        expr = GreaterThanOrEqual(lhs, rhs)
+        expr = Or(And(LessThanOrEqual(lhs, rhs)))
         return expr
 
-    def visit_LessThan(self, expression: LessThan) -> GreaterThan:
-        lhs = self.visit_Add(
-            Add(Multiply(Constant(-1), expression.expr1), expression.expr2)
+    def visit_LessThan(self, expression: LessThan) -> Or:
+        lhs, rhs = _extract_constants(
+            self.visit(Add(expression.expr1, Multiply(Constant(-1), expression.expr2)))
         )
-        lhs, rhs = _extract_constants(lhs)
-        expr = GreaterThan(lhs, rhs)
+        expr = Or(And(LessThan(lhs, rhs)))
         return expr
 
-    def visit_LessThanOrEqual(self, expression: LessThanOrEqual) -> GreaterThanOrEqual:
-        lhs = self.visit_Add(
-            Add(Multiply(Constant(-1), expression.expr1), expression.expr2)
+    def visit_LessThanOrEqual(self, expression: LessThanOrEqual) -> Or:
+        lhs, rhs = _extract_constants(
+            self.visit(Add(expression.expr1, Multiply(Constant(-1), expression.expr2)))
         )
-        lhs, rhs = _extract_constants(lhs)
-        expr = GreaterThanOrEqual(lhs, rhs)
+        expr = Or(And(LessThanOrEqual(lhs, rhs)))
         return expr
 
     def visit_Multiply(self, expression: Multiply) -> Add:
@@ -126,27 +118,27 @@ class CanonicalTransformer(CnfTransformer):
                     e.append(expr)
         if len(expressions) <= 1:
             consts = []
-            symbols: List[Expression] = [Constant(1)]
-            for expr in expressions[0]:
-                if expr.is_concrete:
-                    consts.append(expr.value)
+            symbols = [Constant(1)]
+            for e in expressions[0]:
+                if e.is_concrete:
+                    consts.append(e)
                 else:
-                    symbols.append(expr)
-            const = Constant(reduce(operator.mul, consts, 1))
+                    symbols.append(e)
+            const = Constant(Multiply(*consts).value)
             product = Multiply(*symbols).propagate_constants()
             return Add(Multiply(const, product))
-        return self.visit_Add(Add(*[Multiply(*e) for e in expressions]))
+        return self.visit(Add(*[Multiply(*e) for e in expressions]))
 
     def visit_Negation(self, expression: Negation) -> Add:
-        return self.visit_Multiply(Multiply(Constant(-1), expression.expr))
+        return self.visit(Multiply(Constant(-1), expression.expr))
 
     def visit_NotEqual(self, expression: NotEqual) -> And:
         expr1 = expression.expr1
         expr2 = expression.expr2
-        return self.visit_Or(Or(expr1 > expr2, expr2 > expr1))
+        return self.visit(Or(And(expr1 > expr2), And(expr2 > expr1)))
 
     def visit_Subtract(self, expression: Subtract) -> Add:
-        return self.visit_Add(
+        return self.visit(
             Add(expression.expr1, Multiply(Constant(-1), expression.expr2))
         )
 

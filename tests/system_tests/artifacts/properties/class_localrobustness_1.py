@@ -1,4 +1,6 @@
 from dnnv.properties import *
+
+import ast
 import numpy as np
 import os
 
@@ -9,7 +11,7 @@ OUTPUT_LAYER = eval(os.environ.get("OUTPUT_LAYER", "None"))
 N = Network("N")[INPUT_LAYER:OUTPUT_LAYER]
 
 x = rng.normal(size=N.input_shape[0][1])[None].astype(np.float32)
-x = x + eval(os.environ.get("SHIFT", "0"))
+x = x + np.asarray(ast.literal_eval(os.environ.get("SHIFT", "0")), dtype=np.float32)
 epsilon = 3.0
 
 Forall(

@@ -48,85 +48,93 @@ class Expression:
         from .attribute import Attribute
         from .terms import Constant
 
-        if isinstance(name, str) and name.startswith("__"):
-            # This case allows access to flags like `__FLAG_is_concrete`
-            return super().__getattribute__(name)
-        if isinstance(name, str) and self.is_concrete:
-            return Constant(getattr(self.value, name))
-        if isinstance(name, Constant) and self.is_concrete:
-            return Constant(getattr(self.value, name.value))
-        if isinstance(name, Expression):
-            return Attribute(self, name)
-        return Attribute(self, Constant(name))
+        with self.ctx:
+            if isinstance(name, str) and name.startswith("__"):
+                # This case allows access to flags like `__FLAG_is_concrete`
+                return super().__getattribute__(name)
+            if isinstance(name, str) and self.is_concrete:
+                return Constant(getattr(self.value, name))
+            if isinstance(name, Constant) and self.is_concrete:
+                return Constant(getattr(self.value, name.value))
+            if isinstance(name, Expression):
+                return Attribute(self, name)
+            return Attribute(self, Constant(name))
 
     def __getitem__(self, index) -> Union[Constant, Subscript]:
         from .slices import Slice
         from .subscript import Subscript
         from .terms import Constant
 
-        if not isinstance(index, Expression) and self.is_concrete:
-            return Constant(self.value[index])
-        if isinstance(index, slice):
-            index = Slice(index.start, index.stop, index.step)
-        if isinstance(index, Expression):
-            if index.is_concrete and self.is_concrete:
-                return Constant(self.value[index.value])
-            return Subscript(self, index)
-        return Subscript(self, Constant(index))
+        with self.ctx:
+            if not isinstance(index, Expression) and self.is_concrete:
+                return Constant(self.value[index])
+            if isinstance(index, slice):
+                index = Slice(index.start, index.stop, index.step)
+            if isinstance(index, Expression):
+                if index.is_concrete and self.is_concrete:
+                    return Constant(self.value[index.value])
+                return Subscript(self, index)
+            return Subscript(self, Constant(index))
 
     def __eq__(self, other) -> Equal:  # type: ignore
         from .logic import Equal
 
-        if isinstance(other, Expression):
-            return Equal(self, other)
-        from .terms import Constant
+        with self.ctx:
+            if isinstance(other, Expression):
+                return Equal(self, other)
+            from .terms import Constant
 
-        return Equal(self, Constant(other))
+            return Equal(self, Constant(other))
 
     def __ge__(self, other) -> GreaterThanOrEqual:
         from .logic import GreaterThanOrEqual
 
-        if isinstance(other, Expression):
-            return GreaterThanOrEqual(self, other)
-        from .terms import Constant
+        with self.ctx:
+            if isinstance(other, Expression):
+                return GreaterThanOrEqual(self, other)
+            from .terms import Constant
 
-        return GreaterThanOrEqual(self, Constant(other))
+            return GreaterThanOrEqual(self, Constant(other))
 
     def __gt__(self, other) -> GreaterThan:
         from .logic import GreaterThan
 
-        if isinstance(other, Expression):
-            return GreaterThan(self, other)
-        from .terms import Constant
+        with self.ctx:
+            if isinstance(other, Expression):
+                return GreaterThan(self, other)
+            from .terms import Constant
 
-        return GreaterThan(self, Constant(other))
+            return GreaterThan(self, Constant(other))
 
     def __le__(self, other) -> LessThanOrEqual:
         from .logic import LessThanOrEqual
 
-        if isinstance(other, Expression):
-            return LessThanOrEqual(self, other)
-        from .terms import Constant
+        with self.ctx:
+            if isinstance(other, Expression):
+                return LessThanOrEqual(self, other)
+            from .terms import Constant
 
-        return LessThanOrEqual(self, Constant(other))
+            return LessThanOrEqual(self, Constant(other))
 
     def __lt__(self, other) -> LessThan:
         from .logic import LessThan
 
-        if isinstance(other, Expression):
-            return LessThan(self, other)
-        from .terms import Constant
+        with self.ctx:
+            if isinstance(other, Expression):
+                return LessThan(self, other)
+            from .terms import Constant
 
-        return LessThan(self, Constant(other))
+            return LessThan(self, Constant(other))
 
     def __ne__(self, other) -> NotEqual:  # type: ignore
         from .logic import NotEqual
 
-        if isinstance(other, Expression):
-            return NotEqual(self, other)
-        from .terms import Constant
+        with self.ctx:
+            if isinstance(other, Expression):
+                return NotEqual(self, other)
+            from .terms import Constant
 
-        return NotEqual(self, Constant(other))
+            return NotEqual(self, Constant(other))
 
     def iter(self, max_depth=-1, include_self=True) -> Iterator[Expression]:
         if include_self:

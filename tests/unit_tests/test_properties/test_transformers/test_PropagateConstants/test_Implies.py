@@ -17,7 +17,6 @@ def test_Implies_symbols():
     assert new_expr.expr2 is Symbol("b")
 
 
-@pytest.mark.xfail
 def test_Implies_same_symbol():
     transformer = PropagateConstants()
 
@@ -125,51 +124,57 @@ def test_Implies_const_arrays():
 def test_Implies_array_for_antecedent():
     transformer = PropagateConstants()
 
-    a, b = Constant(np.ones((1, 3), dtype=bool)), Symbol("b")
-    expr = Implies(a, b)
-    new_expr = transformer.visit(expr)
-    assert new_expr is not expr
-    assert new_expr is Symbol("b")
+    with Context():
+        a, b = Constant(np.ones((1, 3), dtype=bool)), Symbol("b")
+        expr = Implies(a, b)
+        new_expr = transformer.visit(expr)
+        assert new_expr is not expr
+        assert new_expr is Symbol("b")
 
-    a, b = Constant(np.zeros((1, 3), dtype=bool)), Symbol("b")
-    expr = Implies(a, b)
-    new_expr = transformer.visit(expr)
-    assert new_expr is not expr
-    assert isinstance(new_expr, Constant)
-    assert new_expr.value == True
+    with Context():
+        a, b = Constant(np.zeros((1, 3), dtype=bool)), Symbol("b")
+        expr = Implies(a, b)
+        new_expr = transformer.visit(expr)
+        assert new_expr is not expr
+        assert isinstance(new_expr, Constant)
+        assert new_expr.value == True
 
-    arr_a = np.array([1, 0], dtype=bool)
-    a, b = Constant(arr_a), Symbol("b")
-    expr = Implies(a, b)
-    new_expr = transformer.visit(expr)
-    assert new_expr is not expr
-    assert isinstance(new_expr, Implies)
-    assert np.allclose(new_expr.expr1.value, arr_a)
-    assert new_expr.expr2 is Symbol("b")
+    with Context():
+        arr_a = np.array([1, 0], dtype=bool)
+        a, b = Constant(arr_a), Symbol("b")
+        expr = Implies(a, b)
+        new_expr = transformer.visit(expr)
+        assert new_expr is not expr
+        assert isinstance(new_expr, Implies)
+        assert np.allclose(new_expr.expr1.value, arr_a)
+        assert new_expr.expr2 is Symbol("b")
 
 
 def test_Implies_array_for_consequent():
     transformer = PropagateConstants()
 
-    a, b = Symbol("a"), Constant(np.zeros((1, 3), dtype=bool))
-    expr = Implies(a, b)
-    new_expr = transformer.visit(expr)
-    assert new_expr is not expr
-    assert isinstance(new_expr, Not)
-    assert new_expr.expr is Symbol("a")
+    with Context():
+        a, b = Symbol("a"), Constant(np.zeros((1, 3), dtype=bool))
+        expr = Implies(a, b)
+        new_expr = transformer.visit(expr)
+        assert new_expr is not expr
+        assert isinstance(new_expr, Not)
+        assert new_expr.expr is Symbol("a")
 
-    a, b = Symbol("a"), Constant(np.ones((1, 3), dtype=bool))
-    expr = Implies(a, b)
-    new_expr = transformer.visit(expr)
-    assert new_expr is not expr
-    assert isinstance(new_expr, Constant)
-    assert new_expr.value == True
+    with Context():
+        a, b = Symbol("a"), Constant(np.ones((1, 3), dtype=bool))
+        expr = Implies(a, b)
+        new_expr = transformer.visit(expr)
+        assert new_expr is not expr
+        assert isinstance(new_expr, Constant)
+        assert new_expr.value == True
 
-    arr_b = np.array([1, 0], dtype=bool)
-    a, b = Symbol("a"), Constant(arr_b)
-    expr = Implies(a, b)
-    new_expr = transformer.visit(expr)
-    assert new_expr is not expr
-    assert isinstance(new_expr, Implies)
-    assert new_expr.expr1 is Symbol("a")
-    assert np.allclose(new_expr.expr2.value, arr_b)
+    with Context():
+        arr_b = np.array([1, 0], dtype=bool)
+        a, b = Symbol("a"), Constant(arr_b)
+        expr = Implies(a, b)
+        new_expr = transformer.visit(expr)
+        assert new_expr is not expr
+        assert isinstance(new_expr, Implies)
+        assert new_expr.expr1 is Symbol("a")
+        assert np.allclose(new_expr.expr2.value, arr_b)

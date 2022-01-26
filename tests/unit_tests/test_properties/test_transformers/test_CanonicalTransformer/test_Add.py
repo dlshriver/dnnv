@@ -8,16 +8,10 @@ def test_Add_symbols():
     expr = Add(Symbol("a"), Symbol("b"), Symbol("c"))
     new_expr = transformer.visit(expr)
     assert new_expr is not expr
-    assert isinstance(new_expr, And)
-    assert len(new_expr.expressions) == 1
-    assert isinstance(new_expr.expressions[0], Or)
-    assert len(new_expr.expressions[0].expressions) == 1
-    assert isinstance(new_expr.expressions[0].expressions[0], Add)
-    new_expr_add = new_expr.expressions[0].expressions[0]
-    assert len(new_expr_add.expressions) == 3
-    assert Multiply(Constant(1), Symbol("a")) in new_expr_add.expressions
-    assert Multiply(Constant(1), Symbol("b")) in new_expr_add.expressions
-    assert Multiply(Constant(1), Symbol("c")) in new_expr_add.expressions
+    assert len(new_expr.expressions) == 3
+    assert Multiply(Constant(1), Symbol("a")) in new_expr.expressions
+    assert Multiply(Constant(1), Symbol("b")) in new_expr.expressions
+    assert Multiply(Constant(1), Symbol("c")) in new_expr.expressions
 
 
 def test_Add_constants():
@@ -26,13 +20,7 @@ def test_Add_constants():
     expr = Add(Constant(1), Constant(-3))
     new_expr = transformer.visit(expr)
     assert new_expr is not expr
-    assert isinstance(new_expr, And)
-    assert len(new_expr.expressions) == 1
-    assert isinstance(new_expr.expressions[0], Or)
-    assert len(new_expr.expressions[0].expressions) == 1
-    assert isinstance(new_expr.expressions[0].expressions[0], Constant)
-    new_expr_const = new_expr.expressions[0].expressions[0]
-    assert new_expr_const is Constant(-2)
+    assert new_expr is Constant(-2)
 
 
 def test_Add_mixed_constants_symbols():
@@ -41,16 +29,10 @@ def test_Add_mixed_constants_symbols():
     expr = Add(Constant(1), Symbol("a"), Constant(-3), Symbol("b"))
     new_expr = transformer.visit(expr)
     assert new_expr is not expr
-    assert isinstance(new_expr, And)
-    assert len(new_expr.expressions) == 1
-    assert isinstance(new_expr.expressions[0], Or)
-    assert len(new_expr.expressions[0].expressions) == 1
-    assert isinstance(new_expr.expressions[0].expressions[0], Add)
-    new_expr_add = new_expr.expressions[0].expressions[0]
-    assert len(new_expr_add.expressions) == 3
-    assert Multiply(Constant(1), Symbol("a")) in new_expr_add.expressions
-    assert Multiply(Constant(1), Symbol("b")) in new_expr_add.expressions
-    assert Multiply(Constant(1), Constant(-2)) in new_expr_add.expressions
+    assert len(new_expr.expressions) == 3
+    assert Multiply(Constant(1), Symbol("a")) in new_expr.expressions
+    assert Multiply(Constant(1), Symbol("b")) in new_expr.expressions
+    assert Multiply(Constant(1), Constant(-2)) in new_expr.expressions
 
 
 def test_Add_multiplications_constant():
@@ -64,16 +46,10 @@ def test_Add_multiplications_constant():
     )
     new_expr = transformer.visit(expr)
     assert new_expr is not expr
-    assert isinstance(new_expr, And)
-    assert len(new_expr.expressions) == 1
-    assert isinstance(new_expr.expressions[0], Or)
-    assert len(new_expr.expressions[0].expressions) == 1
-    assert isinstance(new_expr.expressions[0].expressions[0], Add)
-    new_expr_add = new_expr.expressions[0].expressions[0]
-    assert len(new_expr_add.expressions) == 3
-    assert Multiply(Constant(2), Symbol("a")) in new_expr_add.expressions
-    assert Multiply(Constant(-2), Symbol("b")) in new_expr_add.expressions
-    assert Multiply(Constant(1), Constant(50)) in new_expr_add.expressions
+    assert len(new_expr.expressions) == 3
+    assert Multiply(Constant(2), Symbol("a")) in new_expr.expressions
+    assert Multiply(Constant(-2), Symbol("b")) in new_expr.expressions
+    assert Multiply(Constant(1), Constant(50)) in new_expr.expressions
 
 
 def test_Add_multiplications_linear():
@@ -87,15 +63,9 @@ def test_Add_multiplications_linear():
     )
     new_expr = transformer.visit(expr)
     assert new_expr is not expr
-    assert isinstance(new_expr, And)
-    assert len(new_expr.expressions) == 1
-    assert isinstance(new_expr.expressions[0], Or)
-    assert len(new_expr.expressions[0].expressions) == 1
-    assert isinstance(new_expr.expressions[0].expressions[0], Add)
-    new_expr_add = new_expr.expressions[0].expressions[0]
-    assert len(new_expr_add.expressions) == 2
-    assert Multiply(Constant(3), Symbol("a")) in new_expr_add.expressions
-    assert Multiply(Constant(-2), Symbol("b")) in new_expr_add.expressions
+    assert len(new_expr.expressions) == 2
+    assert Multiply(Constant(3), Symbol("a")) in new_expr.expressions
+    assert Multiply(Constant(-2), Symbol("b")) in new_expr.expressions
 
 
 def test_Add_multiplications_nonlinear():
@@ -109,16 +79,10 @@ def test_Add_multiplications_nonlinear():
     )
     new_expr = transformer.visit(expr)
     assert new_expr is not expr
-    assert isinstance(new_expr, And)
-    assert len(new_expr.expressions) == 1
-    assert isinstance(new_expr.expressions[0], Or)
-    assert len(new_expr.expressions[0].expressions) == 1
-    assert isinstance(new_expr.expressions[0].expressions[0], Add)
-    new_expr_add = new_expr.expressions[0].expressions[0]
-    assert len(new_expr_add.expressions) == 3
-    assert Multiply(Constant(2), Symbol("a")) in new_expr_add.expressions
-    assert Multiply(Constant(-2), Symbol("b")) in new_expr_add.expressions
-    assert Multiply(Constant(1), Symbol("a"), Symbol("b")) in new_expr_add.expressions
+    assert len(new_expr.expressions) == 3
+    assert Multiply(Constant(2), Symbol("a")) in new_expr.expressions
+    assert Multiply(Constant(-2), Symbol("b")) in new_expr.expressions
+    assert Multiply(Constant(1), Symbol("a"), Symbol("b")) in new_expr.expressions
 
 
 def test_Add_multiplication_empty():
@@ -154,15 +118,9 @@ def test_Add_multiplication_zero():
     )
     new_expr = transformer.visit(expr)
     assert new_expr is not expr
-    assert isinstance(new_expr, And)
-    assert len(new_expr.expressions) == 1
-    assert isinstance(new_expr.expressions[0], Or)
-    assert len(new_expr.expressions[0].expressions) == 1
-    assert isinstance(new_expr.expressions[0].expressions[0], Add)
-    new_expr_add = new_expr.expressions[0].expressions[0]
-    assert len(new_expr_add.expressions) == 2
-    assert Multiply(Constant(-3), Symbol("b")) in new_expr_add.expressions
-    assert Multiply(Constant(1), Constant(2)) in new_expr_add.expressions
+    assert len(new_expr.expressions) == 2
+    assert Multiply(Constant(-3), Symbol("b")) in new_expr.expressions
+    assert Multiply(Constant(1), Constant(2)) in new_expr.expressions
 
 
 def test_Add_additions():

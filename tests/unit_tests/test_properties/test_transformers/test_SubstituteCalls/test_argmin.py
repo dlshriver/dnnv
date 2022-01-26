@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+from dnnv.nn.utils import TensorDetails
 from dnnv.properties.expressions import *
 from dnnv.properties.transformers import SubstituteCalls
 
@@ -28,7 +29,10 @@ def test_argmin_constant():
 
 def test_argmin_concrete_network():
     fake_network = lambda x: x
-    fake_network.output_shape = [(1, 3)]
+    fake_network.input_details = (TensorDetails((1, 5), np.float32),)
+    fake_network.input_shape = ((1, 5),)
+    fake_network.output_details = (TensorDetails((1, 3), np.float32),)
+    fake_network.output_shape = ((1, 3),)
 
     expr = Constant(np.argmin)(Network("N")(Symbol("x")))
     expr.concretize(N=fake_network)
@@ -102,7 +106,10 @@ def test_argmin_constant_equal_constant():
 
 def test_argmin_concrete_network_equal_constant():
     fake_network = lambda x: x
-    fake_network.output_shape = [(1, 3)]
+    fake_network.input_details = (TensorDetails((1, 5), np.float32),)
+    fake_network.input_shape = ((1, 5),)
+    fake_network.output_details = (TensorDetails((1, 3), np.float32),)
+    fake_network.output_shape = ((1, 3),)
 
     expr = Constant(np.argmin)(Network("N")(Symbol("x"))) == Constant(0)
     expr.concretize(N=fake_network)
@@ -122,7 +129,10 @@ def test_argmin_concrete_network_equal_constant():
 
 def test_argmin_concrete_network_equal_symbol():
     fake_network = lambda x: x
-    fake_network.output_shape = [(1, 3)]
+    fake_network.input_details = (TensorDetails((1, 5), np.float32),)
+    fake_network.input_shape = ((1, 5),)
+    fake_network.output_details = (TensorDetails((1, 3), np.float32),)
+    fake_network.output_shape = ((1, 3),)
 
     expr = Constant(np.argmin)(Network("N")(Symbol("x"))) == Symbol("y")
     expr.concretize(N=fake_network)
@@ -195,18 +205,25 @@ def test_argmin_constant_notequal_constant():
 
 def test_argmin_concrete_network_notequal_constant():
     fake_network = lambda x: x
-    fake_network.output_shape = [(1, 3)]
+    fake_network.input_details = (TensorDetails((1, 5), np.float32),)
+    fake_network.input_shape = ((1, 5),)
+    fake_network.output_details = (TensorDetails((1, 3), np.float32),)
+    fake_network.output_shape = ((1, 3),)
 
     expr = Constant(np.argmin)(Network("N")(Symbol("x"))) != Constant(0)
     expr.concretize(N=fake_network)
 
     new_expr = SubstituteCalls().visit(expr)
     expected_expr = Or(
-        GreaterThan(
-            Network("N")(Symbol("x"))[(0, 0)], Network("N")(Symbol("x"))[(0, 1)]
+        Not(
+            LessThanOrEqual(
+                Network("N")(Symbol("x"))[(0, 0)], Network("N")(Symbol("x"))[(0, 1)]
+            )
         ),
-        GreaterThan(
-            Network("N")(Symbol("x"))[(0, 0)], Network("N")(Symbol("x"))[(0, 2)]
+        Not(
+            LessThanOrEqual(
+                Network("N")(Symbol("x"))[(0, 0)], Network("N")(Symbol("x"))[(0, 2)]
+            )
         ),
     )
     assert new_expr is not expr
@@ -215,7 +232,10 @@ def test_argmin_concrete_network_notequal_constant():
 
 def test_argmin_concrete_network_notequal_symbol():
     fake_network = lambda x: x
-    fake_network.output_shape = [(1, 3)]
+    fake_network.input_details = (TensorDetails((1, 5), np.float32),)
+    fake_network.input_shape = ((1, 5),)
+    fake_network.output_details = (TensorDetails((1, 3), np.float32),)
+    fake_network.output_shape = ((1, 3),)
 
     expr = Constant(np.argmin)(Network("N")(Symbol("x"))) != Symbol("y")
     expr.concretize(N=fake_network)
@@ -229,7 +249,7 @@ def test_argmin_concrete_network_notequal_symbol():
             LessThanOrEqual(
                 Network("N")(Symbol("x"))[(0, 0)], Network("N")(Symbol("x"))[(0, 2)]
             ),
-            NotEqual(Symbol("y"), Constant(0)),
+            Not(Equal(Symbol("y"), Constant(0))),
         ),
         And(
             LessThanOrEqual(
@@ -238,7 +258,7 @@ def test_argmin_concrete_network_notequal_symbol():
             LessThanOrEqual(
                 Network("N")(Symbol("x"))[(0, 1)], Network("N")(Symbol("x"))[(0, 2)]
             ),
-            NotEqual(Symbol("y"), Constant(1)),
+            Not(Equal(Symbol("y"), Constant(1))),
         ),
         And(
             LessThanOrEqual(
@@ -247,7 +267,7 @@ def test_argmin_concrete_network_notequal_symbol():
             LessThanOrEqual(
                 Network("N")(Symbol("x"))[(0, 2)], Network("N")(Symbol("x"))[(0, 1)]
             ),
-            NotEqual(Symbol("y"), Constant(2)),
+            Not(Equal(Symbol("y"), Constant(2))),
         ),
     )
     assert new_expr is not expr

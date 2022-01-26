@@ -1,4 +1,4 @@
-numpy>=1.18,<1.22
+numpy>=1.20,<1.22
 onnx>=1.8,<1.11
 psutil~=5.6
 scikit-image>=0.18,<0.19

@@ -21,7 +21,7 @@ def test_parse_0(tmp_path):
 
     assert (
         repr(phi)
-        == "Forall(Symbol('X'), Or(GreaterThan(Network('N')(Symbol('X'))[numpy.unravel_index(0, Network('N').'output_shape'[0])], -1.0), GreaterThan(Symbol('X')[numpy.unravel_index(0, Network('N').'input_shape'[0])], 1.0), LessThan(Symbol('X')[numpy.unravel_index(0, Network('N').'input_shape'[0])], -1.0)))"
+        == "Forall(Symbol('X'), Or(Not(GreaterThanOrEqual(Symbol('X')[numpy.unravel_index(0, Network('N').'input_shape'[0])], -1.0)), Not(LessThanOrEqual(Network('N')(Symbol('X'))[numpy.unravel_index(0, Network('N').'output_shape'[0])], -1.0)), Not(LessThanOrEqual(Symbol('X')[numpy.unravel_index(0, Network('N').'input_shape'[0])], 1.0))))"
     )
 
 
@@ -45,7 +45,7 @@ def test_parse_1(tmp_path):
 
     assert (
         repr(phi)
-        == "Forall(Symbol('X'), Or(GreaterThan(Add(2, Network('N')(Symbol('X'))[numpy.unravel_index(0, Network('N').'output_shape'[0])]), -100), GreaterThan(Subtract(2, Network('N')(Symbol('X'))[numpy.unravel_index(0, Network('N').'output_shape'[0])]), 0), GreaterThan(Symbol('X')[numpy.unravel_index(0, Network('N').'input_shape'[0])], 1), LessThan(Symbol('X')[numpy.unravel_index(0, Network('N').'input_shape'[0])], -1)))"
+        == "Forall(Symbol('X'), Or(Not(GreaterThanOrEqual(Symbol('X')[numpy.unravel_index(0, Network('N').'input_shape'[0])], -1)), Not(LessThanOrEqual(Add(2, Network('N')(Symbol('X'))[numpy.unravel_index(0, Network('N').'output_shape'[0])]), -100)), Not(LessThanOrEqual(Subtract(2, Network('N')(Symbol('X'))[numpy.unravel_index(0, Network('N').'output_shape'[0])]), 0)), Not(LessThanOrEqual(Symbol('X')[numpy.unravel_index(0, Network('N').'input_shape'[0])], 1))))"
     )
 
 
@@ -68,7 +68,7 @@ def test_parse_2(tmp_path):
 
     assert (
         repr(phi)
-        == "Forall(Symbol('X'), Or(GreaterThan(Network('N')(Symbol('X'))[numpy.unravel_index(0, Network('N').'output_shape'[0])], 0), GreaterThan(Symbol('X')[numpy.unravel_index(0, Network('N').'input_shape'[0])], 1), LessThan(Symbol('X')[numpy.unravel_index(0, Network('N').'input_shape'[0])], 0)))"
+        == "Forall(Symbol('X'), Or(Not(GreaterThanOrEqual(Symbol('X')[numpy.unravel_index(0, Network('N').'input_shape'[0])], 0)), Not(LessThanOrEqual(Network('N')(Symbol('X'))[numpy.unravel_index(0, Network('N').'output_shape'[0])], 0)), Not(LessThanOrEqual(Symbol('X')[numpy.unravel_index(0, Network('N').'input_shape'[0])], 1))))"
     )
 
 
@@ -96,7 +96,7 @@ def test_parse_multidim(tmp_path):
 
     assert (
         repr(phi)
-        == "Forall(Symbol('X'), Or(GreaterThan(Network('N')(Symbol('X'))[(0, 0)], -1.0), GreaterThan(Network('N')(Symbol('X'))[(0, 1)], -1.0), GreaterThan(Symbol('X')[(0, 0)], 1.0), GreaterThan(Symbol('X')[(0, 1)], 1.0), LessThan(Symbol('X')[(0, 0)], -1.0), LessThan(Symbol('X')[(0, 1)], -1.0)))"
+        == "Forall(Symbol('X'), Or(Not(GreaterThanOrEqual(Symbol('X')[(0, 0)], -1.0)), Not(GreaterThanOrEqual(Symbol('X')[(0, 1)], -1.0)), Not(LessThanOrEqual(Network('N')(Symbol('X'))[(0, 0)], -1.0)), Not(LessThanOrEqual(Network('N')(Symbol('X'))[(0, 1)], -1.0)), Not(LessThanOrEqual(Symbol('X')[(0, 0)], 1.0)), Not(LessThanOrEqual(Symbol('X')[(0, 1)], 1.0))))"
     )
 
 
@@ -125,5 +125,5 @@ def test_parse_parameters(tmp_path):
 
     assert (
         repr(phi)
-        == "Forall(Symbol('X'), Or(GreaterThan(Symbol('X')[(0, 0)], 1.0), GreaterThan(Symbol('X')[(0, 1)], 1.0), LessThan(Symbol('X')[(0, 0)], -1.0), LessThan(Symbol('X')[(0, 1)], -1.0), LessThanOrEqual(Network('N')(Symbol('X'))[(0, 0)], 0.0)))"
+        == "Forall(Symbol('X'), Or(Not(GreaterThan(Network('N')(Symbol('X'))[(0, 0)], 0.0)), Not(GreaterThanOrEqual(Symbol('X')[(0, 0)], -1.0)), Not(GreaterThanOrEqual(Symbol('X')[(0, 1)], -1.0)), Not(LessThanOrEqual(Symbol('X')[(0, 0)], 1.0)), Not(LessThanOrEqual(Symbol('X')[(0, 1)], 1.0))))"
     )

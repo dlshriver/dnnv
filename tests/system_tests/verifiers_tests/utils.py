@@ -32,7 +32,15 @@ class VerifierTests:
 
     def tearDown(self):
         self.reset_property_context()
-        for varname in ["SEED", "SHIFT", "INPUT_LAYER", "OUTPUT_LAYER"]:
+        for varname in [
+            "SEED",
+            "SHIFT",
+            "INPUT_LAYER",
+            "OUTPUT_LAYER",
+            "INPUT_LB",
+            "INPUT_UB",
+            "OUTPUT_LB",
+        ]:
             if varname in os.environ:
                 os.environ.pop(varname)
 
@@ -106,7 +114,7 @@ class VerifierTests:
             self.assertEqual(result, UNSAT)
 
     def test_a_gt_b_localrobustness_unsat(self):
-        os.environ["SHIFT"] = "np.asarray([[100,0]], dtype=np.float32)"
+        os.environ["SHIFT"] = "[100,0]"
         for i in range(RUNS_PER_PROP):
             os.environ["SEED"] = str(i + 1)
             self.reset_property_context()
@@ -123,7 +131,7 @@ class VerifierTests:
             phi.concretize(N=dnn.simplify()[:-1])
             result = self.verifier.verify(phi).result
             self.assertEqual(result, UNSAT)
-        os.environ["SHIFT"] = "np.asarray([[0,100]], dtype=np.float32)"
+        os.environ["SHIFT"] = "[0,100]"
         for i in range(RUNS_PER_PROP):
             os.environ["SEED"] = str(i + 1)
             self.reset_property_context()
@@ -206,3 +214,25 @@ class VerifierTests:
             phi.concretize(N=dnn.simplify())
             result = self.verifier.verify(phi).result
             self.assertEqual(result, UNSAT)
+
+    def test_a_gt_b_output_greater_than_x_unsat(self):
+        os.environ["OUTPUT_LB"] = "-0.001"
+        for i in range(RUNS_PER_PROP):
+            os.environ["SEED"] = str(i + 1)
+            self.reset_property_context()
+            dnn = nn.parse(network_artifact_dir / "a_gt_b.onnx")
+            phi = properties.parse(property_artifact_dir / "output_greater_than_X.py")
+            phi.concretize(N=dnn[:-1])
+            result = self.verifier.verify(phi).result
+            self.assertEqual(result, UNSAT)
+
+    def test_a_gt_b_output_greater_than_x_sat(self):
+        os.environ["OUTPUT_LB"] = "1.0"
+        for i in range(RUNS_PER_PROP):
+            os.environ["SEED"] = str(i + 1)
+            self.reset_property_context()
+            dnn = nn.parse(network_artifact_dir / "a_gt_b.onnx")
+            phi = properties.parse(property_artifact_dir / "output_greater_than_X.py")
+            phi.concretize(N=dnn[:-1])
+            result = self.verifier.verify(phi).result
+            self.assertEqual(result, SAT)

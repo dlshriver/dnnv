@@ -26,13 +26,17 @@ class Call(CallableExpression, ArithmeticExpression, LogicalExpression):
         self.function = function
         self.args = args
         self.kwargs = kwargs
+        self._value = None
 
     @property
     def value(self):
+        if self._value is not None:
+            return self._value
         if self.is_concrete:
             args = tuple(arg.value for arg in self.args)
             kwargs = {name: value.value for name, value in self.kwargs.items()}
-            return self.function.value(*args, **kwargs)
+            self._value = self.function.value(*args, **kwargs)
+            return self._value
         return super().value
 
     def is_equivalent(self, other):

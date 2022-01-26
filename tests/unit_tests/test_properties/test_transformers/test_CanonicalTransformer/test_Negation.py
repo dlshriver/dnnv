@@ -8,14 +8,8 @@ def test_Negation_symbol():
     expr = Negation(Symbol("a"))
     new_expr = transformer.visit(expr)
     assert new_expr is not expr
-    assert isinstance(new_expr, And)
-    assert len(new_expr.expressions) == 1
-    assert isinstance(new_expr.expressions[0], Or)
-    assert len(new_expr.expressions[0].expressions) == 1
-    assert isinstance(new_expr.expressions[0].expressions[0], Add)
-    new_expr_add = new_expr.expressions[0].expressions[0]
-    assert len(new_expr_add.expressions) == 1
-    assert Multiply(Constant(-1), Symbol("a")) in new_expr_add.expressions
+    assert isinstance(new_expr, Add)
+    assert Multiply(Constant(-1), Symbol("a")) in new_expr.expressions
 
 
 def test_Negation_constant():

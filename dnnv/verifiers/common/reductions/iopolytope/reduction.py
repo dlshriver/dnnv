@@ -70,8 +70,9 @@ class IOPolytopeReduction(Reduction):
         if isinstance(expression, Forall):
             raise NotImplementedError()  # TODO
         assert isinstance(expression, LogicalExpression)
-        dnf_expression = Or(~(~expression).canonical())
+        dnf_expression = expression.canonical()
         self.logger.debug("DNF: %s", dnf_expression)
+        assert isinstance(dnf_expression, Or)
 
         for conjunction in sorted(dnf_expression, key=lambda x: len(str(x))):
             self.logger.info("CONJUNCTION: %s", conjunction)
