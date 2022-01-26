@@ -221,7 +221,7 @@ class VerifierTests:
             phi = properties.parse(property_artifact_dir / "output_greater_than_X.py")
             phi.concretize(N=dnn[:-1])
             result, _ = self.verifier.verify(phi)
-            self.assertEqual(result, UNSAT)
+            self.assertIn(result, [UNKNOWN, UNSAT])
 
     def test_a_gt_b_output_greater_than_x_sat(self):
         os.environ["OUTPUT_LB"] = "1.0"
@@ -232,4 +232,4 @@ class VerifierTests:
             phi = properties.parse(property_artifact_dir / "output_greater_than_X.py")
             phi.concretize(N=dnn[:-1])
             result, _ = self.verifier.verify(phi)
-            self.assertEqual(result, SAT)
+            self.assertIn(result, [UNKNOWN, SAT])
