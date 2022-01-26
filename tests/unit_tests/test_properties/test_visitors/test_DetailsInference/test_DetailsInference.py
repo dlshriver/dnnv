@@ -30,6 +30,9 @@ def test_has_all():
         if not expression_t.__module__.startswith("dnnv.properties"):
             # we don't need to support things not in DNNV
             continue
+        if expression_t.__module__.startswith("dnnv.properties.expressions.temporal"):
+            # these should be supported separately, if needed
+            continue
         if expression_t.__name__.endswith("Expression") or expression_t in (
             Term,
             Quantifier,

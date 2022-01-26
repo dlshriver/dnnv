@@ -277,6 +277,16 @@ class DetailsInference(ExpressionVisitor):
 
         self.set_details(expression, shape=shape, dtype=dtype)
 
+    def visit_Compose(self, expression: expressions.Compose):
+        self.visit(expression.expr1)
+        self.visit(expression.expr2)
+        dtype = self.types[expression.expr2]
+        if self.types[expression.expr1] is Constant(OperationGraph) and self.types[
+            expression.expr2
+        ] is Constant(OperationGraph):
+            dtype = Constant(OperationGraph)
+        self.set_details(expression, shape=Constant(()), dtype=dtype)
+
     def visit_Constant(self, expression: expressions.Constant):
         value = expression.value
         if isinstance(value, np.ndarray):
