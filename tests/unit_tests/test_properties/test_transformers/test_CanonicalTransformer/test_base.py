@@ -12,7 +12,7 @@ def test_missing():
     with pytest.raises(
         ValueError, match="Unimplemented expression type: FakeExpression"
     ):
-        CanonicalTransformer().visit(FakeExpression())
+        CanonicalTransformer().generic_visit(FakeExpression())
     del FakeExpression
 
 

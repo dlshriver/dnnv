@@ -14,19 +14,6 @@ from ..visitors import ExpressionVisitor
 
 
 class ExpressionTransformer(ExpressionVisitor):
-    def __init__(self):
-        self.visited = {}
-        self._top_level = True
-
-    def visit(self, expression: Expression) -> Expression:
-        if self._top_level:
-            self._top_level = False
-        if expression not in self.visited:
-            method_name = "visit_%s" % expression.__class__.__name__
-            visitor = getattr(self, method_name, self.generic_visit)
-            self.visited[expression] = visitor(expression)
-        return self.visited[expression]
-
     def generic_visit(self, expression: Expression) -> Expression:
         if isinstance(expression, Expression):
             raise ValueError(
