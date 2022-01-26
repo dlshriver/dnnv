@@ -94,6 +94,11 @@ class Py2PropertyTransformer(ast.NodeTransformer):
         new_node = ast.Call(and_func, comparisons, [], **attributes)
         return new_node
 
+    def visit_Bytes(self, node: ast.Bytes):  # pragma: no cover
+        attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
+        const_func = ast.Name("Constant", ast.Load(), **attributes)
+        return ast.Call(const_func, [node], [], **attributes)
+
     def visit_Constant(self, node: ast.Constant):
         attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
         const_func = ast.Name("Constant", ast.Load(), **attributes)
@@ -121,10 +126,12 @@ class Py2PropertyTransformer(ast.NodeTransformer):
 
     def _ensure_primitive(self, expr):
         primitive_type = (
+            ast.Bytes,
             ast.Constant,
             ast.Ellipsis,
             ast.NameConstant,
             ast.Num,
+            ast.Slice,
             ast.Str,
         )
         if isinstance(
