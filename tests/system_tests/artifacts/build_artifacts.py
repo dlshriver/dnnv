@@ -18,17 +18,17 @@ def build_known_behavior_artifacts():
 
     resnet34_path = artifact_dir / "resnet34.onnx"
     if not resnet34_path.exists():
-        resnet34 = models.resnet34(pretrained=True).eval()
+        resnet34 = models.resnet34(pretrained=True, progress=False).eval()
         torch.onnx.export(resnet34, imagenet_dummy_input, resnet34_path)
 
     resnet50_path = artifact_dir / "resnet50.onnx"
     if not resnet50_path.exists():
-        resnet50 = models.resnet50(pretrained=True).eval()
+        resnet50 = models.resnet50(pretrained=True, progress=False).eval()
         torch.onnx.export(resnet50, imagenet_dummy_input, resnet50_path)
 
     vgg16_path = artifact_dir / "vgg16.onnx"
     if not vgg16_path.exists():
-        vgg16 = models.vgg16(pretrained=True).eval()
+        vgg16 = models.vgg16(pretrained=True, progress=False).eval()
         torch.onnx.export(vgg16, imagenet_dummy_input, vgg16_path)
 
     # create models for known functions
