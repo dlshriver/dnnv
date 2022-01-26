@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+from dnnv.nn.utils import TensorDetails
 from dnnv.properties.expressions import *
 from dnnv.properties.transformers import SubstituteCalls
 
@@ -12,7 +13,7 @@ def test_missing():
     with pytest.raises(
         ValueError, match="Unimplemented expression type: FakeExpression"
     ):
-        SubstituteCalls().visit(FakeExpression())
+        SubstituteCalls().generic_visit(FakeExpression())
     del FakeExpression
 
 
@@ -72,6 +73,9 @@ def test_Binary():
 
     func_call = Call(Symbol("f"), (Network("N")(Symbol("a")),), {})
     fake_network = lambda x: x
+    fake_network.input_details = (TensorDetails((1, 5), np.float32),)
+    fake_network.input_shape = ((1, 5),)
+    fake_network.output_details = (TensorDetails((1, 3), np.float32),)
     fake_network.output_shape = ((1, 3),)
     func_call.concretize(f=np.argmax, N=fake_network)
     expr = Equal(func_call, Constant(5))
@@ -84,8 +88,8 @@ def test_Binary():
     new_expr = transformer.visit(expr)
     assert new_expr is not expr
     assert (
-        str(new_expr)
-        == "((N(a)[(0, 0)] < N(a)[(0, 1)]) | (N(a)[(0, 0)] < N(a)[(0, 2)]))"
+        repr(new_expr)
+        == "Or(Not(GreaterThanOrEqual(Network('N')(Symbol('a'))[(0, 0)], Network('N')(Symbol('a'))[(0, 1)])), Not(GreaterThanOrEqual(Network('N')(Symbol('a'))[(0, 0)], Network('N')(Symbol('a'))[(0, 2)])))"
     )
 
 
@@ -94,6 +98,9 @@ def test_Call():
 
     func_call = Call(Constant(np.argmax), (Network("N")(Symbol("a")),), {})
     fake_network = lambda x: x
+    fake_network.input_details = (TensorDetails((1, 5), np.float32),)
+    fake_network.input_shape = ((1, 5),)
+    fake_network.output_details = (TensorDetails((1, 3), np.float32),)
     fake_network.output_shape = ((1, 3),)
     func_call.concretize(N=fake_network)
     new_expr = transformer.visit(func_call)
@@ -106,6 +113,9 @@ def test_Call():
 
     func_call = Call(Symbol("f"), (Network("N")(Symbol("a")),), {})
     fake_network = lambda x: x
+    fake_network.input_details = (TensorDetails((1, 5), np.float32),)
+    fake_network.input_shape = ((1, 5),)
+    fake_network.output_details = (TensorDetails((1, 3), np.float32),)
     fake_network.output_shape = ((1, 3),)
     func_call.concretize(f=np.argmax, N=fake_network)
     new_expr = transformer.visit(func_call)

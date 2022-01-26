@@ -95,9 +95,7 @@ class PropagateConstants(GenericExpressionTransformer):
             and all(_is_concrete(a) for a in args)
             and all(_is_concrete(a) for a in kwargs.values())
         ):
-            args = tuple(arg.value for arg in args)
-            kwargs = {name: value.value for name, value in kwargs.items()}
-            result = function.value(*args, **kwargs)
+            result = expression.value
             if isinstance(result, Expression):
                 return result.propagate_constants()
             return Constant(result)

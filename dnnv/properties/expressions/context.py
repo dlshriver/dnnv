@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, Hashable, List, Optional, Type, TypeVar
 
+from .. import expressions
+
 T = TypeVar("T")
 
 
@@ -14,6 +16,9 @@ class Context:
         Context.count += 1
         self._instance_cache: Dict[Type, Dict[Hashable, Any]] = {}
         self._prev_contexts: List[Context] = []
+
+        self.shapes: Dict[expressions.Expression, Any] = {}
+        self.types: Dict[expressions.Expression, Any] = {}
 
     def __repr__(self):
         prev_contexts = ", ".join(str(ctx) for ctx in self._prev_contexts)
@@ -32,6 +37,8 @@ class Context:
 
     def reset(self):
         self._instance_cache = {}
+        self.shapes = {}
+        self.types = {}
 
 
 Context._current_context = Context()

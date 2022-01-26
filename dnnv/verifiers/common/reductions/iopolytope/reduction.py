@@ -64,8 +64,9 @@ class IOPolytopeReduction(Reduction):
     def reduce_property(self, expression: Expression) -> Iterator[Property]:
         if not isinstance(expression, Exists):
             raise NotImplementedError()  # TODO
-        dnf_expression = Or(~(~expression).canonical())
+        dnf_expression = expression.canonical()
         self.logger.debug("DNF: %s", dnf_expression)
+        assert isinstance(dnf_expression, Or)
 
         for conjunction in dnf_expression:
             self.logger.info("CONJUNCTION: %s", conjunction)

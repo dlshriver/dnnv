@@ -11,7 +11,7 @@ def test_missing():
     with pytest.raises(
         ValueError, match="Unimplemented expression type: FakeExpression"
     ):
-        RemoveIfThenElse().visit(FakeExpression())
+        RemoveIfThenElse().generic_visit(FakeExpression())
     del FakeExpression
 
 

@@ -16,7 +16,10 @@ class CnfTransformer(GenericExpressionTransformer):
             expression = expression.propagate_constants()
             expression = RemoveIfThenElse().visit(expression)
             expression = expression.propagate_constants()
-            expression = And(Or(expression))
+            if not isinstance(expression, ArithmeticExpression) or isinstance(
+                expression, Symbol
+            ):
+                expression = And(Or(expression))
         expr = super().visit(expression)
         return expr
 
@@ -27,9 +30,7 @@ class CnfTransformer(GenericExpressionTransformer):
             if isinstance(expr, And):
                 expressions = expressions.union(expr.expressions)
             else:
-                if not isinstance(expr, Or):
-                    expr = Or(expr)
-                expressions.add(expr)
+                expressions.add(Or(expr))
         return And(*expressions)
 
     def visit_Exists(self, expression: Exists):

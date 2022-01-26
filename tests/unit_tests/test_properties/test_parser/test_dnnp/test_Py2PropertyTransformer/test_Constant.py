@@ -2,6 +2,12 @@ from dnnv.properties import *
 from dnnv.properties.parser.dnnp import parse_str
 
 
+def test_Bytes():
+    spec_str = 'b"test"'
+    phi = parse_str(spec_str)
+    assert phi == b"test"
+
+
 def test_Ellipsis():
     spec_str = "..."
     phi = parse_str(spec_str)

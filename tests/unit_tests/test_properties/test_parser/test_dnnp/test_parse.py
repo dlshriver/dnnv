@@ -15,7 +15,6 @@ def test_true():
     assert isinstance(phi, Forall)
     assert len(phi.networks) == 1
     assert len(phi.variables) == 2
-    print(repr(phi))
     assert (
         repr(phi)
         == "Forall(Symbol('x'), Implies(And(GreaterThan(Network('N')(Symbol('x')), 1), LessThanOrEqual(0, Symbol('x')), LessThanOrEqual(Symbol('x'), 1)), LessThan(Network('N')(Symbol('x')), Multiply(2, Network('N')(Symbol('x'))))))"

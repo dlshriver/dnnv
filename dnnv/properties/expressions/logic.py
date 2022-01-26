@@ -71,7 +71,7 @@ class Or(LogicalExpression, AssociativeExpression):
     OPERATOR_SYMBOL = "|"
 
     def __invert__(self):
-        return And(*[~expr for expr in self.expressions])
+        return And(*[~expr for expr in self.expressions], ctx=self.ctx)
 
 
 class And(LogicalExpression, AssociativeExpression):
@@ -81,7 +81,7 @@ class And(LogicalExpression, AssociativeExpression):
     OPERATOR_SYMBOL = "&"
 
     def __invert__(self):
-        return Or(*[~expr for expr in self.expressions])
+        return Or(*[~expr for expr in self.expressions], ctx=self.ctx)
 
 
 class Implies(LogicalExpression, BinaryExpression):
@@ -91,7 +91,7 @@ class Implies(LogicalExpression, BinaryExpression):
         return operator.or_(operator.xor(True, a), b)
 
     def __invert__(self):
-        return And(self.expr1, ~self.expr2)
+        return And(self.expr1, ~self.expr2, ctx=self.ctx)
 
 
 class Quantifier(LogicalExpression):
@@ -128,12 +128,12 @@ class Quantifier(LogicalExpression):
 
 class Forall(Quantifier):
     def __invert__(self):
-        return Exists(self.variable, ~self.expression)
+        return Exists(self.variable, ~self.expression, ctx=self.ctx)
 
 
 class Exists(Quantifier):
     def __invert__(self):
-        return Forall(self.variable, ~self.expression)
+        return Forall(self.variable, ~self.expression, ctx=self.ctx)
 
 
 ## Comparisons
@@ -144,7 +144,7 @@ class Equal(LogicalExpression, BinaryExpression):
     OPERATOR_SYMBOL = "=="
 
     def __invert__(self) -> NotEqual:
-        return NotEqual(self.expr1, self.expr2)
+        return Not(self, ctx=self.ctx)
 
     def __bool__(self):
         if self.is_concrete:
@@ -157,7 +157,7 @@ class GreaterThan(LogicalExpression, BinaryExpression):
     OPERATOR_SYMBOL = ">"
 
     def __invert__(self) -> LessThanOrEqual:
-        return LessThanOrEqual(self.expr1, self.expr2)
+        return Not(self, ctx=self.ctx)
 
 
 class GreaterThanOrEqual(LogicalExpression, BinaryExpression):
@@ -165,7 +165,7 @@ class GreaterThanOrEqual(LogicalExpression, BinaryExpression):
     OPERATOR_SYMBOL = ">="
 
     def __invert__(self) -> LessThan:
-        return LessThan(self.expr1, self.expr2)
+        return Not(self, ctx=self.ctx)
 
 
 class LessThan(LogicalExpression, BinaryExpression):
@@ -173,7 +173,7 @@ class LessThan(LogicalExpression, BinaryExpression):
     OPERATOR_SYMBOL = "<"
 
     def __invert__(self) -> GreaterThanOrEqual:
-        return GreaterThanOrEqual(self.expr1, self.expr2)
+        return Not(self, ctx=self.ctx)
 
 
 class LessThanOrEqual(LogicalExpression, BinaryExpression):
@@ -181,7 +181,7 @@ class LessThanOrEqual(LogicalExpression, BinaryExpression):
     OPERATOR_SYMBOL = "<="
 
     def __invert__(self) -> GreaterThan:
-        return GreaterThan(self.expr1, self.expr2)
+        return Not(self, ctx=self.ctx)
 
 
 class NotEqual(LogicalExpression, BinaryExpression):
@@ -189,7 +189,7 @@ class NotEqual(LogicalExpression, BinaryExpression):
     OPERATOR_SYMBOL = "!="
 
     def __invert__(self) -> Equal:
-        return Equal(self.expr1, self.expr2)
+        return Not(self, ctx=self.ctx)
 
     def __bool__(self):
         if self.is_concrete:

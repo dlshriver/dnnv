@@ -18,7 +18,7 @@ def test_non_existential():
 def test_no_network():
     reduction = IOPolytopeReduction()
 
-    phi = Exists(Symbol("x"), Constant(True))
+    phi = Exists(Symbol("x"), Symbol("x") > Constant(0))
     with pytest.raises(IOPolytopeReductionError):
         properties = list(reduction.reduce_property(phi))
 
@@ -40,8 +40,6 @@ def test_simple_property():
     output_op = operations.Add(input_op, operations.Mul(np.float64(-2), input_op))
     op_graph = OperationGraph([output_op])
     phi.concretize(N=op_graph)
-
-    print(phi)
 
     properties = list(reduction.reduce_property(phi))
     assert len(properties) == 1

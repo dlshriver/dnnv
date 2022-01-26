@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 from dnnv.properties.expressions import *
@@ -11,7 +12,7 @@ def test_missing():
     with pytest.raises(
         ValueError, match="Unimplemented expression type: FakeExpression"
     ):
-        GenericExpressionTransformer().visit(FakeExpression())
+        GenericExpressionTransformer().generic_visit(FakeExpression())
     del FakeExpression
 
 
@@ -58,6 +59,8 @@ def test_Constant():
 
 def test_Image(tmp_path):
     transformer = GenericExpressionTransformer()
+
+    np.save(tmp_path / "test.npy", np.random.rand(3, 32, 32))
 
     expr = Image(tmp_path / "test.npy")
     new_expr = transformer.visit(expr)

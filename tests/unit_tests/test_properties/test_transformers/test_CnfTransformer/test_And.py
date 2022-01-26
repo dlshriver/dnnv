@@ -8,11 +8,7 @@ def test_And_empty():
     expr = And()
     new_expr = transformer.visit(expr)
     assert new_expr is not expr
-    assert isinstance(new_expr, And)
-    assert len(new_expr.expressions) == 1
-    assert isinstance(new_expr.expressions[0], Or)
-    assert len(new_expr.expressions[0].expressions) == 1
-    assert new_expr.expressions[0].expressions[0] is Constant(True)
+    assert new_expr is Constant(True)
 
 
 def test_And_of_and():

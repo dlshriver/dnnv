@@ -1,4 +1,5 @@
 from dnnv.properties import *
+
 import ast
 import numpy as np
 import os
