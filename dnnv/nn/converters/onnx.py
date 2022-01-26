@@ -50,7 +50,13 @@ class OnnxConverter(OperationVisitor):
             self.outputs,
             initializer=self.initializer,
         )
-        model_def = onnx.helper.make_model(graph_def, producer_name="dnnv")
+        # TODO : make opset configurable
+        model_def = onnx.helper.make_model(
+            graph_def,
+            producer_name="dnnv",
+            ir_version=7,
+            opset_imports=[onnx.helper.make_opsetid("", 13)],
+        )
         model_def = onnx.shape_inference.infer_shapes(model_def)
         onnx.checker.check_model(model_def, full_check=True)
         return model_def
