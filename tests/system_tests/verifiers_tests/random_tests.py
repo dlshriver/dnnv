@@ -35,6 +35,9 @@ VERIFIERS = {
 }
 
 
+@unittest.skipIf(
+    sum(v.is_installed() for v in VERIFIERS.values()) < 2, "Not enough verifiers installed"
+)
 class RandomTests(unittest.TestCase):
     def setUp(self):
         self.reset_property_context()
