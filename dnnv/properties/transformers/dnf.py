@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Optional, Set, Tuple
 
 from .base import GenericExpressionTransformer
+from .fol import FirstOrderLogicTransformer
 from .lift_ifthenelse import LiftIfThenElse
 from .remove_ifthenelse import RemoveIfThenElse
 from ..expressions import *
@@ -12,6 +13,8 @@ from ..visitors.inference import DetailsInference
 class DnfTransformer(GenericExpressionTransformer):
     def visit(self, expression: Expression) -> Expression:
         if self._top_level:
+            expression = expression.propagate_constants()
+            expression = FirstOrderLogicTransformer().visit(expression)
             expression = expression.propagate_constants()
             expression = LiftIfThenElse().visit(expression)
             expression = expression.propagate_constants()
