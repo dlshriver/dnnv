@@ -5,6 +5,7 @@ import numpy as np
 from typing import Any, Dict, Optional, Union
 
 from .base import LTL, LTLUnwindingBoundReached
+from ...base import Expression
 from ...terms import Constant, Network, Parameter, Symbol
 from .....nn import operations, OperationGraph, OperationVisitor
 from .....nn.transformers.mlp import MLPTransformer
@@ -48,25 +49,15 @@ class TemporalSymbol(LTL):
             current_step = current_step.value
         self.step = current_step
 
-        if (
-            unwind is not None
-            and isinstance(unwind, (Constant, Parameter))
-            and unwind.is_concrete
-        ):
+        if unwind is not None and isinstance(unwind, Expression) and unwind.is_concrete:
             unwind = unwind.value
         self.unwind = unwind
 
-        if (
-            isinstance(control_period, (Constant, Parameter))
-            and control_period.is_concrete
-        ):
+        if isinstance(control_period, Expression) and control_period.is_concrete:
             control_period = control_period.value
         self.control_period = control_period
 
-        if (
-            isinstance(num_noise_vars, (Constant, Parameter))
-            and num_noise_vars.is_concrete
-        ):
+        if isinstance(num_noise_vars, Expression) and num_noise_vars.is_concrete:
             num_noise_vars = num_noise_vars.value
         self.num_noise_vars = num_noise_vars
 

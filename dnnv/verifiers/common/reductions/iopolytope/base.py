@@ -287,7 +287,7 @@ class HalfspacePolytope(Constraint):
             return False
         x_flat_ = []
         for x_, v in zip(x, self.variables):
-            if x_.shape != v.shape:
+            if x_.size != v.size():
                 return False
             x_flat_.append(x_.flatten())
         x_flat = np.concatenate(x_flat_)

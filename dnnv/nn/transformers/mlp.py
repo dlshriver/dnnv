@@ -37,6 +37,26 @@ class MLPTransformer(OperationTransformer):
         mlp_op_graph = super().transform(simplified_op_graph).simplify()
         return mlp_op_graph
 
+    def visit_Add(self, operation: operations.Add):
+        if not isinstance(operation.a, operations.Operation) or not isinstance(
+            operation.b, operations.Operation
+        ):
+            return super().visit(operation)
+        a_shape, a_dtype = OperationGraph([operation.a]).output_details[0]
+        b_shape, b_dtype = OperationGraph([operation.b]).output_details[0]
+        assert a_shape == b_shape
+        assert a_shape[0] == 1
+        dtype = np.result_type(a_dtype, b_dtype)
+        size = np.product(a_shape)
+        I = np.eye(size, dtype=dtype)
+        new_concat_op = operations.Concat(
+            [operations.Flatten(operation.a), operations.Flatten(operation.b)], axis=1
+        )
+        new_add_op = operations.Gemm(
+            new_concat_op, np.block([[I], [I]]), np.zeros(size, dtype=dtype)
+        )
+        return self.visit(new_add_op)
+
     def visit_Concat(self, operation: operations.Concat) -> operations.Operation:
         assert operation.axis == 1
         new_op_constructor: Callable = lambda x: x
@@ -177,7 +197,40 @@ class MLPTransformer(OperationTransformer):
         assert isinstance(w, np.ndarray)
         b = operation.b
         assert isinstance(b, np.ndarray)
-        return operations.Gemm(x, w.squeeze().T, b)
+        assert np.all(operation.group == 1)
+        assert np.all(operation.dilations == 1)
+
+        k_h, k_w = w.shape[2:4]
+        p_top, p_left, p_bottom, p_right = operation.pads
+        s_h, s_w = operation.strides
+
+        _, in_c, in_h, in_w = OperationGraph([operation.x]).output_shape[0]
+        input_size = in_c * in_h * in_w
+        out_c = w.shape[0]
+        out_h = (in_h - k_h + p_top + p_bottom) // s_h + 1
+        out_w = (in_w - k_w + p_left + p_right) // s_w + 1
+        output_size = out_c * out_h * out_w
+
+        gemm_b = np.zeros((input_size, output_size), dtype=w.dtype)
+        gemm_c = np.tile(b[..., None, None], (1, out_h, out_w)).flatten()
+        for co in range(out_c):
+            for ho in range(out_h):
+                for wo in range(out_w):
+                    out_idx = np.ravel_multi_index((co, ho, wo), (out_c, out_h, out_w))
+                    for hk in range(k_h):
+                        for wk in range(k_w):
+                            for ck in range(in_c):
+                                hi = ho * s_h + hk - p_top
+                                wi = wo * s_w + wk - p_left
+                                if hi < 0 or hi >= in_h:
+                                    continue
+                                if wi < 0 or wi >= in_w:
+                                    continue
+                                in_idx = np.ravel_multi_index(
+                                    (ck, hi, wi), (in_c, in_h, in_w)
+                                )
+                                gemm_b[in_idx, out_idx] = w[co, ck, hk, wk]
+        return operations.Gemm(x, gemm_b, gemm_c)
 
     def visit_Flatten(self, operation: operations.Flatten) -> operations.Operation:
         return self.visit(operation.x)
@@ -199,7 +252,9 @@ class MLPTransformer(OperationTransformer):
 
     def visit_Input(self, operation: operations.Input) -> operations.Input:
         assert abs(operation.shape[0]) == 1
-        return operations.Input((1, np.product(operation.shape[1:])), operation.dtype)
+        return operations.Input(
+            (1, int(np.product(operation.shape[1:]))), operation.dtype
+        )
 
 
 __all__ = ["MLPTransformer"]

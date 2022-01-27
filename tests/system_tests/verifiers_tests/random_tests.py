@@ -36,7 +36,8 @@ VERIFIERS = {
 
 
 @unittest.skipIf(
-    sum(v.is_installed() for v in VERIFIERS.values()) < 2, "Not enough verifiers installed"
+    sum(v.is_installed() for v in VERIFIERS.values()) < 2,
+    "Not enough verifiers installed",
 )
 class RandomTests(unittest.TestCase):
     def setUp(self):
@@ -239,7 +240,7 @@ class RandomTests(unittest.TestCase):
             for i in range(RUNS_PER_PROP):
                 os.environ["SEED"] = str(i)
                 results = []
-                for name, verifier in verifiers.items():
+                for name, verifier in VERIFIERS.items():
                     if not verifier.is_installed():
                         continue
                     self.reset_property_context()

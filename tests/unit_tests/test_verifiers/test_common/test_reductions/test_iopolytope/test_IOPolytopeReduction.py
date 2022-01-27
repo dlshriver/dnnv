@@ -36,7 +36,7 @@ def test_simple_property():
     reduction = IOPolytopeReduction()
 
     phi = Exists(Symbol("x"), Network("N")(Symbol("x")) > Constant(0))
-    input_op = operations.Input((1,), np.dtype(np.float64))
+    input_op = operations.Input((1, 1), np.dtype(np.float64))
     output_op = operations.Add(input_op, operations.Mul(np.float64(-2), input_op))
     op_graph = OperationGraph([output_op])
     phi.concretize(N=op_graph)
