@@ -5,10 +5,10 @@ Adding a New Verifier
 As an example, the implementation for the planet verifier can be seen
 `here <https://github.com/dlshriver/DNNV/tree/main/dnnv/verifiers/planet>`_.
 
-In general a verifier will subclass the `Verifier` base class 
+In general a verifier will subclass the :py:class:`Verifier` base class 
 and implement at least the methods 
-`build_inputs(self, prop)` 
-and `parse_results(self, prop, results)`.
+``build_inputs(self, prop)``
+and ``parse_results(self, prop, results)``.
 When verifying a property, the base verifier implementation simplifies the network,
 and reduces the property to a set of properties with 
 hyper-rectangles in the input space
