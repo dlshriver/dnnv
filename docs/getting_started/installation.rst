@@ -6,26 +6,30 @@ Installation
 We provide several installation options for DNNV.
 We recommend using pip for general usage.
 
-From Pip
+With Pip
 --------
 
 Requirements:
 
-* Python 3.7+
+* Python 3.7, 3.8, or 3.9
 
-To install the latest stable version of DNNV using pip, run::
+To install the latest released version of DNNV using pip, run::
 
   pip install dnnv
 
+To install the latest and greatest version of DNNV using pip, run::
 
-From Docker
+  pip install git+https://github.com/dlshriver/dnnv.git@develop
+
+
+With Docker
 -----------
 
 Requirements:
 
 * `Docker`_
 
-To download and use the latest DNNV docker image, run::
+To download and use the latest released version of DNNV in a docker image, run::
 
   docker pull dlshriver/dnnv:latest
   docker run --rm -it dlshriver/dnnv:latest
@@ -37,13 +41,24 @@ To use a specific version of DNNV, run::
 
 Where ``X.X.X`` is replaced by the desired version of DNNV.
 
+To use the latest development version of DNNV in a docker image, 
+specify the ``develop`` tag::
+
+  docker pull dlshriver/dnnv:develop
+  docker run --rm -it dlshriver/dnnv:develop
+
+The development version does not come with any verifiers pre-installed.
+These can be installed using the ``dnnv_manage``, 
+either in a custom Dockerfile or through an interactive prompt.
+
 
 From Source
 -----------
 
 Requirements:
 
-* Python 3.7+
+* Python 3.7 or 3.8
+* Git
 
 Installing DNNV from source is primarily recommended for 
 development of DNNV itself. This requires Python 3.7 or above,
@@ -52,7 +67,7 @@ separately (e.g., ``sudo apt-get install python3-venv``).
 
 To clone the source code, run::
 
-  git clone https://github.com/dlshriver/DNNV.git
+  git clone https://github.com/dlshriver/dnnv.git
   cd DNNV
 
 To create a python virtual environment, and install required

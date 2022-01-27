@@ -9,40 +9,46 @@ DNNV
 DNNV is a framework for verifying deep neural networks (DNN).
 DNN verification takes in a neural network, and a property over
 that network, and checks whether the property is true or false.
-One common DNN property is local robustness, which specifies that
-inputs near a given input, will be classified similarly to that
-given input.
-
 DNNV standardizes the network and property input formats to enable
 multiple verification tools to run on a single network and property.
 This facilitates both verifier comparison, and artifact re-use.
 
+
 .. toctree::
    :maxdepth: 1
    :caption: Getting Started
+   :glob:
 
    getting_started/installation
-   getting_started/basic_usage
-   getting_started/examples
+   getting_started/*
 
 .. toctree::
    :maxdepth: 1
-   :caption: Usage
+   :caption: DNNP
+   :glob:
 
-   usage/specifying_properties
+   dnnp/*
 
 .. toctree::
    :maxdepth: 1
    :caption: Advanced
+   :glob:
 
-   advanced/property_reduction
-   advanced/dnn_simplification
+   advanced/*
 
 .. toctree::
    :maxdepth: 1
    :caption: Developers
+   :glob:
 
-   developers/new_verifier
+   developers/*
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Publications
+   
+   publications
+
 
 .. Indices and tables
 .. ==================

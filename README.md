@@ -8,7 +8,7 @@ For detailed instructions on installing and using DNNV, see our [documentation](
 
 ### Installation
 
-DNNV requires python3.7 or python3.8, and has only been tested on linux. To install the latest stable version run:
+DNNV requires python >=3.7,<3.10, and has been tested on linux. To install the latest stable version run:
 
 ```bash
 $ pip install dnnv
@@ -29,8 +29,6 @@ $ dnnv_manage install reluplex planet mipverify neurify eran bab marabou nnenum 
 ```
 
 *Several verifiers make use of the [Gurobi solver](https://www.gurobi.com/).* This should be installed automatically, but requires a license to be manually activated and available on the host machine. Academic licenses can be obtained for free from the [Gurobi website](https://user.gurobi.com/download/licenses/free-academic).
-
-**May 30, 2021**: The current version of nnenum can return errors for some problems, as reported [here](https://github.com/stanleybak/nnenum/issues/3), which will result in an `NnenumError(result:error)` result from DNNV. This can sometimes be avoided with the option `--nnenum.num_processes=1`, but this is not a general fix for the issue.
 
 #### Source Installation
 
@@ -73,19 +71,9 @@ $ docker run --rm -it dlshriver/dnnv
 (.venv) dnnv@hostname:~$ dnnv -h
 ```
 
-#### Full Installation Script
-
-DNNV, with all supported verifiers can be installed using a provided installation script. We have tested this script on a fresh Ubuntu 20.04 system. **WARNING: This will install system packages. We recommend this only be run in a VM.**
-
-```
-$ wget https://raw.githubusercontent.com/dlshriver/DNNV/CAV2021/scripts/install_artifact.sh
-$ chmod u+x install_artifact.sh
-$ ./install_artifact.sh
-```
-
 ### Usage
 
-Properties are specified in our property DSL, extended from Python. A property specification can import python modules, and define variables. The only required component is the property expression, which must appear at the end of the file. An example of a local robustness property is shown below.
+Properties are specified in our property Python-embedded DSL, [DNNP](https://dnnv.readthedocs.io/en/latest/usage/specifying_properties.html). A property specification can import python modules, and define variables. The only required component is the property expression, which must appear at the end of the file. An example of a local robustness property is shown below.
 
 ```python
 from dnnv.properties import *
@@ -106,22 +94,21 @@ Forall(
 To check whether property holds for some network using the ERAN verifier, run:
 
 ```bash
-$ dnnv property.prop --network N network.onnx --eran
+$ dnnv property.dnnp --network N network.onnx --eran
 ```
 
 Additionally, if the property defines parameters, using the `Parameter` keyword, they can be specified on the command line using the option `--prop.PARAMETER_NAME`, where `PARAMETER_NAME` is the name of the parameter. For the property defined above, a value for `epsilon` can be provided with a command line option as follows:
 
 ```bash
-$ dnnv property.prop --network N network.onnx --eran --prop.epsilon=2.0
+$ dnnv property.dnnp --network N network.onnx --eran --prop.epsilon=2.0
 ```
 
 To save any counter-example found by the verifier, use the option `--save-violation /path/to/array.npy` when running DNNV. This will save any violation found as a numpy array at the path specified, which is useful for viewing counter-examples to properties and enables additional debugging and analysis later.
 
-### Examples
+### Example Problems
 
-A set of example networks and properties that can be run with DNNV are available [here](http://cs.virginia.edu/~dls2fc/eranmnist_benchmark.tar.gz).
-
-We also provide the [ACAS Xu benchmark](http://cs.virginia.edu/~dls2fc/acasxu_benchmark.tar.gz) in DNNP and ONNX format, along with a run script to run DNNV on all of the problems in the benchmark.
+We have made several DNN verification benchmarks available in DNNP+ONNX format in [dlshriver/dnnv-benchmarks](https://github.com/dlshriver/dnnv-benchmarks).
+This repo includes the [ACAS Xu](https://github.com/dlshriver/dnnv-benchmarks/tree/main/benchmarks/ACAS_Xu) benchmark, ready to run with DNNV!
 
 ## Acknowledgements
 
