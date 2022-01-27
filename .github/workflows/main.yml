@@ -8,17 +8,17 @@ on:
   push:
     branches: [main, develop]
     paths:
-    - ".github/*"
-    - "dnnv/*"
-    - "tests/*"
+    - ".github/**"
+    - "dnnv/**"
+    - "tests/**"
     - "pyproject.toml"
     - "requirements.txt"
   pull_request:
     branches: [main, develop]
     paths:
-    - ".github/*"
-    - "dnnv/*"
-    - "tests/*"
+    - ".github/**"
+    - "dnnv/**"
+    - "tests/**"
     - "pyproject.toml"
     - "requirements.txt"
 
@@ -44,7 +44,7 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      
+
       - name: Cache Dependencies
         uses: actions/cache@v2
         with:
