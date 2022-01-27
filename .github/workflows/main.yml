@@ -7,8 +7,20 @@ on:
   # Triggers the workflow on push or pull request events but only for the main branch
   push:
     branches: [main, develop]
+    paths:
+    - ".github/*"
+    - "dnnv/*"
+    - "tests/*"
+    - "pyproject.toml"
+    - "requirements.txt"
   pull_request:
     branches: [main, develop]
+    paths:
+    - ".github/*"
+    - "dnnv/*"
+    - "tests/*"
+    - "pyproject.toml"
+    - "requirements.txt"
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -21,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.7, 3.8]
+        python-version: [3.7, 3.8, 3.9]
 
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
@@ -32,6 +44,12 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+      
+      - name: Cache Dependencies
+        uses: actions/cache@v2
+        with:
+          key: dnnv-cache
+          path: ~/.cache/dnnv
 
       - name: Install DNNV
         run: |
