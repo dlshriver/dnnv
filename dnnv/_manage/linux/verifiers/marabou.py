@@ -102,7 +102,7 @@ class MarabouInstaller(Installer):
             "python -m venv marabou",
             ". marabou/bin/activate",
             "pip install --upgrade pip",
-            'pip install "numpy>=1.19,<1.20" "onnx>=1.8,<1.9" "onnxruntime>=1.7,<1.8"',
+            'pip install "numpy>=1.19,<1.22" "onnx>=1.8,<1.11" "onnxruntime>=1.7,<1.11"',
             f"cd {cache_dir}",
             "rm -rf Marabou",
             "git clone https://github.com/NeuralNetworkVerification/Marabou.git",
