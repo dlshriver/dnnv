@@ -2,12 +2,24 @@ import numpy as np
 import tempfile
 
 from dnnv.verifiers.common.base import Parameter, Verifier
+from dnnv.verifiers.common.reductions import (
+    IOPolytopeReduction,
+    HalfspacePolytope,
+    HyperRectangle,
+)
 from dnnv.verifiers.common.results import SAT, UNSAT, UNKNOWN
+from functools import partial
 
 from .errors import ERANError, ERANTranslatorError
 
 
 class ERAN(Verifier):
+    reduction = partial(
+        IOPolytopeReduction,
+        HyperRectangle,
+        HalfspacePolytope,
+        require_linear_network=False,
+    )
     translator_error = ERANTranslatorError
     verifier_error = ERANError
     parameters = {

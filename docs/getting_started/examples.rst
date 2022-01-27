@@ -5,13 +5,10 @@ In this section, we will go over several examples of properties,
 and how to check them on a network. We will also discuss the
 basics of the property DSL.
 
-We also provide several example networks and properties
-in an external archive,
-`available here <http://cs.virginia.edu/~dls2fc/eranmnist_benchmark.tar.gz>`_.
-These networks and properties are from the benchmark of the `ERAN`_ verifier,
-and are converted to the ONNX and property DSL formats required by DNNV.
-
-.. _ERAN: https://github.com/eth-sri/eran
+We have made several DNN verification benchmarks available in DNNP and ONNX formats 
+in `dlshriver/dnnv-benchmarks`_.
+This benchmark repository includes both `ERAN-MNIST`_ and the `ACAS Xu`_ benchmark, 
+ready to run with DNNV!
 
 
 Local Robustness
@@ -52,11 +49,11 @@ This property can be specified in our DSL as follows:
 ACAS Xu
 -------
 
-Properties other than local robustness can also be specified in
-the DNNV property DSL. For example, the properties for the ACAS Xu
+Properties other than local robustness can also be specified in DNNP. 
+For example, the properties for the ACAS Xu
 aircraft collision avoidance network (as introduced in 
-`this work <https://arxiv.org/pdf/1702.01135.pdf>`_) can easily be
-encoded.
+the evaluation of `Reluplex <https://arxiv.org/pdf/1702.01135.pdf>`_) 
+can easily be encoded in DNNP.
 
 Here we write the specification for ACAS Xu Property :math:`\phi_3`.
 The specification states that if an intruding aircraft is directly
@@ -89,3 +86,7 @@ network input, ``x``.
   Forall(
       x, Implies(x_min_normalized <= x <= x_max_normalized, argmin(N(x)) != 0),
   )
+
+.. _dlshriver/dnnv-benchmarks: https://github.com/dlshriver/dnnv-benchmarks
+.. _ERAN-MNIST: https://github.com/dlshriver/dnnv-benchmarks/tree/main/benchmarks/ERAN-MNIST
+.. _ACAS Xu: https://github.com/dlshriver/dnnv-benchmarks/tree/main/benchmarks/ACAS_Xu

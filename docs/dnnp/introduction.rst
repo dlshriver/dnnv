@@ -1,18 +1,17 @@
-Specifying Properties
-=====================
+Introduction to DNNP
+====================
 
 A property specification defines the desired behavior of a
-DNN in a formal language. DNNV uses a custom DSL for writing
-property specifications, based on the Python programming
-language, which we call DNNP. 
+DNN in a formal language. DNNV uses a custom Python-embedded DSL 
+for writing property specifications, which we call DNNP. 
 In this section we will go over this language in
-detail and describe how properties can be specified in this DSL.
+detail and describe how properties can be specified in DNNP.
 To see some examples of common properties specified in this
 language, check :doc:`here <../getting_started/examples>`).
 
-Because the property DSL extends from Python, it should support
+Because DNNP extends from Python, it should support
 execution of arbitrary Python code. However, DNNV is still
-of a work-in-progress, so some expressions (such as star expressions)
+a work-in-progress, so some expressions (such as star expressions)
 are not yet supported by our property parser. We are still working to
 fully support all Python expressions, but the current version
 supports the most common use cases, and can handle all of the DNN

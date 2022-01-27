@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 import numpy as np
-import operator
 
 from collections import defaultdict
-from functools import reduce
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Tuple
 
 from .dnf import DnfTransformer
 from .substitute_calls import SubstituteCalls

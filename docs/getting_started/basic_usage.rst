@@ -14,7 +14,7 @@ option will list the available options:
 
 .. code-block:: console
 
-  $ python -m dnnv -h
+  $ dnnv -h
   usage: dnnv [-h] [-V] [--seed SEED] [-v | -q] [-N NAME NETWORK] 
             [--save-violation PATH] [--vnnlib] [--bab]
             [--bab.reluify_maxpools RELUIFY_MAXPOOLS]
@@ -92,11 +92,12 @@ option will list the available options:
     --verinet.no_split NO_SPLIT
                           Whether or not to do splitting.
 
-DNNV requires a network and property be specified, and accepts
-an optional list of verifiers to be run to check the network and
-property.
-Currently, verifiers are run sequentially, in the order that they
-are specified on the command line.
+Only a single verifier can be specified.
+If a network is specified without a property 
+(i.e., ``dnnv --network N /path/to/model.onnx``),
+then DNNV will print a brief description of the network.
+This can be useful for understanding the structure of the network
+to be verified.
 
 
 Running DNNV
@@ -104,67 +105,71 @@ Running DNNV
 
 DNNV can be used to check whether a given property holds
 for a network. It accepts networks specified in the ONNX format,
-and properties specified in our property DSL (which is explained
-in more detail :doc:`here <../usage/specifying_properties>`).
+and properties specified in our property DSL, DNNP, (explained
+in more detail :doc:`here <../dnnp/introduction>`).
 Networks can be converted to ONNX format by using native export
 utilities, such as ``torch.onnx.export`` in `PyTorch`_, or by
 using an external conversion tool, such as `MMDNN`_.
 
-We provide several example networks and properties,
-`available here <http://cs.virginia.edu/~dls2fc/eran_benchmark.tar.gz>`_.
-These networks and properties are from the benchmark of the `ERAN`_ verifier,
-and are converted to the ONNX and property DSL formats required by DNNV.
+We provide several neural network verification benchmarks as example problems,
+`available here <https://github.com/dlshriver/dnnv-benchmarks>`_.
+
+One of these benchmarks, 
+`ERAN-MNIST <https://github.com/dlshriver/dnnv-benchmarks/tree/main/benchmarks/ERAN-MNIST>`_, 
+is from the evaluation of the `ERAN`_ verifier,
+and have been converted to the DNNP and ONNX formats required by DNNV.
 
 To check a property for a network, using the `ERAN`_ verifier, DNNV
 can be run as::
 
-  python -m dnnv --eran --network N onnx/pyt/ffnnRELU__Point_6_500.onnx properties/pyt_property_7.py
+  dnnv --eran --network N onnx/pyt/ffnnRELU__Point_6_500.onnx properties/pyt/property_7.py
 
-This will check whether ``pyt_property_7``---a local robustness
-property---holds for the network ``ffnnRELU__Point_6_500.onnx``---a 6 layer,
+This will check whether ``properties/pyt/property_7.py``, a local robustness
+property, holds for the network ``ffnnRELU__Point_6_500.onnx``, a 6 layer,
 3000 neuron fully connected network.
 
-Another common option is the ``--save-violation /path/to/array.npy`` which 
-will save any violation found by a verifier as a numpy array at the path
-specified. This can be useful for viewing counter-examples to properties
-and enables performing additional debugging and analysis later.
-
 DNNV will first report a basic description of the network, followed
-by the property to be verified. It will then run each of the specified
-verifiers and report the verification result and the total time to
+by the property to be verified. It will then run the specified
+verifier and report the verification result and the total time to
 translate and verify the property. The output of the property check
 above should resemble the output below:
 
 .. code-block:: console
 
-  $ python -m dnnv --eran --network N onnx/pyt/ffnnRELU__Point_6_500.onnx properties/pyt_property_7.py
-  Input_0                         : Input([ 1  1 28 28], dtype=float32)
-  Reshape_0                       : Reshape(Input_0, ndarray_0)
-  Gemm_0                          : Gemm(Reshape_0, ndarray_1, ndarray_2)
-  Reshape_1                       : Reshape(Gemm_0, ndarray_3)
-  Transpose_0                     : Transpose(Reshape_1, permutation=[0 2 3 1])
-  Reshape_2                       : Reshape(Transpose_0, ndarray_4)
-  Gemm_1                          : Gemm(Reshape_2, ndarray_5, ndarray_6)
-  Relu_0                          : Relu(Gemm_1)
-  Gemm_2                          : Gemm(Relu_0, ndarray_7, ndarray_8)
-  Relu_1                          : Relu(Gemm_2)
-  Gemm_3                          : Gemm(Relu_1, ndarray_9, ndarray_10)
-  Relu_2                          : Relu(Gemm_3)
-  Gemm_4                          : Gemm(Relu_2, ndarray_11, ndarray_12)
-  Relu_3                          : Relu(Gemm_4)
-  Gemm_5                          : Gemm(Relu_3, ndarray_13, ndarray_14)
-  Relu_4                          : Relu(Gemm_5)
-  Gemm_6                          : Gemm(Relu_4, ndarray_15, ndarray_16)
-  Relu_5                          : Relu(Gemm_6)
-  Gemm_7                          : Gemm(Relu_5, ndarray_17, ndarray_18)
+  $ dnnv --eran --network N onnx/pyt/ffnnRELU__Point_6_500.onnx properties/pyt/property_7.py
   Verifying property:
-  Forall(x_, (((x_ < 3.2457*Image("properties/image7.npy")-0.41637) & (3.2457*Image("properties/image7.npy")-0.432056 < x_)) ==> (numpy.argmax(N[4:](x_)) == numpy.argmax(N[4:](3.2457*Image("properties/image7.npy")-0.424213)))))
+  Forall(x_, ((([[[-0.008 -0.008 ... -0.008 -0.008] [-0.008 -0.008 ... -0.008 -0.008] ... [-0.008 -0.008 ... -0.008 -0.008] [-0.008 -0.008 ... -0.008 -0.008]]] < (0.1307 + (0.3081 * x_))) & ((0.1307 + (0.3081 * x_)) < [[[0.008 0.008 ... 0.008 0.008] [0.008 0.008 ... 0.008 0.008] ... [0.008 0.008 ... 0.008 0.008] [0.008 0.008 ... 0.008 0.008]]]) & (0 < (0.1307 + (0.3081 * x_))) & ((0.1307 + (0.3081 * x_)) < 1)) ==> (numpy.argmax(N(x_)) == 9)))
+
+  Verifying Networks:
+  N:
+  Input_0                         : Input([ 1  1 28 28], dtype=float32)
+  Transpose_0                     : Transpose(Input_0, permutation=[0 2 3 1])
+  Reshape_0                       : Reshape(Transpose_0, [ -1 784])
+  Gemm_0                          : Gemm(Reshape_0, ndarray(shape=(500, 784)), ndarray(shape=(500,)), transpose_a=0, transpose_b=1, alpha=1.000000, beta=1.000000)
+  Relu_0                          : Relu(Gemm_0)
+  Gemm_1                          : Gemm(Relu_0, ndarray(shape=(500, 500)), ndarray(shape=(500,)), transpose_a=0, transpose_b=1, alpha=1.000000, beta=1.000000)
+  Relu_1                          : Relu(Gemm_1)
+  Gemm_2                          : Gemm(Relu_1, ndarray(shape=(500, 500)), ndarray(shape=(500,)), transpose_a=0, transpose_b=1, alpha=1.000000, beta=1.000000)
+  Relu_2                          : Relu(Gemm_2)
+  Gemm_3                          : Gemm(Relu_2, ndarray(shape=(500, 500)), ndarray(shape=(500,)), transpose_a=0, transpose_b=1, alpha=1.000000, beta=1.000000)
+  Relu_3                          : Relu(Gemm_3)
+  Gemm_4                          : Gemm(Relu_3, ndarray(shape=(500, 500)), ndarray(shape=(500,)), transpose_a=0, transpose_b=1, alpha=1.000000, beta=1.000000)
+  Relu_4                          : Relu(Gemm_4)
+  Gemm_5                          : Gemm(Relu_4, ndarray(shape=(500, 500)), ndarray(shape=(500,)), transpose_a=0, transpose_b=1, alpha=1.000000, beta=1.000000)
+  Relu_5                          : Relu(Gemm_5)
+  Gemm_6                          : Gemm(Relu_5, ndarray(shape=(10, 500)), ndarray(shape=(10,)), transpose_a=0, transpose_b=1, alpha=1.000000, beta=1.000000)
 
   dnnv.verifiers.eran
     result: unsat
-    time: 2.4884
+    time: 61.0565
+
+Another common option is the ``--save-violation /path/to/array.npy`` which 
+will save any violation found by a verifier as a `numpy`_ array at the path
+specified. This can be useful for viewing counter-examples to properties
+and enables performing additional debugging and analysis later.
 
 
-.. _MMDNN: https://github.com/microsoft/MMdnn
-.. _PyTorch: https://pytorch.org/
 .. _ERAN: https://github.com/eth-sri/eran
+.. _MMDNN: https://github.com/microsoft/MMdnn
+.. _numpy: https://numpy.org/
+.. _PyTorch: https://pytorch.org/

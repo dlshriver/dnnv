@@ -12,7 +12,12 @@ from .utils import to_rlv_file
 
 
 class Planet(Verifier):
-    reduction = partial(IOPolytopeReduction, HalfspacePolytope, HalfspacePolytope)
+    reduction = partial(
+        IOPolytopeReduction,
+        HalfspacePolytope,
+        HalfspacePolytope,
+        require_linear_network=False,
+    )
     translator_error = PlanetTranslatorError
     verifier_error = PlanetError
 
