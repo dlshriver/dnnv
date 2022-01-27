@@ -3,7 +3,7 @@ Adding a New Reduction
 
 *TODO.* Sorry, this page is still in development.
 An example reduction can be seen
-`here <https://github.com/dlshriver/DNNV/tree/develop/dnnv/verifiers/common/reductions/iopolytope>`_.
+`here <https://github.com/dlshriver/dnnv/tree/develop/dnnv/verifiers/common/reductions/iopolytope>`_.
 
 In general a reduction will subclass the :py:class:`Reduction` base class 
 and implement the method

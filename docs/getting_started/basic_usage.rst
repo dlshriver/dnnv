@@ -111,10 +111,13 @@ Networks can be converted to ONNX format by using native export
 utilities, such as ``torch.onnx.export`` in `PyTorch`_, or by
 using an external conversion tool, such as `MMDNN`_.
 
-We provide several example networks and properties,
-`available here <http://cs.virginia.edu/~dls2fc/eran_benchmark.tar.gz>`_.
-These networks and properties are from the benchmark of the `ERAN`_ verifier,
-and are converted to the ONNX and property DSL formats required by DNNV.
+We provide several neural network verification benchmarks as example problems,
+`available here <https://github.com/dlshriver/dnnv-benchmarks>`_.
+
+One of these benchmarks, 
+`ERAN-MNIST <https://github.com/dlshriver/dnnv-benchmarks/tree/main/benchmarks/ERAN-MNIST>`_, 
+is from the evaluation of the `ERAN`_ verifier,
+and have been converted to the DNNP and ONNX formats required by DNNV.
 
 To check a property for a network, using the `ERAN`_ verifier, DNNV
 can be run as::

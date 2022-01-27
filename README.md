@@ -8,7 +8,7 @@ For detailed instructions on installing and using DNNV, see our [documentation](
 
 ### Installation
 
-DNNV requires python3.7 or python3.8, and has only been tested on linux. To install the latest stable version run:
+DNNV requires python >=3.7,<3.10, and has been tested on linux. To install the latest stable version run:
 
 ```bash
 $ pip install dnnv
@@ -105,11 +105,10 @@ $ dnnv property.dnnp --network N network.onnx --eran --prop.epsilon=2.0
 
 To save any counter-example found by the verifier, use the option `--save-violation /path/to/array.npy` when running DNNV. This will save any violation found as a numpy array at the path specified, which is useful for viewing counter-examples to properties and enables additional debugging and analysis later.
 
-### Examples
+### Example Problems
 
-A set of example networks and properties that can be run with DNNV are available [here](http://cs.virginia.edu/~dls2fc/eranmnist_benchmark.tar.gz).
-
-We also provide the [ACAS Xu benchmark](http://cs.virginia.edu/~dls2fc/acasxu_benchmark.tar.gz) in DNNP and ONNX format, along with a run script to run DNNV on all of the problems in the benchmark.
+We have made several DNN verification benchmarks available in DNNP+ONNX format in [dlshriver/dnnv-benchmarks](https://github.com/dlshriver/dnnv-benchmarks).
+This repo includes the [ACAS Xu](https://github.com/dlshriver/dnnv-benchmarks/tree/main/benchmarks/ACAS_Xu) benchmark, ready to run with DNNV!
 
 ## Acknowledgements
 

@@ -9,15 +9,15 @@ to help keep our community approachable and respectable.
 
 If you have a question, please don't hesitate to ask!
 We only ask that you not file an issue to ask a question. 
-We have an official [discussion board](https://github.com/dlshriver/DNNV/discussions) on GitHub where the community and DNNV developers can chime in with helpful advice on any questions.
+We have an official [discussion board](https://github.com/dlshriver/dnnv/discussions) on GitHub where the community and DNNV developers can chime in with helpful advice on any questions.
 
 
 ## How to Contribute
 
 ### Report a Bug
 
-Ensure the bug was not already reported by searching on GitHub under [Issues](https://github.com/dlshriver/DNNV/issues).
-If you're unable to find an open issue addressing the problem, [open a new one](https://github.com/dlshriver/DNNV/issues/new). 
+Ensure the bug was not already reported by searching on GitHub under [Issues](https://github.com/dlshriver/dnnv/issues).
+If you're unable to find an open issue addressing the problem, [open a new one](https://github.com/dlshriver/dnnv/issues/new). 
 Be sure to include a **title** and **clear description** with as much relevant information as possible, as well as a **code sample** or an **executable test case** demonstrating the issue.
 
 ### Submit a Patch

@@ -11,13 +11,13 @@ With Pip
 
 Requirements:
 
-* Python 3.7 or 3.8
+* Python 3.7, 3.8, or 3.9
 
 To install the latest released version of DNNV using pip, run::
 
   pip install dnnv
 
-To install the latest version of DNNV using pip, run::
+To install the latest and greatest version of DNNV using pip, run::
 
   pip install git+https://github.com/dlshriver/dnnv.git@develop
 
@@ -67,7 +67,7 @@ separately (e.g., ``sudo apt-get install python3-venv``).
 
 To clone the source code, run::
 
-  git clone https://github.com/dlshriver/DNNV.git
+  git clone https://github.com/dlshriver/dnnv.git
   cd DNNV
 
 To create a python virtual environment, and install required

@@ -56,7 +56,7 @@ docs = ["sphinx", "furo"]
 
 [project.urls]
 Documentation = "https://dnnv.readthedocs.io/en/latest/"
-Source = "https://github.com/dlshriver/DNNV"
+Source = "https://github.com/dlshriver/dnnv"
 
 [project.scripts]
 dnnv = "dnnv.__main__:_main"
