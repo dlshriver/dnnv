@@ -78,7 +78,7 @@ if __name__ == "__main__":
 
 class MarabouInstaller(Installer):
     def run(self, env: Environment, dependency: Dependency):
-        commit_hash = "b0e29fb43b6722dfe9b5a90cc1353990aa732327"
+        commit_hash = "c179c5db1af2cb66bc45c4ed7fbb7a1897e67233"
 
         cache_dir = env.cache_dir / f"marabou-{commit_hash}"
         cache_dir.mkdir(exist_ok=True, parents=True)
@@ -140,7 +140,7 @@ def install(env: Environment):
                 ProgramDependency("curl", min_version="7.16.0"),
                 LibraryDependency(
                     "libopenblas",
-                    installer=OpenBLASInstaller("0.3.9"),
+                    installer=OpenBLASInstaller("0.3.19"),
                     allow_from_system=False,
                 ),
                 ProgramDependency(
