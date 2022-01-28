@@ -92,6 +92,7 @@ class GurobiInstaller(Installer):
             f"curl -o {identifier}.tar.gz -L https://packages.gurobi.com/{major_version}.{minor_version}/gurobi{self.version}_linux64.tar.gz",
             f"tar xf {identifier}.tar.gz",
             f"cp -r gurobi{nondot_version} {installation_path}/gurobi{nondot_version}",
+            f"ln -s {installation_path}/gurobi{nondot_version}/linux64/bin/grbgetkey {env.env_dir}/bin/grbgetkey",
         ]
         install_script = "; ".join(commands)
         proc = sp.run(install_script, shell=True, env=env.vars())

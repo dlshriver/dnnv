@@ -151,6 +151,8 @@ class ELINAInstaller(Installer):
             # f"cp -r {cdd_path}/lib .",
             f"cp -r {cache_dir}/ELINA .",
             f"cp -r {cdd_prefix.parent.parent}/lib ELINA/",
+            f"cp -r {libmpfr_path.parent} ELINA/",
+            f"cp -r {libgmp_path.parent} ELINA/",
         ]
         install_script = "; ".join(commands)
         proc = sp.run(install_script, shell=True, env=envvars)

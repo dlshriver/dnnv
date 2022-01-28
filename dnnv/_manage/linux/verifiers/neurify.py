@@ -36,7 +36,7 @@ class NeurifyInstaller(Installer):
             "cd Neurify",
             f"git checkout {commit_hash}",
             "cd generic",
-            f'make LDFLAGS="-static {library_paths} -lopenblas -lpthread -lm" INCLUDE_FLAGS="{include_paths}"',
+            f'make LDFLAGS="-no-pie {library_paths} -Wl,-Bstatic -lopenblas -llpsolve55 -Wl,-Bdynamic -lpthread -lm -ldl" LPFLAGS="" INCLUDE_FLAGS="{include_paths}"',
             f"cp src/neurify {installation_path}",
         ]
         install_script = "; ".join(commands)
