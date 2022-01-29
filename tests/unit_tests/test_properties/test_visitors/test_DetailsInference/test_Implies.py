@@ -52,7 +52,7 @@ def test_Implies_constants():
 def test_Implies_arrays():
     inference = DetailsInference()
 
-    a, b = Constant(np.array([[1, 0, 0]], dtype=np.bool)), Constant(
+    a, b = Constant(np.array([[1, 0, 0]], dtype=bool)), Constant(
         np.random.rand(1, 3) > 0.5
     )
     expr = Implies(a, b)
