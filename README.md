@@ -75,7 +75,7 @@ $ docker run --rm -it dlshriver/dnnv
 
 ### Usage
 
-Properties are specified in our property Python-embedded DSL, [DNNP](https://dnnv.readthedocs.io/en/latest/usage/specifying_properties.html). A property specification can import python modules, and define variables. The only required component is the property expression, which must appear at the end of the file. An example of a local robustness property is shown below.
+Properties are specified in our Python-embedded DSL, [DNNP](https://dnnv.readthedocs.io/en/latest/usage/specifying_properties.html). A property specification can import python modules, and define variables. The only required component is the property expression, which must appear at the end of the file. An example of a local robustness property is shown below.
 
 ```python
 from dnnv.properties import *
