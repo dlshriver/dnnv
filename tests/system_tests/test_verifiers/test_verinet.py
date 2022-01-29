@@ -11,6 +11,10 @@ class VeriNetVerifierTests(VerifierTests, unittest.TestCase):
         self.verifier = VeriNet
         self.is_complete = False
 
+    @unittest.skip("VeriNet is too slow on this problem.")
+    def test_a_gt_b_output_greater_than_x_unsat(self):
+        super().test_a_gt_b_output_greater_than_x_unsat()
+
 
 if __name__ == "__main__":
     unittest.main()
