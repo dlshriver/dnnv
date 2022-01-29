@@ -5,16 +5,21 @@ from typing import Optional, Set, Tuple
 from .base import GenericExpressionTransformer
 from .lift_ifthenelse import LiftIfThenElse
 from .remove_ifthenelse import RemoveIfThenElse
+from .substitute_calls import SubstituteCalls
 from ..expressions import *
+from ..visitors.inference import DetailsInference
 
 
 class CnfTransformer(GenericExpressionTransformer):
     def visit(self, expression: Expression) -> Expression:
         if self._top_level:
             expression = expression.propagate_constants()
+            DetailsInference().visit(expression)
+            expression = SubstituteCalls(form="cnf").visit(expression)
+            expression = expression.propagate_constants()
             expression = LiftIfThenElse().visit(expression)
             expression = expression.propagate_constants()
-            expression = RemoveIfThenElse().visit(expression)
+            expression = RemoveIfThenElse(form="cnf").visit(expression)
             expression = expression.propagate_constants()
             if not isinstance(expression, ArithmeticExpression) or isinstance(
                 expression, Symbol

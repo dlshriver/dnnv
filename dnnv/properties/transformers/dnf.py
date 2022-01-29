@@ -5,6 +5,7 @@ from typing import Optional, Set, Tuple
 from .base import GenericExpressionTransformer
 from .lift_ifthenelse import LiftIfThenElse
 from .remove_ifthenelse import RemoveIfThenElse
+from .substitute_calls import SubstituteCalls
 from ..expressions import *
 from ..visitors.inference import DetailsInference
 
@@ -13,6 +14,8 @@ class DnfTransformer(GenericExpressionTransformer):
     def visit(self, expression: Expression) -> Expression:
         if self._top_level:
             expression = expression.propagate_constants()
+            expression = SubstituteCalls().visit(expression)
+            expression = expression.propagate_constants()
             expression = LiftIfThenElse().visit(expression)
             expression = expression.propagate_constants()
             expression = RemoveIfThenElse().visit(expression)
@@ -20,10 +23,10 @@ class DnfTransformer(GenericExpressionTransformer):
             if not isinstance(expression, ArithmeticExpression) or isinstance(
                 expression, Symbol
             ):
-                expression = And(Or(expression))
+                expression = Or(And(expression))
             DetailsInference().visit(expression)
-        expr = super().visit(expression)
-        return expr
+        expression = super().visit(expression)
+        return expression
 
     def visit_And(self, expression: And) -> Or:
         disjunction: Optional[Or] = None
@@ -133,7 +136,8 @@ class DnfTransformer(GenericExpressionTransformer):
 
         result = ~expression.expr
         if isinstance(result, Not):
-            return ~self.visit(expression.expr)
+            # TODO : should this be an error?
+            return result
         return self.visit(result)
 
     def visit_Or(self, expression: Or) -> Or:

@@ -81,7 +81,7 @@ class Argmax(FunctionSubstitutor):
         return argcmp(lambda a, b: a >= b, A)
 
     @staticmethod
-    def substitute_Equal(a: Expression, b: Expression) -> Expression:
+    def substitute_Equal(a: Expression, b: Expression, form=None) -> Expression:
         if (
             isinstance(a, Call)
             and a.function.is_concrete
@@ -91,7 +91,7 @@ class Argmax(FunctionSubstitutor):
         return argcmp_eq(lambda x, y: x >= y, b, a)
 
     @staticmethod
-    def substitute_NotEqual(a: Expression, b: Expression) -> Expression:
+    def substitute_NotEqual(a: Expression, b: Expression, form=None) -> Expression:
         result = Argmax.substitute_Equal(a, b)
         if result is NotImplemented:
             return NotImplemented
@@ -108,7 +108,7 @@ class Argmin(FunctionSubstitutor):
         return argcmp(lambda a, b: a <= b, *args, **kwargs)
 
     @staticmethod
-    def substitute_Equal(a: Expression, b: Expression) -> Expression:
+    def substitute_Equal(a: Expression, b: Expression, form=None) -> Expression:
         if (
             isinstance(a, Call)
             and a.function.is_concrete
@@ -118,7 +118,7 @@ class Argmin(FunctionSubstitutor):
         return argcmp_eq(lambda x, y: x <= y, b, a)
 
     @staticmethod
-    def substitute_NotEqual(a: Expression, b: Expression) -> Expression:
+    def substitute_NotEqual(a: Expression, b: Expression, form=None) -> Expression:
         result = Argmin.substitute_Equal(a, b)
         if result is NotImplemented:
             return NotImplemented

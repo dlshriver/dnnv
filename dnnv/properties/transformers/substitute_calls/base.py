@@ -5,9 +5,21 @@ from dnnv.properties.expressions.base import Expression
 from ...expressions import BinaryExpression, Call
 from ..base import GenericExpressionTransformer
 from ._calls import FunctionSubstitutor
+from ...visitors import DetailsInference
 
 
 class SubstituteCalls(GenericExpressionTransformer):
+    def __init__(self, form="dnf"):
+        super().__init__()
+        # `form` provides a hint to the substitutor on how to efficiently
+        # format the substitution expression
+        self.form = form
+
+    def visit(self, expression):
+        if self._top_level:
+            DetailsInference().visit(expression)
+        return super().visit(expression)
+
     def visit_BinaryExpression(self, expression: BinaryExpression) -> BinaryExpression:
         expr_type = type(expression)
         expr1 = expression.expr1
@@ -18,7 +30,9 @@ class SubstituteCalls(GenericExpressionTransformer):
             if substitutor is not None and hasattr(
                 substitutor, binexpr_substitute_method
             ):
-                result = getattr(substitutor, binexpr_substitute_method)(expr1, expr2)
+                result = getattr(substitutor, binexpr_substitute_method)(
+                    expr1, expr2, form=self.form
+                )
                 if result is not NotImplemented:
                     return self.visit(result)
         elif isinstance(expr2, Call) and expr2.function.is_concrete:
@@ -27,7 +41,9 @@ class SubstituteCalls(GenericExpressionTransformer):
             if substitutor is not None and hasattr(
                 substitutor, binexpr_substitute_method
             ):
-                result = getattr(substitutor, binexpr_substitute_method)(expr1, expr2)
+                result = getattr(substitutor, binexpr_substitute_method)(
+                    expr1, expr2, form=self.form
+                )
                 if result is not NotImplemented:
                     return self.visit(result)
         return expr_type(self.visit(expr1), self.visit(expr2))
@@ -44,6 +60,13 @@ class SubstituteCalls(GenericExpressionTransformer):
                     return result
         expr = Call(function, args, kwargs)
         return expr
+
+    def visit_Not(self, expression):
+        form = self.form
+        self.form = "cnf" if form == "dnf" else "dnf"
+        result = super().generic_visit(expression)
+        self.form = form
+        return result
 
 
 __all__ = ["SubstituteCalls"]

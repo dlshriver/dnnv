@@ -6,7 +6,6 @@ from collections import defaultdict
 from typing import Dict, List, Tuple
 
 from .dnf import DnfTransformer
-from .substitute_calls import SubstituteCalls
 from ..expressions import *
 
 
@@ -22,13 +21,6 @@ def _extract_constants(expr: Add) -> Tuple[Add, Constant]:
 
 
 class CanonicalTransformer(DnfTransformer):
-    def visit(self, expression: Expression) -> Expression:
-        if self._top_level:
-            expression = expression.propagate_constants()
-            expression = SubstituteCalls().visit(expression)
-        expr = super().visit(expression)
-        return expr
-
     def _extract_coefficients(self, expression: Add) -> Dict[Expression, Expression]:
         coefficients = defaultdict(lambda: Constant(0))
         for expr in expression.expressions:

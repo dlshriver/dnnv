@@ -24,11 +24,15 @@ class FunctionSubstitutor:
         pass
 
     @staticmethod
-    def substitute_Equal(a: Expression, b: Expression) -> Expression:
+    def substitute_Equal(
+        a: Expression, b: Expression, form: Optional[str] = None
+    ) -> Expression:
         return NotImplemented
 
     @staticmethod
-    def substitute_NotEqual(a: Expression, b: Expression) -> Expression:
+    def substitute_NotEqual(
+        a: Expression, b: Expression, form: Optional[str] = None
+    ) -> Expression:
         return NotImplemented
 
 

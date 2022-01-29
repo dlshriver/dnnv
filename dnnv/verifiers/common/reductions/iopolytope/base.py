@@ -183,8 +183,14 @@ class HalfspacePolytope(Constraint):
             new_lb[:prev_size] = self._lower_bound
             new_ub[:prev_size] = self._upper_bound
 
+            size_diff = new_size - prev_size
+            self._A = [
+                np.hstack([a, np.zeros((1, size_diff), dtype=a.dtype)]) for a in self._A
+            ]
+
         self._lower_bound = new_lb
         self._upper_bound = new_ub
+
         return self
 
     def _update_bounds(

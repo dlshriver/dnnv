@@ -29,6 +29,8 @@ def _check_assertions(assertions: Sequence[Expression]) -> bool:
     transformer._top_level = False
 
     expr = expressions.And(*assertions)
+    if expr.is_concrete:
+        return expr.value
     result = transformer.visit(expr)
     if result.is_concrete and not result.value:
         return False
@@ -441,7 +443,7 @@ class DetailsInference(ExpressionVisitor):
         self.assertions.extend(shape_assertions)
         if not _check_assertions(type_assertions):
             raise DNNVTypeError(
-                f"Incompatible types in Implies: {self.types[expression.expr1].value} and {self.types[expression.expr1].value}"
+                f"Incompatible types in Implies: {self.types[expression.expr1].value} and {self.types[expression.expr2].value}"
             )
         self.assertions.extend(type_assertions)
 
