@@ -200,6 +200,13 @@ class Py2PropertyTransformer(ast.NodeTransformer):
         const_func = ast.Name("Constant", ast.Load(), **attributes)
         return ast.Call(const_func, [node], [], **attributes)
 
+    def visit_Subscript(self, node: ast.Subscript):
+        attributes = {"lineno": node.lineno, "col_offset": node.col_offset}
+        value = self.visit(node.value)
+        index = self.visit(node.slice)
+        subscript_func = ast.Name("Subscript", ast.Load(), **attributes)
+        return ast.Call(subscript_func, [value, index], [], **attributes)
+
     def visit_Slice(self, node: ast.Slice):
         attributes = {"lineno": 0, "col_offset": 0}
 
@@ -221,8 +228,7 @@ class Py2PropertyTransformer(ast.NodeTransformer):
 
         slice_func = ast.Name("Slice", ast.Load(), **attributes)
         new_node = ast.Call(slice_func, [start, stop, step], [], **attributes)
-        index_node = ast.Index(new_node)
-        return index_node
+        return new_node
 
     def visit_ExtSlice(self, node: ast.ExtSlice):
         dims = [
@@ -238,7 +244,15 @@ class Py2PropertyTransformer(ast.NodeTransformer):
             raise DNNPParserError(
                 "DNNP does not currently support definition of slices containing non-primitive types"
             )
-        return self.generic_visit(node)
+        attributes = {"lineno": 0, "col_offset": 0}
+        ext_slice_func = ast.Name("ExtSlice", ast.Load(), **attributes)
+        new_node = ast.Call(
+            ext_slice_func, [self.visit(d) for d in node.dims], [], **attributes
+        )
+        return new_node
+
+    def visit_Index(self, node: ast.Index):
+        return self.visit(node.value)
 
     def visit_Await(self, node: ast.Await):
         raise DNNPParserError(

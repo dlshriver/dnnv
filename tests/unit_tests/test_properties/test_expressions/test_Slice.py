@@ -61,3 +61,27 @@ def test_str():
     assert str(expr) == "0:-1:1"
     expr = Slice(0, -1, None)
     assert str(expr) == "0:-1"
+
+
+def test_ExtSlice():
+    expr = ExtSlice(Symbol("a"), Symbol("b"), Symbol("c"))
+    assert Symbol("a") in expr.expressions
+    assert Symbol("b") in expr.expressions
+    assert Symbol("c") in expr.expressions
+
+    expr = ExtSlice(Constant(0), Constant(1), Constant(2))
+    assert Constant(0) in expr.expressions
+    assert Constant(1) in expr.expressions
+    assert Constant(2) in expr.expressions
+
+
+def test_ExtSlice_value():
+    expr = ExtSlice(Symbol("a"), Symbol("b"), Symbol("c"))
+    with pytest.raises(ValueError):
+        _ = expr.value
+
+    expr = ExtSlice()
+    assert expr.value == ()
+
+    expr = ExtSlice(Constant(0), Constant(1), Constant(2))
+    assert expr.value == (0, 1, 2)

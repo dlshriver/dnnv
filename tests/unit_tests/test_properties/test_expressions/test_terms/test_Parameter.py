@@ -1,6 +1,24 @@
+from email.policy import default
 import pytest
 
 from dnnv.properties.expressions import *
+
+
+def test_Parameter():
+    p = Parameter("p1", bool)
+    assert p.name == "p1"
+    assert p.type == bool
+    assert p.default is None
+
+    p = Parameter(Constant("p2"), bool)
+    assert p.name == "p2"
+    assert p.type == bool
+    assert p.default is None
+
+    p = Parameter("p3", bool, default=True)
+    assert p.name == "p3"
+    assert p.type == bool
+    assert p.default is Constant(True)
 
 
 def test_build_identifier():
