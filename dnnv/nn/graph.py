@@ -146,13 +146,13 @@ class OperationGraph:
             raise TypeError(
                 f"Unsupported type for indexing operation graph: {type(index).__name__!r}"
             )
-        elif len(index) != 2:
+        elif len(index) > 2:
             raise TypeError(f"Unsupported indexing expression {index!r}")
         elif not isinstance(index[0], slice):
             raise TypeError(
                 f"Unsupported type for slicing indices: {type(index[0]).__name__!r}"
             )
-        elif not isinstance(index[1], int):
+        elif len(index) > 1 and not isinstance(index[1], int):
             raise TypeError(
                 f"Unsupported type for selecting operations: {type(index[1]).__name__!r}"
             )

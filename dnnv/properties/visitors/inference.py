@@ -345,6 +345,11 @@ class DetailsInference(ExpressionVisitor):
         dtype = self.types[expression.expression]
         self.set_details(expression, shape=shape, dtype=dtype)
 
+    def visit_ExtSlice(self, expression: expressions.ExtSlice):
+        for expr in expression.expressions:
+            self.visit(expr)
+        self.set_details(expression, shape=Constant(()), dtype=Constant(tuple))
+
     def visit_Forall(self, expression: expressions.Forall):
         self.visit(expression.expression)
         self.visit(expression.variable)
