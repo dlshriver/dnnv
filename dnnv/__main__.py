@@ -77,6 +77,7 @@ def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
         result, cex = verifier.verify(phi, **params)
     except errors.DNNVError as e:
         result = f"{type(e).__name__}({e})"
+        cex = None
         logger.debug("Error traceback:", exc_info=True)
     except SystemExit:
         if verifier.__module__ != "dnnv.verifiers.convert":

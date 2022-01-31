@@ -39,6 +39,11 @@ class IOPolytopeReduction(Reduction):
         self.coefs: Dict[Expression, np.ndarray] = {}
 
     def build_property(self):
+        input_lb, input_ub = self.input_constraint.as_bounds()
+        if np.any(np.isinf(input_lb) | np.isinf(input_ub)):
+            raise self.reduction_error(
+                "Unbounded inputs detected! All inputs must have upper and lower bounds."
+            )
         return IOPolytopeProperty(
             self.networks, self.input_constraint, self.output_constraint
         )

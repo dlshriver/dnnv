@@ -62,6 +62,8 @@ class IOPolytopeProperty(Property):
     def validate_counter_example(
         self, cex: np.ndarray, threshold=1e-6
     ) -> Tuple[bool, Optional[str]]:
+        if np.any(np.isnan(cex)):
+            return False, "NaN values in input."
         if not self.input_constraint.validate(cex, threshold=threshold):
             return False, "Invalid counter example found: input outside bounds."
         output = self.op_graph(cex)

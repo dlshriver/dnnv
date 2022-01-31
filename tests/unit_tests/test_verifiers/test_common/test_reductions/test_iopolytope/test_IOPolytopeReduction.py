@@ -35,7 +35,14 @@ def test_non_concrete_network():
 def test_simple_property():
     reduction = IOPolytopeReduction()
 
-    phi = Exists(Symbol("x"), Network("N")(Symbol("x")) > Constant(0))
+    phi = Exists(
+        Symbol("x"),
+        And(
+            Constant(0) <= Symbol("x"),
+            Symbol("x") <= Constant(1),
+            Network("N")(Symbol("x")) > Constant(0),
+        ),
+    )
     input_op = operations.Input((1,), np.dtype(np.float64))
     output_op = operations.Add(input_op, operations.Mul(np.float64(-2), input_op))
     op_graph = OperationGraph([output_op])
@@ -47,8 +54,8 @@ def test_simple_property():
 
     assert len(prop.networks) == 1
 
-    assert np.all(prop.input_constraint._lower_bound == np.array([-np.inf]))
-    assert np.all(prop.input_constraint._upper_bound == np.array([np.inf]))
+    assert np.all(prop.input_constraint._lower_bound == np.array([0]))
+    assert np.all(prop.input_constraint._upper_bound == np.array([1]))
 
     assert np.all(prop.output_constraint._lower_bound == np.array([np.nextafter(0, 1)]))
     assert np.all(prop.output_constraint._upper_bound == np.array([np.inf]))
