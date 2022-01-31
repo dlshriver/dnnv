@@ -70,6 +70,16 @@ class Or(LogicalExpression, AssociativeExpression):
     OPERATOR = operator.or_
     OPERATOR_SYMBOL = "|"
 
+    def __init__(self, *expr: Expression, ctx: Optional[Context] = None):
+        expr_set = set()
+        expressions = []
+        for e in expr:
+            if e in expr_set:
+                continue
+            expr_set.add(e)
+            expressions.append(e)
+        super().__init__(*expressions, ctx=ctx)
+
     def __invert__(self):
         return And(*[~expr for expr in self.expressions], ctx=self.ctx)
 
@@ -79,6 +89,16 @@ class And(LogicalExpression, AssociativeExpression):
     DOMINANT_VALUES = [False]
     OPERATOR = operator.and_
     OPERATOR_SYMBOL = "&"
+
+    def __init__(self, *expr: Expression, ctx: Optional[Context] = None):
+        expr_set = set()
+        expressions = []
+        for e in expr:
+            if e in expr_set:
+                continue
+            expr_set.add(e)
+            expressions.append(e)
+        super().__init__(*expressions, ctx=ctx)
 
     def __invert__(self):
         return Or(*[~expr for expr in self.expressions], ctx=self.ctx)
@@ -147,7 +167,7 @@ class Equal(LogicalExpression, BinaryExpression):
         return Not(self, ctx=self.ctx)
 
     def __bool__(self):
-        if self.is_concrete:
+        if self.expr1.is_concrete and self.expr2.is_concrete:
             return bool(np.all(self.expr1.value == self.expr2.value))
         return self.expr1.is_equivalent(self.expr2)
 
@@ -192,7 +212,7 @@ class NotEqual(LogicalExpression, BinaryExpression):
         return Not(self, ctx=self.ctx)
 
     def __bool__(self):
-        if self.is_concrete:
+        if self.expr1.is_concrete and self.expr2.is_concrete:
             return bool(np.any(self.expr1.value != self.expr2.value))
         return not self.expr1.is_equivalent(self.expr2)
 

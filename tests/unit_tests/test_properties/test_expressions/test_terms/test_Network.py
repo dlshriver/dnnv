@@ -37,6 +37,11 @@ def test_get_item():
     assert isinstance(N_0, Subscript)
     assert N_0.expr == N
 
+    N_i = N[Symbol("i")]
+    assert isinstance(N_i, Subscript)
+    assert N_i.expr == N
+    assert N_i.index is Symbol("i")
+
     input_op = operations.Input((-1, 5), np.dtype(np.float32))
     mul_op = operations.Mul(input_op, 2.0)
     add_op = operations.Add(mul_op, -1.0)
@@ -59,3 +64,7 @@ def test_get_item():
     N_ = N[:-1:1]
     assert isinstance(N_, Network)
     assert repr(N_) == "Network('N[:-1:1]')"
+
+    N_ = N[:-1, 0]
+    assert isinstance(N_, Network)
+    assert repr(N_) == "Network('N[:-1,0]')"

@@ -11,8 +11,11 @@ def test_missing():
         pass
 
     expr = MockExpression()
-    new_expr = SubstituteCalls().visit(expr)
-    assert new_expr is expr
+    with pytest.raises(
+        NotImplementedError,
+        match="DetailsInference is not yet implemented for expression type: MockExpression",
+    ) as excinfo:
+        new_expr = SubstituteCalls().visit(expr)
     del MockExpression
 
 

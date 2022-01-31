@@ -23,27 +23,39 @@ class FunctionSubstitutor:
         pass
 
     @staticmethod
-    def substitute_Equal(a: Expression, b: Expression) -> Expression:
+    def substitute_Equal(
+        a: Expression, b: Expression, form: Optional[str] = None
+    ) -> Expression:
         return NotImplemented
 
     @staticmethod
-    def substitute_GreaterThan(a: Expression, b: Expression) -> Expression:
+    def substitute_GreaterThan(
+        a: Expression, b: Expression, form: Optional[str] = None
+    ) -> Expression:
         return NotImplemented
 
     @staticmethod
-    def substitute_GreaterThanOrEqual(a: Expression, b: Expression) -> Expression:
+    def substitute_GreaterThanOrEqual(
+        a: Expression, b: Expression, form: Optional[str] = None
+    ) -> Expression:
         return NotImplemented
 
     @staticmethod
-    def substitute_LessThan(a: Expression, b: Expression) -> Expression:
+    def substitute_LessThan(
+        a: Expression, b: Expression, form: Optional[str] = None
+    ) -> Expression:
         return NotImplemented
 
     @staticmethod
-    def substitute_LessThanOrEqual(a: Expression, b: Expression) -> Expression:
+    def substitute_LessThanOrEqual(
+        a: Expression, b: Expression, form: Optional[str] = None
+    ) -> Expression:
         return NotImplemented
 
     @staticmethod
-    def substitute_NotEqual(a: Expression, b: Expression) -> Expression:
+    def substitute_NotEqual(
+        a: Expression, b: Expression, form: Optional[str] = None
+    ) -> Expression:
         return NotImplemented
 
 

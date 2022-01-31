@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 from dnnv.verifiers.common.reductions.iopolytope import *
@@ -8,7 +9,10 @@ def setup_function():
     Variable._count = 0
 
 
-class ConstrainMock(Constraint):
+class ConstraintMock(Constraint):
+    def as_bounds(self):
+        return np.zeros(self.size()), np.ones(self.size())
+
     def update_constraint(self, variables, indices, coefficients, b, is_open):
         return super().update_constraint(
             variables, indices, coefficients, b, is_open=is_open
@@ -20,7 +24,7 @@ class ConstrainMock(Constraint):
 
 def test_isconsistent():
     v = Variable((1, 5))
-    c = ConstrainMock(v)
+    c = ConstraintMock(v)
     c.update_constraint(None, None, None, None, None)
     c.validate()
     assert c.is_consistent is None
@@ -28,7 +32,7 @@ def test_isconsistent():
 
 def test_num_variables():
     v = Variable((1, 5))
-    c = ConstrainMock(v)
+    c = ConstraintMock(v)
     assert c.num_variables == 1
 
     c.add_variable(Variable((1, 3, 2, 2)))
@@ -39,7 +43,7 @@ def test_num_variables():
 
 def test_size():
     v = Variable((1, 5))
-    c = ConstrainMock(v)
+    c = ConstraintMock(v)
     assert c.size() == 5
 
     c.add_variable(Variable((1, 3, 2, 2)))
@@ -49,7 +53,7 @@ def test_size():
 
 
 def test_add_variable():
-    c = ConstrainMock()
+    c = ConstraintMock()
 
     v1 = Variable((1, 5))
     assert v1 not in c.variables
@@ -78,7 +82,7 @@ def test_unravel_index():
     v1 = Variable((1, 5))
     v2 = Variable((1, 3, 2, 2))
     v3 = Variable((1, 10))
-    c = ConstrainMock(v1)
+    c = ConstraintMock(v1)
     c.add_variable(v2)
     c.add_variable(v3)
 

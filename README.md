@@ -30,6 +30,8 @@ $ dnnv_manage install reluplex planet mipverify neurify eran bab marabou nnenum 
 
 *Several verifiers make use of the [Gurobi solver](https://www.gurobi.com/).* This should be installed automatically, but requires a license to be manually activated and available on the host machine. Academic licenses can be obtained for free from the [Gurobi website](https://user.gurobi.com/download/licenses/free-academic).
 
+> After installing a verifier that requires Gurobi, the grbgetkey command can be found at `.venv/opt/gurobi912/linux64/bin/grbgetkey`.
+
 #### Source Installation
 
 First create and activate a python virtual environment.
@@ -73,7 +75,7 @@ $ docker run --rm -it dlshriver/dnnv
 
 ### Usage
 
-Properties are specified in our property Python-embedded DSL, [DNNP](https://dnnv.readthedocs.io/en/latest/usage/specifying_properties.html). A property specification can import python modules, and define variables. The only required component is the property expression, which must appear at the end of the file. An example of a local robustness property is shown below.
+Properties are specified in our Python-embedded DSL, [DNNP](https://dnnv.readthedocs.io/en/latest/usage/specifying_properties.html). A property specification can import python modules, and define variables. The only required component is the property expression, which must appear at the end of the file. An example of a local robustness property is shown below.
 
 ```python
 from dnnv.properties import *

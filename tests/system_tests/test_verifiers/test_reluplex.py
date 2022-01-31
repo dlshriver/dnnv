@@ -2,7 +2,7 @@ import unittest
 
 from dnnv.verifiers.reluplex import Reluplex
 
-from system_tests.verifiers_tests.utils import VerifierTests
+from system_tests.test_verifiers.utils import VerifierTests
 
 
 @unittest.skipIf(not Reluplex.is_installed(), "Reluplex is not installed")

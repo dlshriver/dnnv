@@ -28,6 +28,13 @@ Ensure the PR description clearly describes the problem and solution. Include th
 TODO: Describe coding conventions, etc.
 -->
 Every patch should also include relevant tests to show that the patch behaves as intended.
+Before opening a pull request with your path, please run the test suite on your local machine to ensure that all tests pass.
+To run the test suite, first build the test artifacts (only needs to be built once), and then run coveragepy, as follows:
+
+```bash
+$ python tests/system_tests/artifacts/build_artifacts.py # only needs to be run the first time you run the test suite
+$ coverage run
+```
 
 > Cosmetic changes that do not add anything substantial to the stability, functionality, or testability of DNNV will generally not be accepted.
 

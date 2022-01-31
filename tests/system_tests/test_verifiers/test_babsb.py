@@ -2,7 +2,7 @@ import unittest
 
 from dnnv.verifiers.babsb import BaBSB
 
-from system_tests.verifiers_tests.utils import VerifierTests
+from system_tests.test_verifiers.utils import VerifierTests
 
 
 @unittest.skipIf(not BaBSB.is_installed(), "BaBSB is not installed")

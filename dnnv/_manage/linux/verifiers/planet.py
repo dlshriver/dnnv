@@ -41,7 +41,7 @@ class PlanetInstaller(Installer):
             f"g++ -c -m64 -pipe -std=c++14 -g -O2 -Wall -W -fPIC -DUSE_GLPK -DNDEBUG -I. {include_paths} -o main.o main.cpp",
             f"g++ -c -m64 -pipe -std=c++14 -g -O2 -Wall -W -fPIC -DUSE_GLPK -DNDEBUG -I. {include_paths} -o verifierContext.o verifierContext.cpp",
             f"g++ -c -m64 -pipe -std=c++14 -g -O2 -Wall -W -fPIC -DUSE_GLPK -DNDEBUG -I. {include_paths} -o supersetdatabase.o supersetdatabase.cpp",
-            f"g++ -m64 -Wl,-O1 -static {library_paths} -o planet Options.o Solver.o System.o main.o verifierContext.o supersetdatabase.o -Bstatic -lglpk -lgmp -lz",
+            f"g++ -m64 -o planet Options.o Solver.o System.o main.o verifierContext.o supersetdatabase.o {library_paths} -Wl,-Bstatic -lglpk -lgmp -Wl,-Bdynamic -lz",
             f"cp planet {installation_path}",
         ]
         install_script = "; ".join(commands)

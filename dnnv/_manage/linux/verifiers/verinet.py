@@ -87,7 +87,7 @@ class VeriNetInstaller(Installer):
     def run(self, env: Environment, dependency: Dependency):
         name = "verinet"
         version = "1.0"
-        dnnv_version = "v0.4.5"
+        dnnv_version = "v0.5.0"
 
         cache_dir = env.cache_dir / f"{name}-{version}"
         cache_dir.mkdir(exist_ok=True, parents=True)
@@ -112,7 +112,7 @@ class VeriNetInstaller(Installer):
             f"python -m venv {name}",
             f". {name}/bin/activate",
             "pip install --upgrade pip",
-            'pip install "numba>=0.50,<0.60" "onnx>=1.8,<1.9" "torch>=1.8,<1.9" "torchvision>=0.9,<0.10"',
+            'pip install "numba>=0.50,<0.60" "onnx>=1.8,<1.11" "torch>=1.8,<1.9" "torchvision>=0.9,<0.10"',
             f"cd {gurobi_path}",
             "python setup.py install",
             f"cd {cache_dir}",

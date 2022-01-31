@@ -4,7 +4,6 @@ import tempfile
 
 from contextlib import contextmanager
 from functools import partial
-from typing import Any, Dict, List, Optional
 
 from dnnv.verifiers.common.base import Parameter, Verifier
 from dnnv.verifiers.common.reductions import IOPolytopeReduction, HalfspacePolytope

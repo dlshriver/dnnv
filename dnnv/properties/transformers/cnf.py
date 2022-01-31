@@ -6,7 +6,9 @@ from .base import GenericExpressionTransformer
 from .fol import FirstOrderLogicTransformer
 from .lift_ifthenelse import LiftIfThenElse
 from .remove_ifthenelse import RemoveIfThenElse
+from .substitute_calls import SubstituteCalls
 from ..expressions import *
+from ..visitors.inference import DetailsInference
 
 
 class CnfTransformer(GenericExpressionTransformer):
@@ -15,9 +17,11 @@ class CnfTransformer(GenericExpressionTransformer):
             expression = expression.propagate_constants()
             expression = FirstOrderLogicTransformer().visit(expression)
             expression = expression.propagate_constants()
+            expression = SubstituteCalls(form="cnf").visit(expression)
+            expression = expression.propagate_constants()
             expression = LiftIfThenElse().visit(expression)
             expression = expression.propagate_constants()
-            expression = RemoveIfThenElse().visit(expression)
+            expression = RemoveIfThenElse(form="cnf").visit(expression)
             expression = expression.propagate_constants()
             if not isinstance(expression, ArithmeticExpression) or isinstance(
                 expression, Symbol

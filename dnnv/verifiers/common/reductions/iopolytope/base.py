@@ -68,6 +68,10 @@ class Constraint(ABC):
         )
 
     @abstractmethod
+    def as_bounds(self) -> bool:
+        pass
+
+    @abstractmethod
     def update_constraint(
         self,
         variables: Sequence[Variable],

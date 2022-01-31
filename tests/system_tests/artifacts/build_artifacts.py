@@ -13,24 +13,6 @@ def build_known_behavior_artifacts():
     artifact_dir = Path(__file__).parent / "networks"
     artifact_dir.mkdir(parents=True, exist_ok=True)
 
-    # create several imagenet models
-    imagenet_dummy_input = torch.ones((1, 3, 224, 224))
-
-    resnet34_path = artifact_dir / "resnet34.onnx"
-    if not resnet34_path.exists():
-        resnet34 = models.resnet34(pretrained=True, progress=False).eval()
-        torch.onnx.export(resnet34, imagenet_dummy_input, resnet34_path)
-
-    resnet50_path = artifact_dir / "resnet50.onnx"
-    if not resnet50_path.exists():
-        resnet50 = models.resnet50(pretrained=True, progress=False).eval()
-        torch.onnx.export(resnet50, imagenet_dummy_input, resnet50_path)
-
-    vgg16_path = artifact_dir / "vgg16.onnx"
-    if not vgg16_path.exists():
-        vgg16 = models.vgg16(pretrained=True, progress=False).eval()
-        torch.onnx.export(vgg16, imagenet_dummy_input, vgg16_path)
-
     # create models for known functions
 
     const_zero_path = artifact_dir / "const_zero.onnx"
@@ -231,6 +213,10 @@ def build_random_weight_artifacts():
             )
 
 
-if __name__ == "__main__":
+def build():
     build_known_behavior_artifacts()
     build_random_weight_artifacts()
+
+
+if __name__ == "__main__":
+    build()
