@@ -395,22 +395,36 @@ class DetailsInference(ExpressionVisitor):
         self.visit(expression.condition)
         self.visit(expression.t_expr)
         self.visit(expression.f_expr)
-        type_assertions = [
-            self.types[expression.condition] == Constant(bool),
-            self.types[expression.t_expr] == self.types[expression.f_expr],
-            self.types[expression.f_expr] == self.types[expression.t_expr],
-        ]
         shape_assertions = [
             self.shapes[expression.condition] == Constant(()),
             self.shapes[expression.t_expr] == self.shapes[expression.f_expr],
             self.shapes[expression.f_expr] == self.shapes[expression.t_expr],
         ]
+        type_assertions = [
+            self.types[expression.condition] == Constant(bool),
+            expressions.Or(
+                Constant(np.can_cast)(
+                    self.types[expression.t_expr], self.types[expression.f_expr]
+                ),
+                Constant(np.can_cast)(
+                    self.types[expression.f_expr], self.types[expression.t_expr]
+                ),
+            ),
+        ]
 
         shape = self.shapes[expression.t_expr]
-        dtype = self.types[expression.t_expr]
+        dtype = Constant(np.result_type)(
+            self.types[expression.t_expr], self.types[expression.f_expr]
+        )
 
-        if not _check_assertions(shape_assertions):
-            raise DNNVShapeError("Incompatible shapes in IfThenElse")
+        if not _check_assertions(shape_assertions[:1]):
+            raise DNNVShapeError(
+                f"Incompatible shapes in IfThenElse: {self.shapes[expression.condition].value}"
+            )
+        if not _check_assertions(shape_assertions[1:]):
+            raise DNNVShapeError(
+                f"Incompatible shapes in IfThenElse: {self.shapes[expression.t_expr].value} and {self.shapes[expression.f_expr].value}"
+            )
         self.assertions.extend(shape_assertions)
         if not _check_assertions(type_assertions):
             raise DNNVTypeError("Incompatible types in IfThenElse")

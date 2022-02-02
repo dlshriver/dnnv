@@ -63,13 +63,18 @@ class CanonicalTransformer(DnfTransformer):
     def visit_Equal(self, expression: Equal) -> Or:
         expr1 = expression.expr1
         expr2 = expression.expr2
-        return self.visit(Or(And(expr1 <= expr2, expr2 <= expr1)))
+        expr = self.visit(Or(And(expr1 <= expr2, expr2 <= expr1)))
+        if expr.is_concrete:
+            return Constant(expr.value)
+        return expr
 
     def visit_GreaterThan(self, expression: GreaterThan) -> Or:
         lhs, rhs = _extract_constants(
             self.visit(Add(Multiply(Constant(-1), expression.expr1), expression.expr2))
         )
         expr = Or(And(LessThan(lhs, rhs)))
+        if expr.is_concrete:
+            return Constant(expr.value)
         return expr
 
     def visit_GreaterThanOrEqual(self, expression: GreaterThanOrEqual) -> Or:
@@ -77,6 +82,8 @@ class CanonicalTransformer(DnfTransformer):
             self.visit(Add(Multiply(Constant(-1), expression.expr1), expression.expr2))
         )
         expr = Or(And(LessThanOrEqual(lhs, rhs)))
+        if expr.is_concrete:
+            return Constant(expr.value)
         return expr
 
     def visit_LessThan(self, expression: LessThan) -> Or:
@@ -84,6 +91,8 @@ class CanonicalTransformer(DnfTransformer):
             self.visit(Add(expression.expr1, Multiply(Constant(-1), expression.expr2)))
         )
         expr = Or(And(LessThan(lhs, rhs)))
+        if expr.is_concrete:
+            return Constant(expr.value)
         return expr
 
     def visit_LessThanOrEqual(self, expression: LessThanOrEqual) -> Or:
@@ -91,6 +100,8 @@ class CanonicalTransformer(DnfTransformer):
             self.visit(Add(expression.expr1, Multiply(Constant(-1), expression.expr2)))
         )
         expr = Or(And(LessThanOrEqual(lhs, rhs)))
+        if expr.is_concrete:
+            return Constant(expr.value)
         return expr
 
     def visit_Multiply(self, expression: Multiply) -> Add:
@@ -108,6 +119,8 @@ class CanonicalTransformer(DnfTransformer):
             else:
                 for e in expressions:
                     e.append(expr)
+        if len(expressions) == 0:
+            return Constant(0)
         if len(expressions) <= 1:
             consts = []
             symbols = [Constant(1)]
@@ -127,7 +140,10 @@ class CanonicalTransformer(DnfTransformer):
     def visit_NotEqual(self, expression: NotEqual) -> Or:
         expr1 = expression.expr1
         expr2 = expression.expr2
-        return self.visit(Or(And(expr1 > expr2), And(expr2 > expr1)))
+        expr = self.visit(Or(And(expr1 < expr2), And(expr2 < expr1)))
+        if expr.is_concrete:
+            return Constant(expr.value)
+        return expr
 
     def visit_Subtract(self, expression: Subtract) -> Add:
         return self.visit(

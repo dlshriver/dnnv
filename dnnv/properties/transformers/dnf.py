@@ -33,13 +33,17 @@ class DnfTransformer(GenericExpressionTransformer):
         expressions: Set[Expression] = set()
         for expr in expression.expressions:
             expr = self.visit(expr)
+            if expr.is_concrete:
+                if expr.value:
+                    continue
+                return Constant(False)
             if disjunction is None and isinstance(expr, Or):
                 disjunction = expr
             else:
                 expressions.add(expr)
         if disjunction is None:
             if len(expressions) == 0:
-                return Constant(False)
+                return Constant(True)
             return Or(And(*expressions))
         elif len(expressions) == 0:
             return disjunction
@@ -144,6 +148,10 @@ class DnfTransformer(GenericExpressionTransformer):
         expressions: Set[Expression] = set()
         for expr in expression.expressions:
             expr = self.visit(expr)
+            if expr.is_concrete:
+                if expr.value:
+                    return Constant(True)
+                continue
             if isinstance(expr, Or):
                 expressions = expressions.union(expr.expressions)
             else:
