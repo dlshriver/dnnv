@@ -39,11 +39,4 @@ def test_NotEqual_constants():
 
     expr = NotEqual(Constant(302), Constant(120))
     new_expr = transformer.visit(expr)
-    assert new_expr is not expr
-    assert isinstance(new_expr, Or)
-    assert len(new_expr.expressions) == 2
-    assert isinstance(new_expr.expressions[0], And)
-    assert len(new_expr.expressions[0].expressions) == 1
-    or_expressions = new_expr.expressions
-    assert And(GreaterThan(Add(), Constant(-182))) in or_expressions
-    assert And(GreaterThan(Add(), Constant(182))) in or_expressions
+    assert new_expr is Constant(True)

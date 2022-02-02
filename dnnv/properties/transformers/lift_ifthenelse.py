@@ -38,15 +38,15 @@ class LiftIfThenElse(GenericExpressionTransformer):
             else:
                 expressions.append(expr)
         if len(ite_exprs) > 1:
-            t_expr = self.visit_AssociativeExpression(
+            t_expr = self.visit(
                 expr_t(ite_exprs[0].t_expr, *ite_exprs[1:], *expressions)
             )
-            f_expr = self.visit_AssociativeExpression(
+            f_expr = self.visit(
                 expr_t(ite_exprs[0].f_expr, *ite_exprs[1:], *expressions)
             )
         else:
-            t_expr = expr_t(ite_exprs[0].t_expr, *expressions)
-            f_expr = expr_t(ite_exprs[0].f_expr, *expressions)
+            t_expr = self.visit(expr_t(ite_exprs[0].t_expr, *expressions))
+            f_expr = self.visit(expr_t(ite_exprs[0].f_expr, *expressions))
         return IfThenElse(ite_exprs[0].condition, t_expr, f_expr)
 
     def visit_BinaryExpression(
