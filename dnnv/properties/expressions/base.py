@@ -32,6 +32,7 @@ class Expression:
 
     def __init__(self, ctx: Optional[Context] = None):
         self.ctx: Context = ctx or get_context()
+        self.hash_cache_base = None
 
     def __bool__(self):
         if self.is_concrete:
@@ -39,10 +40,12 @@ class Expression:
         raise ValueError("The truth value of a non-concrete expression is ambiguous")
 
     def __hash__(self) -> int:
-        exprs_hash = 1
-        for expr in self.iter(max_depth=1, include_self=False):
-            exprs_hash *= hash(expr)
-        return hash(self.__class__) * exprs_hash
+        if self.hash_cache_base is None:
+            exprs_hash = 1
+            for expr in self.iter(max_depth=1, include_self=False):
+                exprs_hash *= hash(expr)
+            self.hash_cache_base =  hash(self.__class__) * exprs_hash
+        return self.hash_cache_base
 
     def __getattr__(self, name) -> Union[Attribute, Constant]:
         from .attribute import Attribute
