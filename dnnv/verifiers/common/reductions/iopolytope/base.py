@@ -103,8 +103,12 @@ class HalfspacePolytope(Constraint):
         self._b: List[np.ndarray] = []
         self._A_mat: Optional[np.ndarray] = None
         self._b_vec: Optional[np.ndarray] = None
-        self._lower_bound = np.full(self.size(), -np.inf)
-        self._upper_bound = np.full(self.size(), np.inf)
+        if np.isscalar(self.size()):
+            shape = self.size()
+        else:
+            shape = self.size()[::-1]
+        self._lower_bound = np.full(shape, -np.inf)
+        self._upper_bound = np.full(shape, np.inf)
 
     @property
     def A(self) -> np.ndarray:
