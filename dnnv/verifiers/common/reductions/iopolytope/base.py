@@ -103,12 +103,8 @@ class HalfspacePolytope(Constraint):
         self._b: List[np.ndarray] = []
         self._A_mat: Optional[np.ndarray] = None
         self._b_vec: Optional[np.ndarray] = None
-        if np.isscalar(self.size()):
-            shape = self.size()
-        else:
-            shape = self.size()[::-1]
-        self._lower_bound = np.full(shape, -np.inf)
-        self._upper_bound = np.full(shape, np.inf)
+        self._lower_bound = np.full(self.size(), -np.inf)
+        self._upper_bound = np.full(self.size(), np.inf)
 
     @property
     def A(self) -> np.ndarray:
@@ -226,11 +222,17 @@ class HalfspacePolytope(Constraint):
                 obj = np.zeros(n)
                 try:
                     obj[i] = 1
+                    bounds = list(
+                        zip(
+                            (l for l in self._lower_bound),
+                            (u for u in self._upper_bound),
+                        )
+                    )
                     result = linprog(
                         obj,
                         A_ub=self.A,
                         b_ub=self.b,
-                        bounds=(None, None),
+                        bounds=bounds,
                         method="highs",
                     )
                     if result.status == 0:
@@ -243,11 +245,17 @@ class HalfspacePolytope(Constraint):
                         raise e
                 try:
                     obj[i] = -1
+                    bounds = list(
+                        zip(
+                            (l for l in self._lower_bound),
+                            (u for u in self._upper_bound),
+                        )
+                    )
                     result = linprog(
                         obj,
                         A_ub=self.A,
                         b_ub=self.b,
-                        bounds=(None, None),
+                        bounds=bounds,
                         method="highs",
                     )
                     if result.status == 0:
