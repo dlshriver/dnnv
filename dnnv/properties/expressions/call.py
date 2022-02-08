@@ -27,7 +27,7 @@ class Call(CallableExpression, ArithmeticExpression, LogicalExpression):
         self.args = args
         self.kwargs = kwargs
         self._value = None
-        self.hash_cache_call = None
+        self._hash_cache_call = None
 
     @property
     def value(self):
@@ -60,14 +60,14 @@ class Call(CallableExpression, ArithmeticExpression, LogicalExpression):
         return False
 
     def __hash__(self):
-        if self.hash_cache_call is None:
+        if self._hash_cache_call is None:
             args_hash = 1
             for arg in self.args:
                 args_hash *= hash(arg)
             for key, arg in self.kwargs.items():
                 args_hash *= hash(key) * hash(arg)
-            self.hash_cache_call = super().__hash__() * hash(self.function) * args_hash
-        return self.hash_cache_call
+            self._hash_cache_call = super().__hash__() * hash(self.function) * args_hash
+        return self._hash_cache_call
 
     def __repr__(self):
         function_name = repr(self.function)
