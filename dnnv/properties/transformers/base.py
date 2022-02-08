@@ -23,6 +23,15 @@ class ExpressionTransformer(ExpressionVisitor):
 
 
 class GenericExpressionTransformer(ExpressionTransformer):
+    def visit(self, expression: Expression) -> Expression:
+        result = super().visit(expression)
+        setattr(
+            result,
+            "__FLAG_is_concrete",
+            getattr(expression, "__FLAG_is_concrete", False),
+        )
+        return result
+
     def generic_visit(self, expression: Expression) -> Expression:
         if not isinstance(expression, Expression):
             return Constant(expression)

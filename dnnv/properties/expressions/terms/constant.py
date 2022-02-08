@@ -65,7 +65,9 @@ class Constant(Term):
         return bool(self._value)
 
     def __hash__(self):
-        return super().__hash__() * hash(self._identifier)
+        if getattr(self, "__hash", None) is None:
+            setattr(self, "__hash", super().__hash__() * hash(self._identifier))
+        return getattr(self, "__hash")
 
     def __repr__(self):
         value = self.value

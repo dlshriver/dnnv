@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Set, Tuple
+from typing import Optional, Set, Tuple, Union
 
 from .base import GenericExpressionTransformer
 from .fol import FirstOrderLogicTransformer
@@ -12,7 +12,15 @@ from ..visitors.inference import DetailsInference
 
 
 class DnfTransformer(GenericExpressionTransformer):
-    def visit(self, expression: Expression) -> Expression:
+    def __init__(self):
+        super().__init__()
+        self._infer_expression_details = lambda: None
+
+    def _lazy_inference(self):
+        self._infer_expression_details()
+        self._infer_expression_details = lambda: None
+
+    def visit(self, expression: Expression):
         if self._top_level:
             expression = expression.propagate_constants()
             expression = FirstOrderLogicTransformer().visit(expression)
@@ -27,11 +35,13 @@ class DnfTransformer(GenericExpressionTransformer):
                 expression, Symbol
             ):
                 expression = Or(And(expression))
-            DetailsInference().visit(expression)
+            self._infer_expression_details = (
+                lambda expression=expression: DetailsInference().visit(expression)
+            )
         expression = super().visit(expression)
         return expression
 
-    def visit_And(self, expression: And) -> Or:
+    def visit_And(self, expression: And) -> Union[Or, Constant]:
         disjunction: Optional[Or] = None
         expressions: Set[Expression] = set()
         for expr in expression.expressions:
@@ -68,20 +78,20 @@ class DnfTransformer(GenericExpressionTransformer):
                 disjuncts = new_disjuncts
         return Or(*[And(*disjunct) for disjunct in disjuncts])
 
-    def visit_Exists(self, expression: Exists):
+    def visit_Exists(self, expression: Exists) -> Union[Or, Constant]:
         # TODO : should this do other things ?
         expr = self.visit(expression.expression)
         return expr
 
-    def visit_Forall(self, expression: Forall):
+    def visit_Forall(self, expression: Forall) -> Union[Or, Constant]:
         # TODO : should this do other things ?
         expr = self.visit(expression.expression)
         return expr
 
-    def visit_Implies(self, expression: Implies) -> Or:
-        return self.visit(Or(~expression.expr1, expression.expr2))
+    def visit_Implies(self, expression: Implies) -> Union[Or, Constant]:
+        return self.visit(Or(Not(expression.expr1), expression.expr2))
 
-    def visit_Not(self, expression: Not) -> Or:
+    def visit_Not(self, expression: Not) -> Union[Or, Constant]:
         expr = expression.expr
         if isinstance(
             expr,
@@ -102,6 +112,7 @@ class DnfTransformer(GenericExpressionTransformer):
                 LessThan: GreaterThanOrEqual,
                 LessThanOrEqual: GreaterThan,
             }
+            self._lazy_inference()
             if expr.expr1 in expr.ctx.shapes and expr.expr2 in expr.ctx.shapes:
                 import numpy as np
 
@@ -141,13 +152,14 @@ class DnfTransformer(GenericExpressionTransformer):
         elif isinstance(expression.expr, Symbol):
             return Or(And(Not(expression.expr)))
 
+        assert isinstance(expression.expr, LogicalExpression)
         result = ~expression.expr
         if isinstance(result, Not):
             # TODO : should this be an error?
             return result
         return self.visit(result)
 
-    def visit_Or(self, expression: Or) -> Or:
+    def visit_Or(self, expression: Or) -> Union[Or, Constant]:
         expressions: Set[Expression] = set()
         for expr in expression.expressions:
             expr = self.visit(expr)

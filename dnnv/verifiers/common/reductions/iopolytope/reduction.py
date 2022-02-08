@@ -72,6 +72,7 @@ class IOPolytopeReduction(Reduction):
         yield prop
 
     def reduce_property(self, expression: Expression) -> Iterator[Property]:
+        self.logger.debug("reducing expression")
         if isinstance(expression, Forall):
             raise NotImplementedError()  # TODO
         assert isinstance(expression, LogicalExpression)

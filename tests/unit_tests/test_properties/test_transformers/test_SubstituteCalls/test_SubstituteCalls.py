@@ -1,22 +1,8 @@
 import numpy as np
-import pytest
 
 from dnnv.nn.utils import TensorDetails
 from dnnv.properties.expressions import *
 from dnnv.properties.transformers import SubstituteCalls
-
-
-def test_missing():
-    class MockExpression(Expression):
-        pass
-
-    expr = MockExpression()
-    with pytest.raises(
-        NotImplementedError,
-        match="DetailsInference is not yet implemented for expression type: MockExpression",
-    ) as excinfo:
-        new_expr = SubstituteCalls().visit(expr)
-    del MockExpression
 
 
 def test_Binary_no_func_call():

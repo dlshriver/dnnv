@@ -39,10 +39,12 @@ class Expression:
         raise ValueError("The truth value of a non-concrete expression is ambiguous")
 
     def __hash__(self) -> int:
-        exprs_hash = 1
-        for expr in self.iter(max_depth=1, include_self=False):
-            exprs_hash *= hash(expr)
-        return hash(self.__class__) * exprs_hash
+        if getattr(self, "__hash", None) is None:
+            exprs_hash = 1
+            for expr in self.iter(max_depth=1, include_self=False):
+                exprs_hash *= hash(expr)
+            setattr(self, "__hash", hash(self.__class__) * exprs_hash)
+        return getattr(self, "__hash")
 
     def __getattr__(self, name) -> Union[Attribute, Constant]:
         from .attribute import Attribute
