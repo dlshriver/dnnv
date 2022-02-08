@@ -222,11 +222,17 @@ class HalfspacePolytope(Constraint):
                 obj = np.zeros(n)
                 try:
                     obj[i] = 1
+                    bounds = list(
+                        zip(
+                            (l for l in self._lower_bound),
+                            (u for u in self._upper_bound),
+                        )
+                    )
                     result = linprog(
                         obj,
                         A_ub=self.A,
                         b_ub=self.b,
-                        bounds=(None, None),
+                        bounds=bounds,
                         method="highs",
                     )
                     if result.status == 0:
@@ -239,11 +245,17 @@ class HalfspacePolytope(Constraint):
                         raise e
                 try:
                     obj[i] = -1
+                    bounds = list(
+                        zip(
+                            (l for l in self._lower_bound),
+                            (u for u in self._upper_bound),
+                        )
+                    )
                     result = linprog(
                         obj,
                         A_ub=self.A,
                         b_ub=self.b,
-                        bounds=(None, None),
+                        bounds=bounds,
                         method="highs",
                     )
                     if result.status == 0:
