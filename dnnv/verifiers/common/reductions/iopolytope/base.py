@@ -220,17 +220,23 @@ class HalfspacePolytope(Constraint):
             n = self.size()
             for i in indices:
                 obj = np.zeros(n)
+                bounds = list(
+                    zip(
+                        (l if np.isfinite(l) else None for l in self._lower_bound),
+                        (u if np.isfinite(u) else None for u in self._upper_bound),
+                    )
+                )
                 try:
                     obj[i] = 1
                     result = linprog(
                         obj,
                         A_ub=self.A,
                         b_ub=self.b,
-                        bounds=(None, None),
+                        bounds=bounds,
                         method="highs",
                     )
                     if result.status == 0:
-                        self._lower_bound[i] = result.x[i]
+                        self._lower_bound[i] = max(result.x[i], self._lower_bound[i])
                 except ValueError as e:
                     if (
                         e.args[0]
@@ -243,11 +249,11 @@ class HalfspacePolytope(Constraint):
                         obj,
                         A_ub=self.A,
                         b_ub=self.b,
-                        bounds=(None, None),
+                        bounds=bounds,
                         method="highs",
                     )
                     if result.status == 0:
-                        self._upper_bound[i] = result.x[i]
+                        self._upper_bound[i] = min(result.x[i], self._upper_bound[i])
                 except ValueError as e:
                     if (
                         e.args[0]

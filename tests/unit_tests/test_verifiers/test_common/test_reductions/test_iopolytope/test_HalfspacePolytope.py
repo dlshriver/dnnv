@@ -1,6 +1,8 @@
 import numpy as np
-import pytest
 
+from dnnv.nn.graph import OperationGraph
+from dnnv.nn import operations
+from dnnv.properties.expressions import *
 from dnnv.verifiers.common.reductions.iopolytope import *
 from dnnv.verifiers.common.reductions.iopolytope import Variable
 
@@ -329,3 +331,53 @@ def test_as_matrix_inequality_include_bounds_1():
         ),
     )
     assert np.allclose(b, np.array([10.0, -2, 5]))
+
+
+def test_bound_tightening():
+    v = Variable((1, 2))
+    hspoly = HalfspacePolytope(v)
+
+    # v[0,0] >= 0
+    variables = [v]
+    indices = np.array([(0, 0)])
+    coeffs = np.array([-1.0])
+    b = np.array([0.0])
+    hspoly.update_constraint(variables, indices, coeffs, b)
+
+    # v[0,1] >= -200
+    variables = [v]
+    indices = np.array([(0, 1)])
+    coeffs = np.array([-1.0])
+    b = np.array([200.0])
+    hspoly.update_constraint(variables, indices, coeffs, b)
+
+    # v[0,0] <= 100
+    variables = [v]
+    indices = np.array([(0, 0)])
+    coeffs = np.array([1.0])
+    b = np.array([100.0])
+    hspoly.update_constraint(variables, indices, coeffs, b)
+
+    # v[0,1] <= 100
+    variables = [v]
+    indices = np.array([(0, 1)])
+    coeffs = np.array([1.0])
+    b = np.array([100.0])
+    hspoly.update_constraint(variables, indices, coeffs, b)
+
+    # v[0,0] - v[0,1] <= 50
+    variables = [v, v]
+    indices = np.array([(0, 0), (0, 1)])
+    coeffs = np.array([1.0, -1.0])
+    b = np.array([50.0])
+    hspoly.update_constraint(variables, indices, coeffs, b)
+
+    # -v[0,0] + 0.01*v[0,1] <= 1.0
+    variables = [v, v]
+    indices = np.array([(0, 0), (0, 1)])
+    coeffs = np.array([-1.0, 0.01])
+    b = np.array([1.0])
+    hspoly.update_constraint(variables, indices, coeffs, b)
+
+    assert np.all(hspoly._lower_bound >= np.array([0, -52]))
+    assert np.all(hspoly._upper_bound <= np.array([100, 100]))
