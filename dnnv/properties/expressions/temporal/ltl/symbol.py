@@ -219,9 +219,8 @@ class TemporalSymbol(LTL):
                         np.zeros(num_control_signals, dtype=dtype),
                     ),
                 )
-                plant_op_graph = MLPTransformer().transform(
-                    OperationGraph(plant_output_ops)
-                )
+                plant_op_graph = OperationGraph(plant_output_ops)
+            plant_op_graph = MLPTransformer().transform(plant_op_graph)
             self._cache["plant"] = plant_op_graph
         return self._cache["plant"]
 
