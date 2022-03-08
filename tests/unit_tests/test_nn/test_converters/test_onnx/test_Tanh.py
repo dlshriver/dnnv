@@ -1,7 +1,8 @@
 import numpy as np
-import onnxruntime
+import onnxruntime.backend
 
-from dnnv.nn.converters.onnx import *
+from dnnv.nn.converters.onnx import OnnxConverter
+from dnnv.nn.graph import OperationGraph
 from dnnv.nn.operations import *
 
 
@@ -10,7 +11,7 @@ def test_Tanh():
     y = np.tanh(x)
 
     op = Tanh(x)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -18,7 +19,7 @@ def test_Tanh():
     assert np.allclose(result, y)
 
     op = Tanh(Input((3,), np.dtype(np.float32)))
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [x])
     assert len(results) == 1
@@ -31,7 +32,7 @@ def test_Tanh_rand():
     y = np.tanh(x)
 
     op = Tanh(x)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1

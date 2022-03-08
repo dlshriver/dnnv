@@ -1,7 +1,8 @@
 import numpy as np
-import onnxruntime
+import onnxruntime.backend
 
-from dnnv.nn.converters.onnx import *
+from dnnv.nn.converters.onnx import OnnxConverter
+from dnnv.nn.graph import OperationGraph
 from dnnv.nn.operations import *
 
 
@@ -12,7 +13,7 @@ def test_Flatten():
     for i in range(a.ndim):
         axis = i
         op = Flatten(a, axis=axis)
-        onnx_model = convert(OperationGraph([op]))
+        onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
         results = onnxruntime.backend.run(onnx_model, [])
         assert len(results) == 1
@@ -32,7 +33,7 @@ def test_Flatten_negative_axis():
     for i in range(a.ndim):
         axis = i - 1
         op = Flatten(a, axis=axis)
-        onnx_model = convert(OperationGraph([op]))
+        onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
         results = onnxruntime.backend.run(onnx_model, [])
         assert len(results) == 1
@@ -51,7 +52,7 @@ def test_Flatten_with_default_axis():
 
     input_op = Input(shape, np.dtype(np.float32))
     op = Flatten(input_op)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [a])
     assert len(results) == 1

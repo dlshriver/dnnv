@@ -1,8 +1,9 @@
 import numpy as np
-import onnxruntime
+import onnxruntime.backend
 import pytest
 
-from dnnv.nn.converters.onnx import *
+from dnnv.nn.converters.onnx import OnnxConverter
+from dnnv.nn.graph import OperationGraph
 from dnnv.nn.operations import *
 
 
@@ -12,7 +13,7 @@ def test_Sub():
     z = x - y
 
     op = Sub(x, y)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -20,7 +21,7 @@ def test_Sub():
     assert np.allclose(result, z)
 
     op = Sub(Input((3,), np.dtype(np.float32)), Input((3,), np.dtype(np.float32)))
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [x, y])
     assert len(results) == 1
@@ -36,7 +37,7 @@ def test_Sub_rand():
     z = x - y
 
     op = Sub(x, y)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -47,7 +48,7 @@ def test_Sub_rand():
     y = np.random.randint(12, size=(3, 4, 5), dtype=np.uint8)
     z = x - y
     op = Sub(x, y)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -61,7 +62,7 @@ def test_Sub_broadcast():
     z = x - y
 
     op = Sub(x, y)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1

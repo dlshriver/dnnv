@@ -3,80 +3,49 @@ from __future__ import annotations
 import itertools
 import numpy as np
 
-from typing import Dict, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
-from .operations import Operation
+from .operations import Input, Operation
 from .utils import TensorDetails
 
 
 class OperationGraph:
-    def __init__(self, output_operations: Sequence[Operation]):
-        self.output_operations = tuple(output_operations)
+    def __init__(self, outputs: Sequence[Operation]):
+        self.outputs: Sequence[Operation] = tuple(outputs)
+
+        self._inputs: Optional[Sequence[Input]] = None
         self._input_details: Optional[Sequence[TensorDetails]] = None
         self._output_details: Optional[Sequence[TensorDetails]] = None
         self._is_linear: Optional[bool] = None
 
-    def walk(self, visitor):
-        result = []
-        for output_operation in self.output_operations:
-            result.append(visitor.visit(output_operation))
-        return result
-
-    def copy(self) -> OperationGraph:
-        from .transformers.copy import Copier
-
-        copier = Copier()
-        return copier.transform(self)
-
-    def simplify(self) -> OperationGraph:
-        from .transformers import simplify
-
-        return simplify(self.copy())
-
-    def pprint(self):
-        from .visitors import PrintVisitor
-
-        return self.walk(PrintVisitor())
-
-    def is_linear(self):
-        if self._is_linear is None:
-            from .operations import Input
+    @property
+    def inputs(self) -> Sequence[Input]:
+        if self._inputs is None:
             from .visitors import OperationVisitor
 
-            LinearPattern = (Operation >> Operation) | Input
-            result = True
+            inputs: List[Input] = []
 
-            class IsLinear(OperationVisitor):
-                def generic_visit(self, operation):
-                    nonlocal result
+            class GetInputs(OperationVisitor):
+                def visit_Input(self, op: Input):
+                    nonlocal inputs
+                    inputs.append(op)
 
-                    matches = LinearPattern.match([operation])
-                    found_match = False
-                    for match in matches:
-                        found_match = True
-                        result &= len(match) <= 1
-                        if not result:
-                            continue
-                    result &= found_match
-                    if not result:
-                        return False
-                    return super().generic_visit(operation)
+            GetInputs().walk(self)
+            self._inputs = tuple(inputs)
 
-            linearity_visitor = IsLinear()
-            self.walk(linearity_visitor)
-            self._is_linear = result
-        return self._is_linear
+        return self._inputs
 
     @property
     def input_details(self) -> Sequence[TensorDetails]:
         if self._input_details is None:
-            from .visitors import GetInputDetails
+            from .utils import TensorDetails
 
-            input_details_visitor = GetInputDetails()
-            result = ()
-            for output_op in self.output_operations:
-                result = input_details_visitor.visit(output_op)
-            self._input_details = result
+            input_details = []
+            for input_op in self.inputs:
+                input_details.append(
+                    TensorDetails(tuple(int(i) for i in input_op.shape), input_op.dtype)
+                )
+            self._input_details = tuple(input_details)
         return self._input_details
 
     @property
@@ -85,15 +54,12 @@ class OperationGraph:
 
     @property
     def output_details(self) -> Sequence[TensorDetails]:
-        # TODO : fix output_details calculation
-        # for operations with multiple outputs
         if self._output_details is None:
             output = self(
                 *[
                     np.ones([i if i >= 0 else 1 for i in d.shape], dtype=d.dtype)
                     for d in self.input_details
-                ],
-                squeeze=False,
+                ]
             )
             self._output_details = tuple(
                 TensorDetails(o.shape, o.dtype) for o in output
@@ -102,23 +68,24 @@ class OperationGraph:
 
     @property
     def output_shape(self) -> Sequence[Tuple[int, ...]]:
-        # TODO : fix output_shape calculation
-        # for operations with multiple outputs
         return tuple(details.shape for details in self.output_details)
 
-    def export_onnx(self, filename, *, add_missing_optional_inputs=False):
-        import onnx
+    def as_onnx(
+        self,
+        *,
+        add_missing_optional_inputs=False,
+        name="onnx_model",
+        ir_version=7,
+        opset=13,
+    ):
+        from .converters.onnx import OnnxConverter
 
-        onnx.save(
-            self.as_onnx(add_missing_optional_inputs=add_missing_optional_inputs),
-            filename,
-        )
-
-    def as_onnx(self, *, add_missing_optional_inputs=False):
-        from .converters.onnx import convert as onnx_convert
-
-        return onnx_convert(
-            self, add_missing_optional_inputs=add_missing_optional_inputs
+        return OnnxConverter.convert(
+            self,
+            add_missing_optional_inputs=add_missing_optional_inputs,
+            name=name,
+            ir_version=ir_version,
+            opset=opset,
         )
 
     def as_tf(self):
@@ -156,7 +123,7 @@ class OperationGraph:
                 self.visited: Dict[Operation, Operation] = {}
 
             def visit_Input(self, operation: operations.Input):
-                new_op = self.input_op_graph.output_operations[self.input_id]
+                new_op = self.input_op_graph.outputs[self.input_id]
                 self.input_id += 1
                 return new_op
 
@@ -165,20 +132,77 @@ class OperationGraph:
                 operation.name = operation.name + ":!"
                 return operation
 
-        new_op_graph = OperationGraph(self.walk(Composer(input_op_graph)))
+        new_op_graph = Composer(input_op_graph).transform(self)
+        new_op_graph._inputs = input_op_graph._inputs
         new_op_graph._input_details = input_op_graph.input_details
         new_op_graph._output_details = self.output_details
 
         return new_op_graph
 
+    def copy(self) -> OperationGraph:
+        from .transformers.copy import Copier
+
+        copier = Copier()
+        return copier.transform(self)
+
+    def export_onnx(self, filename, *, add_missing_optional_inputs=False):
+        import onnx
+
+        onnx.save(
+            self.as_onnx(add_missing_optional_inputs=add_missing_optional_inputs),
+            filename,
+        )
+
+    def is_linear(self):
+        if self._is_linear is None:
+            from .operations import Input
+            from .visitors import OperationVisitor
+
+            LinearPattern = (Operation >> Operation) | Input
+            result = True
+
+            class IsLinear(OperationVisitor):
+                def generic_visit(self, operation):
+                    nonlocal result
+
+                    matches = LinearPattern.match([operation])
+                    found_match = False
+                    for match in matches:
+                        found_match = True
+                        result &= len(match) <= 1
+                        if not result:
+                            continue
+                    result &= found_match
+                    if not result:
+                        return False
+                    return super().generic_visit(operation)
+
+            linearity_visitor = IsLinear()
+            linearity_visitor.walk(self)
+            self._is_linear = result
+        return self._is_linear
+
+    def pprint(self):
+        from .visitors import PrintVisitor
+
+        return PrintVisitor().walk(self)
+
+    def simplify(self) -> OperationGraph:
+        from .transformers import simplify
+
+        return simplify(self.copy())
+
     def __call__(self, *x, **kwargs):
-        tf_func = self.as_tf()
-        output = tf_func(*x, **kwargs)
-        return output
+        assert len(kwargs) == 0
+        import onnxruntime.backend
+
+        onnx_model = self.as_onnx()
+        y = onnxruntime.backend.run(onnx_model, list(x))
+        return y
 
     def __getitem__(self, index):
         if isinstance(index, slice):
-            index = (index, list(range(len(self.output_operations))))
+            index = (index, list(range(len(self.outputs))))
         elif isinstance(index, int):
             index = (slice(None), [index])
         elif not isinstance(index, tuple):
@@ -207,13 +231,17 @@ class OperationGraph:
 
         if start is None or start == 0 and stop is None:
             copy = self.copy()
-            output_ops = copy.output_operations
+            output_ops = copy.outputs
             sliced_op_graph = OperationGraph([output_ops[i] for i in output_select])
             return sliced_op_graph
 
         from .transformers import Slicer
 
-        result = list(itertools.chain.from_iterable(self.walk(Slicer(start, stop))))
+        result = list(
+            itertools.chain.from_iterable(
+                Slicer(start, stop).visit(op) for op in self.outputs
+            )
+        )
         result = [result[i] for i in output_select]
         sliced_op_graph = OperationGraph(result)
         return sliced_op_graph

@@ -8,17 +8,15 @@ from dnnv.nn.visitors import OperationCounter
 def test_0():
     op_graph = OperationGraph([Input((1, 2, 3, 4), np.dtype(np.float64))])
     operation_counter = OperationCounter()
-    num_operations = op_graph.walk(operation_counter)
-    assert len(num_operations) == 1
-    assert num_operations[0] == 1
+    num_operations = operation_counter.walk(op_graph)
+    assert num_operations == 1
 
 
 def test_1():
     op_graph = OperationGraph([Add(Input((1,), np.dtype(np.float32)), np.float32(6))])
     operation_counter = OperationCounter()
-    num_operations = op_graph.walk(operation_counter)
-    assert len(num_operations) == 1
-    assert num_operations[0] == 2
+    num_operations = operation_counter.walk(op_graph)
+    assert num_operations == 2
 
 
 def test_2():
@@ -28,9 +26,8 @@ def test_2():
     add_op = Add(mul_op, div_op)
     op_graph = OperationGraph([add_op])
     operation_counter = OperationCounter()
-    num_operations = op_graph.walk(operation_counter)
-    assert len(num_operations) == 1
-    assert num_operations[0] == 4
+    num_operations = operation_counter.walk(op_graph)
+    assert num_operations == 4
 
 
 def test_3():
@@ -39,9 +36,8 @@ def test_3():
     add_op = Add(input_op_0, input_op_1)
     op_graph = OperationGraph([add_op])
     operation_counter = OperationCounter()
-    num_operations = op_graph.walk(operation_counter)
-    assert len(num_operations) == 1
-    assert num_operations[0] == 3
+    num_operations = operation_counter.walk(op_graph)
+    assert num_operations == 3
 
 
 def test_4():
@@ -51,9 +47,8 @@ def test_4():
     add_op = Add(flatten_op, input_op_1)
     op_graph = OperationGraph([add_op])
     operation_counter = OperationCounter()
-    num_operations = op_graph.walk(operation_counter)
-    assert len(num_operations) == 1
-    assert num_operations[0] == 4
+    num_operations = operation_counter.walk(op_graph)
+    assert num_operations == 4
 
 
 def test_5():
@@ -66,12 +61,10 @@ def test_5():
     )
     op_graph = OperationGraph([gemm_op_0, gemm_op_1])
     operation_counter = OperationCounter()
-    num_operations = op_graph.walk(operation_counter)
-    assert len(num_operations) == 2
+    num_operations = operation_counter.walk(op_graph)
     # 2 operations in left branch
-    assert num_operations[0] == 2
     # right branch adds 1 more operation
-    assert num_operations[1] == 2 + 1
+    assert num_operations == 2 + 1
 
 
 def test_6():
@@ -82,9 +75,7 @@ def test_6():
     sub_op = Sub(input_op_1, flatten_op)
     op_graph = OperationGraph([sub_op, add_op])
     operation_counter = OperationCounter()
-    num_operations = op_graph.walk(operation_counter)
-    assert len(num_operations) == 2
+    num_operations = operation_counter.walk(op_graph)
     # 4 operations in left branch
-    assert num_operations[0] == 4
     # right branch adds 1 more operation
-    assert num_operations[1] == 4 + 1
+    assert num_operations == 4 + 1

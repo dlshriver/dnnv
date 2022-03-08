@@ -1,8 +1,9 @@
 import numpy as np
-import onnxruntime
+import onnxruntime.backend
 import pytest
 
-from dnnv.nn.converters.onnx import *
+from dnnv.nn.converters.onnx import OnnxConverter
+from dnnv.nn.graph import OperationGraph
 from dnnv.nn.operations import *
 
 
@@ -10,7 +11,7 @@ from dnnv.nn.operations import *
 def test_Elu_consts():
     x = np.array([-1, 0, 1]).astype(np.float32)
     op = Elu(x, alpha=2.0)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -23,7 +24,7 @@ def test_Elu_consts():
 def test_Elu_default_consts():
     x = np.random.randn(3, 4, 5).astype(np.float32)
     op = Elu(x)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -37,7 +38,7 @@ def test_Elu_default_x_is_op():
     x = np.random.randn(3, 4, 5).astype(np.float32)
     input_op = Input((3, 4, 5), np.dtype(np.float32))
     op = Elu(input_op)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [x])
     assert len(results) == 1

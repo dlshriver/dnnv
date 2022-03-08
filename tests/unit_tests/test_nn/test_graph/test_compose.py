@@ -6,12 +6,12 @@ from dnnv.nn.operations import *
 
 
 def test_0():
-    op_graph_0 = OperationGraph([Mul(Input((), np.dtype(np.float32)), 2.0)])
-    op_graph_1 = OperationGraph([Add(Input((), np.dtype(np.float32)), 2.0)])
+    op_graph_0 = OperationGraph([Mul(Input((), np.dtype(np.float32)), np.float32(2.0))])
+    op_graph_1 = OperationGraph([Add(Input((), np.dtype(np.float32)), np.float32(2.0))])
 
     composed_op_graph = op_graph_1.compose(op_graph_0)
-    assert len(composed_op_graph.output_operations) == 1
-    output_op = composed_op_graph.output_operations[0]
+    assert len(composed_op_graph.outputs) == 1
+    output_op = composed_op_graph.outputs[0]
     assert isinstance(output_op, Add)
     assert len(output_op.inputs) == 1
     add_input_op = output_op.inputs[0]
@@ -25,7 +25,7 @@ def test_1():
     op_graph_0 = OperationGraph(
         [Input((), np.dtype(np.float32)), Input((), np.dtype(np.float32))]
     )
-    op_graph_1 = OperationGraph([Add(Input((), np.dtype(np.float32)), 2.0)])
+    op_graph_1 = OperationGraph([Add(Input((), np.dtype(np.float32)), np.float32(2.0))])
 
     with pytest.raises(ValueError) as excinfo:
         composed_op_graph = op_graph_1.compose(op_graph_0)
@@ -35,8 +35,12 @@ def test_1():
 
 
 def test_2():
-    op_graph_0 = OperationGraph([Mul(Input((1, 5), np.dtype(np.float32)), 2.0)])
-    op_graph_1 = OperationGraph([Add(Input((1, 10), np.dtype(np.float32)), 2.0)])
+    op_graph_0 = OperationGraph(
+        [Mul(Input((1, 5), np.dtype(np.float32)), np.float32(2.0))]
+    )
+    op_graph_1 = OperationGraph(
+        [Add(Input((1, 10), np.dtype(np.float32)), np.float32(2.0))]
+    )
 
     with pytest.raises(ValueError) as excinfo:
         composed_op_graph = op_graph_1.compose(op_graph_0)
@@ -47,19 +51,19 @@ def test_2():
 
 def test_3():
     input_op = Input((1, 5), np.dtype(np.float32))
-    mul_op = Mul(input_op, 2.0)
+    mul_op = Mul(input_op, np.float32(2.0))
     concat_op = Concat([mul_op, input_op], axis=1)
 
     input_op_ = Input((1, 10), np.dtype(np.float32))
-    add_op = Add(input_op_, 1.0)
+    add_op = Add(input_op_, np.float32(1.0))
 
     op_graph_0 = OperationGraph([concat_op])
     op_graph_1 = OperationGraph([add_op])
 
     composed_op_graph = op_graph_1.compose(op_graph_0)
 
-    assert len(composed_op_graph.output_operations) == 1
-    output_op = composed_op_graph.output_operations[0]
+    assert len(composed_op_graph.outputs) == 1
+    output_op = composed_op_graph.outputs[0]
     assert isinstance(output_op, Add)
     assert len(output_op.inputs) == 1
 
@@ -79,10 +83,10 @@ def test_3():
 
 def test_4():
     input_op = Input((1, 5), np.dtype(np.float32))
-    add_op = Add(input_op, 1.0)
+    add_op = Add(input_op, np.float32(1.0))
 
     input_op_ = Input((1, 5), np.dtype(np.float32))
-    mul_op = Mul(input_op_, 2.0)
+    mul_op = Mul(input_op_, np.float32(2.0))
     concat_op = Concat([mul_op, input_op_], axis=1)
 
     op_graph_0 = OperationGraph([add_op])
@@ -92,8 +96,8 @@ def test_4():
 
     composed_op_graph.pprint()
 
-    assert len(composed_op_graph.output_operations) == 1
-    output_op = composed_op_graph.output_operations[0]
+    assert len(composed_op_graph.outputs) == 1
+    output_op = composed_op_graph.outputs[0]
     assert isinstance(output_op, Concat)
     assert len(output_op.inputs) == 2
 

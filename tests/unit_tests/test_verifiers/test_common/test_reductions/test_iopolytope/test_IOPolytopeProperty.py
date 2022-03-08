@@ -28,13 +28,13 @@ def test_init_merge():
 
     prop = IOPolytopeProperty([N0, N1], input_constraint, output_constraint, False)
     prop.op_graph.pprint()
-    assert len(prop.op_graph.output_operations) == 1
-    assert isinstance(prop.op_graph.output_operations[0], operations.Concat)
-    assert len(prop.op_graph.output_operations[0].x) == 2
-    assert isinstance(prop.op_graph.output_operations[0].x[0], operations.Flatten)
-    assert isinstance(prop.op_graph.output_operations[0].x[1], operations.Flatten)
-    assert isinstance(prop.op_graph.output_operations[0].x[0].x, operations.Add)
-    assert isinstance(prop.op_graph.output_operations[0].x[1].x, operations.Sub)
+    assert len(prop.op_graph.outputs) == 1
+    assert isinstance(prop.op_graph.outputs[0], operations.Concat)
+    assert len(prop.op_graph.outputs[0].x) == 2
+    assert isinstance(prop.op_graph.outputs[0].x[0], operations.Flatten)
+    assert isinstance(prop.op_graph.outputs[0].x[1], operations.Flatten)
+    assert isinstance(prop.op_graph.outputs[0].x[0].x, operations.Add)
+    assert isinstance(prop.op_graph.outputs[0].x[1].x, operations.Sub)
     assert len(prop.op_graph.input_details) == 1
 
 
@@ -66,7 +66,7 @@ def test_str():
 def test_validate_counter_example_true():
     input_op = operations.Input((1, 2), np.dtype(np.float32))
     matmul_op = operations.MatMul(input_op, np.array([[1.0], [1.0]], dtype=np.float32))
-    add_op = operations.Add(matmul_op, 1)
+    add_op = operations.Add(matmul_op, np.float32(1))
     op_graph = OperationGraph([add_op])
     N = Network("N").concretize(op_graph)
 
@@ -110,7 +110,7 @@ def test_validate_counter_example_true():
 def test_validate_counter_example_false():
     input_op = operations.Input((1, 2), np.dtype(np.float32))
     matmul_op = operations.MatMul(input_op, np.array([[1.0], [1.0]], dtype=np.float32))
-    add_op = operations.Add(matmul_op, 1)
+    add_op = operations.Add(matmul_op, np.float32(1))
     op_graph = OperationGraph([add_op])
     N = Network("N").concretize(op_graph)
 
@@ -152,7 +152,7 @@ def test_validate_counter_example_false():
 def test_suffixed_op_graph():
     input_op = operations.Input((1, 2), np.dtype(np.float32))
     matmul_op = operations.MatMul(input_op, np.array([[1.0], [1.0]], dtype=np.float32))
-    add_op = operations.Add(matmul_op, 1)
+    add_op = operations.Add(matmul_op, np.float32(1))
     relu_op = operations.Relu(add_op)
     op_graph = OperationGraph([relu_op])
     N = Network("N").concretize(op_graph)
@@ -189,22 +189,22 @@ def test_suffixed_op_graph():
     suffixed_op_graph = prop.suffixed_op_graph()
 
     x = np.array([[1.0, 0.5]]).astype(np.float32)
-    assert suffixed_op_graph(x).item() > 0
+    assert suffixed_op_graph(x)[0].item() > 0
 
     x = np.array([[0.0, 0.0]]).astype(np.float32)
-    assert suffixed_op_graph(x).item() <= 0
+    assert suffixed_op_graph(x)[0].item() <= 0
     x = np.array([[0.25, -0.25]]).astype(np.float32)
-    assert suffixed_op_graph(x).item() <= 0
+    assert suffixed_op_graph(x)[0].item() <= 0
     x = np.array([[-1.0, 0.0]]).astype(np.float32)
-    assert suffixed_op_graph(x).item() <= 0
+    assert suffixed_op_graph(x)[0].item() <= 0
 
 
 def test_suffixed_op_graph_multiple_output_ops():
     input_op = operations.Input((1, 2), np.dtype(np.float32))
     matmul_op = operations.MatMul(input_op, np.array([[1.0], [1.0]], dtype=np.float32))
-    add_op = operations.Add(matmul_op, 1)
+    add_op = operations.Add(matmul_op, np.float32(1))
     relu_op = operations.Relu(add_op)
-    add_op_2 = operations.Add(add_op, -0.5)
+    add_op_2 = operations.Add(add_op, np.float32(-0.5))
     op_graph = OperationGraph([relu_op, add_op_2])
     N = Network("N").concretize(op_graph)
 
@@ -250,23 +250,23 @@ def test_suffixed_op_graph_multiple_output_ops():
     suffixed_op_graph = prop.suffixed_op_graph()
 
     x = np.array([[1.0, 0.5]]).astype(np.float32)
-    assert suffixed_op_graph(x).item() > 0
+    assert suffixed_op_graph(x)[0].item() > 0
     x = np.array([[2.0, 1.0]]).astype(np.float32)
     assert prop.validate_counter_example(x)
-    assert suffixed_op_graph(x).item() > 0
+    assert suffixed_op_graph(x)[0].item() > 0
 
     x = np.array([[0.0, 0.0]]).astype(np.float32)
-    assert suffixed_op_graph(x).item() <= 0
+    assert suffixed_op_graph(x)[0].item() <= 0
     x = np.array([[0.25, -0.25]]).astype(np.float32)
-    assert suffixed_op_graph(x).item() <= 0
+    assert suffixed_op_graph(x)[0].item() <= 0
     x = np.array([[-1.0, 0.0]]).astype(np.float32)
-    assert suffixed_op_graph(x).item() <= 0
+    assert suffixed_op_graph(x)[0].item() <= 0
 
 
 def test_prefixed_and_suffixed_op_graph_hspoly_input_constraints():
     input_op = operations.Input((1, 2), np.dtype(np.float32))
     matmul_op = operations.MatMul(input_op, np.array([[1.0], [1.0]], dtype=np.float32))
-    add_op = operations.Add(matmul_op, 1)
+    add_op = operations.Add(matmul_op, np.float32(1))
     relu_op = operations.Relu(add_op)
     op_graph = OperationGraph([relu_op])
     N = Network("N").concretize(op_graph)
@@ -305,7 +305,7 @@ def test_prefixed_and_suffixed_op_graph_hspoly_input_constraints():
 def test_prefixed_and_suffixed_op_graph():
     input_op = operations.Input((1, 2), np.dtype(np.float32))
     matmul_op = operations.MatMul(input_op, np.array([[1.0], [1.0]], dtype=np.float32))
-    add_op = operations.Add(matmul_op, 1)
+    add_op = operations.Add(matmul_op, np.float32(1))
     relu_op = operations.Relu(add_op)
     op_graph = OperationGraph([relu_op])
     N = Network("N").concretize(op_graph)
@@ -337,16 +337,16 @@ def test_prefixed_and_suffixed_op_graph():
     prefixed_and_suffixed_op_graph, (lbs, ubs) = prop.prefixed_and_suffixed_op_graph()
 
     x = np.array([[1.0, 0.5]]).astype(np.float32)
-    assert prefixed_and_suffixed_op_graph(x).item() > 0
+    assert prefixed_and_suffixed_op_graph(x)[0].item() > 0
     x = np.array([[1.0, 1.0]]).astype(np.float32)
-    assert prefixed_and_suffixed_op_graph(x).item() > 0
+    assert prefixed_and_suffixed_op_graph(x)[0].item() > 0
 
     x = np.array([[0.0, 0.0]]).astype(np.float32)
-    assert prefixed_and_suffixed_op_graph(x).item() <= 0
+    assert prefixed_and_suffixed_op_graph(x)[0].item() <= 0
     x = np.array([[0.5, 0.5]]).astype(np.float32)
-    assert prefixed_and_suffixed_op_graph(x).item() <= 0
+    assert prefixed_and_suffixed_op_graph(x)[0].item() <= 0
     x = np.array([[-1.0, 0.0]]).astype(np.float32)
-    assert prefixed_and_suffixed_op_graph(x).item() <= 0
+    assert prefixed_and_suffixed_op_graph(x)[0].item() <= 0
 
 
 def test_prefixed_and_suffixed_op_graph_4d_input():
@@ -387,13 +387,13 @@ def test_prefixed_and_suffixed_op_graph_4d_input():
     prefixed_and_suffixed_op_graph, (lbs, ubs) = prop.prefixed_and_suffixed_op_graph()
 
     x = np.array([[[[1.0]], [[0.5]]]]).astype(np.float32)
-    assert prefixed_and_suffixed_op_graph(x).item() > 0
+    assert prefixed_and_suffixed_op_graph(x)[0].item() > 0
     x = np.array([[[[1.0]], [[1.0]]]]).astype(np.float32)
-    assert prefixed_and_suffixed_op_graph(x).item() > 0
+    assert prefixed_and_suffixed_op_graph(x)[0].item() > 0
 
     x = np.array([[[[0.0]], [[0.0]]]]).astype(np.float32)
-    assert prefixed_and_suffixed_op_graph(x).item() <= 0
+    assert prefixed_and_suffixed_op_graph(x)[0].item() <= 0
     x = np.array([[[[0.5]], [[0.5]]]]).astype(np.float32)
-    assert prefixed_and_suffixed_op_graph(x).item() <= 0
+    assert prefixed_and_suffixed_op_graph(x)[0].item() <= 0
     x = np.array([[[[-1.0]], [[0.0]]]]).astype(np.float32)
-    assert prefixed_and_suffixed_op_graph(x).item() <= 0
+    assert prefixed_and_suffixed_op_graph(x)[0].item() <= 0

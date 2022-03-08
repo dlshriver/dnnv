@@ -36,9 +36,10 @@ class ConvertMul(Simplifier):
         else:
             return a * b
         input_shape = OperationGraph([input_op]).output_shape[0]
-        output_shape = np.broadcast(np.zeros(input_shape), c).shape
+        output_shape = np.broadcast_shapes(input_shape, c.shape)
         if output_shape != input_shape:
             return operation
+        c = np.broadcast_to(c, input_shape)
         b = np.zeros_like(np.reshape(c, -1))
         if len(input_shape) == 0:
             return operation

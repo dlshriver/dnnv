@@ -1,92 +1,94 @@
-from dnnv.nn.operations.base import OutputSelect
+from __future__ import annotations
+
 import numpy as np
 import onnx
+import onnx.numpy_helper
 
 from collections import defaultdict
 from typing import Any, Dict, List, Union
 
+from .base import OperationConverter
 from .. import operations
 from ..graph import OperationGraph
 from ..operations import Operation
 from ..utils import NUMPY_TO_ONNX_DTYPE
-from ..visitors import OperationVisitor
 
 
-def convert(op_graph: OperationGraph, *, add_missing_optional_inputs=False):
-    converter = OnnxConverter(
-        op_graph, add_missing_optional_inputs=add_missing_optional_inputs
-    )
-    model = converter.convert()
-
-    return model
-
-
-class OnnxConverter(OperationVisitor):
-    def __init__(self, op_graph: OperationGraph, add_missing_optional_inputs=False):
-        self.op_graph = op_graph
+class OnnxConverter(OperationConverter):
+    def __init__(
+        self,
+        *,
+        add_missing_optional_inputs=False,
+        name="onnx_model",
+        ir_version=7,
+        opset=13,
+    ):
+        super().__init__()
         self.inputs: List[onnx.ValueInfoProto] = []
-        self.outputs: List[onnx.ValueInfoProto] = []
         self.initializer: List[onnx.TensorProto] = []
-        self.visited: Dict[Operation, onnx.NodeProto] = {}
+        self.visited: Dict[Operation, onnx.NodeProto] = self._cache
         self.op_counts: Dict[str, int] = defaultdict(int)
         self.add_missing_optional_inputs = add_missing_optional_inputs
+        self.ir_version = ir_version
+        self.opset = opset
 
-    def convert(self, name="onnx_model") -> onnx.ModelProto:
-        output_details = (
-            self.op_graph.output_details
-        )  # TODO: don't rely on tensorflow converter
-        for op, (shape, dtype) in zip(self.op_graph.output_operations, output_details):
+    @classmethod
+    def convert(
+        cls,
+        op_graph: OperationGraph,
+        *,
+        add_missing_optional_inputs=False,
+        name="onnx_model",
+        ir_version=7,
+        opset=13,
+    ) -> onnx.ModelProto:
+        self = cls(
+            add_missing_optional_inputs=add_missing_optional_inputs,
+            name=name,
+            ir_version=ir_version,
+            opset=opset,
+        )
+
+        output_names = []
+        for op in op_graph.outputs:
             output_op = self.visit(op)
-            node = onnx.helper.make_tensor_value_info(
-                output_op.name, NUMPY_TO_ONNX_DTYPE[dtype], shape
-            )
-            self.outputs.append(node)
+            output_names.append(output_op.name)
 
         nodes = [n for n in self.visited.values() if isinstance(n, onnx.NodeProto)]
         graph_def = onnx.helper.make_graph(
             nodes,
             name,
             self.inputs,
-            self.outputs,
+            [],
             initializer=self.initializer,
         )
-        # TODO : make opset configurable
         model_def = onnx.helper.make_model(
             graph_def,
             producer_name="dnnv",
-            ir_version=7,
-            opset_imports=[onnx.helper.make_opsetid("", 13)],
+            ir_version=ir_version,
+            opset_imports=[onnx.helper.make_opsetid("", opset)],
         )
-        model_def = onnx.shape_inference.infer_shapes(model_def)
+        model_def = onnx.shape_inference.infer_shapes(model_def, data_prop=True)
+        value_info_map = {
+            value_info.name: value_info for value_info in model_def.graph.value_info
+        }
+        for value_info in model_def.graph.input:
+            value_info_map[value_info.name] = value_info
+        model_def.graph.output.extend([value_info_map[name] for name in output_names])
         onnx.checker.check_model(model_def, full_check=True)
         return model_def
-
-    def visit(self, operation: Operation) -> Union[onnx.NodeProto, onnx.ValueInfoProto]:
-        if operation not in self.visited:
-            result = super().visit(operation)
-            self.visited[operation] = result
-        return self.visited[operation]
-
-    def generic_visit(self, operation: Operation):
-        if not hasattr(self, "visit_%s" % operation.__class__.__name__):
-            raise ValueError(
-                f"ONNX converter not implemented for operation type {type(operation).__name__}"
-            )
-        return super().generic_visit(operation)
 
     def _to_onnx_proto(
         self, value: Any, opname: str
     ) -> Union[onnx.NodeProto, onnx.TensorProto, onnx.ValueInfoProto]:
         if isinstance(value, Operation):
             return self.visit(value)
-        elif isinstance(value, np.ndarray):
+        elif isinstance(value, (np.ndarray, np.number)):
             tensor_proto = onnx.numpy_helper.from_array(value, name=opname)
             self.initializer.append(tensor_proto)
             return tensor_proto
         elif isinstance(value, (int, float)):
-            tensor_proto = onnx.numpy_helper.from_array(
-                np.array(value, dtype=f"{type(value).__name__}32"), name=opname
-            )
+            tensor_proto = onnx.numpy_helper.from_array(np.array(value), name=opname)
             self.initializer.append(tensor_proto)
             return tensor_proto
         raise ValueError(f"Unknown type for operand of {opname}: {type(value)}")
@@ -419,9 +421,7 @@ class OnnxConverter(OperationVisitor):
         idx = self.op_counts["Input"] = self.op_counts["Input"] + 1
         opname = f"Input_{idx}"
 
-        shape = np.asarray(operation.shape).tolist()
-        if shape[0] < 0:
-            shape[0] = 1
+        shape = [d if d >= 0 else 1 for d in np.asarray(operation.shape).tolist()]
         dtype = NUMPY_TO_ONNX_DTYPE[operation.dtype]
 
         node = onnx.helper.make_tensor_value_info(opname, dtype, shape)
@@ -525,17 +525,26 @@ class OnnxConverter(OperationVisitor):
         x = self._to_onnx_proto(operation.x, f"{opname}.x")
         shape = self._to_onnx_proto(operation.shape, f"{opname}.shape")
 
-        if operation.allowzero:
-            # TODO : need to use newer onnx opset version
-            raise ValueError("Reshape allowzero is not yet supported")
+        if self.opset < 13 and operation.allowzero:
+            raise ValueError("Reshape allowzero is not supported below ONNX opset 14")
 
-        node = onnx.helper.make_node(
-            "Reshape",
-            inputs=[x.name, shape.name],
-            # allowzero=operation.allowzero,
-            outputs=[opname],
-            name=opname,
-        )
+        if self.opset >= 14:
+            node = onnx.helper.make_node(
+                "Reshape",
+                inputs=[x.name, shape.name],
+                allowzero=operation.allowzero,
+                outputs=[opname],
+                name=opname,
+            )
+            print("TEST!")
+            print(node)
+        else:
+            node = onnx.helper.make_node(
+                "Reshape",
+                inputs=[x.name, shape.name],
+                outputs=[opname],
+                name=opname,
+            )
 
         return node
 
@@ -597,3 +606,6 @@ class OnnxConverter(OperationVisitor):
         )
 
         return node
+
+
+__all__ = ["OnnxConverter"]

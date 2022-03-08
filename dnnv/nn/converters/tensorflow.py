@@ -1,10 +1,10 @@
 import numpy as np
 import tensorflow as tf
 
+from .base import OperationConverter
 from ..graph import OperationGraph
 from ..operations import Operation
 from ..utils import ONNX_TO_TENSORFLOW_DTYPE
-from ..visitors import OperationVisitor
 
 
 class TensorflowConverterError(Exception):
@@ -14,7 +14,7 @@ class TensorflowConverterError(Exception):
 def convert(op_graph: OperationGraph):
     converter = TensorflowConverter()
     output_funcs = []
-    for op in op_graph.output_operations:
+    for op in op_graph.outputs:
         output_funcs.append(converter.visit(op))
 
     def func(*inputs, squeeze=True):
@@ -44,11 +44,12 @@ def _concretize(variables, inputs):
     return concrete_values
 
 
-class TensorflowConverter(OperationVisitor):
+class TensorflowConverter(OperationConverter):
     def __init__(self):
+        super().__init__()
         self.input_count = 0
         self.results = {}
-        self._cache = {}
+        # self._cache = {}
 
     def _cached(self, func):
         def wrapped_func(*args, **kwargs):
@@ -69,20 +70,6 @@ class TensorflowConverter(OperationVisitor):
             return self._cache[func]
 
         return wrapped_func
-
-    def visit(self, operation):
-        if operation not in self.results:
-            result = super().visit(operation)
-            self.results[operation] = result
-        return self.results[operation]
-
-    def generic_visit(self, operation):
-        if not hasattr(self, "visit_%s" % operation.__class__.__name__):
-            raise ValueError(
-                "Tensorflow converter not implemented for operation type %s"
-                % operation.__class__.__name__
-            )
-        return super().generic_visit(operation)
 
     def visit_Add(self, operation):
         a_ = operation.a

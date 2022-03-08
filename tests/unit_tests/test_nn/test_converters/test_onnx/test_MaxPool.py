@@ -1,8 +1,9 @@
 import numpy as np
-import onnxruntime
+import onnxruntime.backend
 import pytest
 
-from dnnv.nn.converters.onnx import *
+from dnnv.nn.converters.onnx import OnnxConverter
+from dnnv.nn.graph import OperationGraph
 from dnnv.nn.operations import *
 
 
@@ -13,7 +14,7 @@ def test_MaxPool_1d_default():
         y[idx] = max(x[idx], x[idx[:-1] + (idx[-1] + 1,)])
 
     op = MaxPool(x, np.array([2]))
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -21,7 +22,7 @@ def test_MaxPool_1d_default():
     assert np.allclose(result, y)
 
     op = MaxPool(Input((1, 3, 32), np.dtype(np.float32)), np.array([2]))
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [x])
     assert len(results) == 1
@@ -45,7 +46,7 @@ def test_MaxPool_2d_ceil():
     ).astype(np.float32)
 
     op = MaxPool(x, np.array([3, 3]), strides=np.array([2, 2]), ceil_mode=True)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -65,7 +66,7 @@ def test_MaxPool_2d_default():
         )
 
     op = MaxPool(x, np.array([2, 2]))
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -91,7 +92,7 @@ def test_MaxPool_2d_dilations():
     op = MaxPool(
         x, np.array([2, 2]), strides=np.array([1, 1]), dilations=np.array([2, 2])
     )
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -117,7 +118,7 @@ def test_MaxPool_2d_pads():
                 y[idx] = max(y[idx], x[n, c, h - 2 + i, w - 2 + j])
 
     op = MaxPool(x, np.array([3, 3]), pads=np.array([2, 2, 2, 2]))
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -154,7 +155,7 @@ def test_MaxPool_2d_precomputed_pads():
     ).astype(np.float32)
 
     op = MaxPool(x, np.array([5, 5]), pads=np.array([2, 2, 2, 2]))
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -179,7 +180,7 @@ def test_MaxPool_2d_precomputed_strides():
     y = np.array([[[[7, 9], [17, 19]]]]).astype(np.float32)
 
     op = MaxPool(x, np.array([2, 2]), strides=np.array([2, 2]))
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -197,7 +198,7 @@ def test_MaxPool_2d_strides():
                 y[idx] = max(y[idx], x[n, c, 3 * h + i, 3 * w + j])
 
     op = MaxPool(x, np.array([5, 5]), strides=np.array([3, 3]))
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -234,7 +235,7 @@ def test_MaxPool_2d_uint8():
     ).astype(np.uint8)
 
     op = MaxPool(x, np.array([5, 5]), pads=np.array([2, 2, 2, 2]))
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -253,7 +254,7 @@ def test_MaxPool_3d_default():
                     y[idx] = max(y[idx], x[n, c, h + i, w + j, d + k])
 
     op = MaxPool(x, np.array([2, 2, 2]))
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1

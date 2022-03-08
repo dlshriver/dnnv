@@ -1,7 +1,8 @@
 import numpy as np
-import onnxruntime
+import onnxruntime.backend
 
-from dnnv.nn.converters.onnx import *
+from dnnv.nn.converters.onnx import OnnxConverter
+from dnnv.nn.graph import OperationGraph
 from dnnv.nn.operations import *
 
 
@@ -9,7 +10,7 @@ def test_Div_consts():
     a = np.array([3, 4]).astype(np.float32)
     b = np.array([1, 2]).astype(np.float32)
     op = Div(a, b)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -20,8 +21,8 @@ def test_Div_consts():
 
 
 def test_Div_a_is_op():
-    op = Div(Input((-1, 5), np.dtype(np.float32)), 2.0)
-    onnx_model = convert(OperationGraph([op]))
+    op = Div(Input((-1, 5), np.dtype(np.float32)), np.float32(2.0))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     x = np.array([[1.0, 2.0, 3.0, 4.0, 5.0]], dtype=np.float32)
     results = onnxruntime.backend.run(onnx_model, [x])
@@ -33,8 +34,8 @@ def test_Div_a_is_op():
 
 
 def test_Div_b_is_op():
-    op = Div(10.0, Input((-1, 5), np.dtype(np.float32)))
-    onnx_model = convert(OperationGraph([op]))
+    op = Div(np.float32(10.0), Input((-1, 5), np.dtype(np.float32)))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     x = np.array([[-1.0, -2.0, -3.0, -4.0, -5.0]], dtype=np.float32)
     results = onnxruntime.backend.run(onnx_model, [x])
@@ -47,7 +48,7 @@ def test_Div_b_is_op():
 
 def test_Div_a_b_are_ops():
     op = Div(Input((-1, 5), np.dtype(np.float32)), Input((-1, 5), np.dtype(np.float32)))
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     a = np.array([[-1.0, -2.0, -3.0, -4.0, -5.0]], dtype=np.float32)
     b = np.array([[1.0, 2.0, 3.0, 4.0, 5.0]], dtype=np.float32)

@@ -2,18 +2,26 @@ from __future__ import annotations
 
 import inspect
 
+from typing import Iterable
+
 from ..graph import OperationGraph
 from ..operations import Operation
-from ..visitors import OperationVisitor
 
 
-class OperationTransformer(OperationVisitor):
+class OperationTransformer:
     def __init__(self, cached=True):
         self.cached = cached
         self._cache = {}
 
     def transform(self, op_graph: OperationGraph) -> OperationGraph:
-        return OperationGraph([self.visit(op) for op in op_graph.output_operations])
+        outputs = []
+        for op in op_graph.outputs:
+            transformed_op = self.visit(op)
+            if isinstance(transformed_op, Iterable):
+                outputs.extend(transformed_op)
+            else:
+                outputs.append(transformed_op)
+        return OperationGraph(outputs)
 
     def visit(self, operation: Operation):
         if not self.cached or operation not in self._cache:

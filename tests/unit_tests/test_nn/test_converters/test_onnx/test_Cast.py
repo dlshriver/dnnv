@@ -1,8 +1,9 @@
 import numpy as np
 import onnx
-import onnxruntime
+import onnxruntime.backend
 
-from dnnv.nn.converters.onnx import *
+from dnnv.nn.converters.onnx import OnnxConverter
+from dnnv.nn.graph import OperationGraph
 from dnnv.nn.operations import *
 
 
@@ -10,7 +11,7 @@ def test_Cast_consts():
     x = np.arange(12).reshape((1, 3, 2, 2))
 
     op = Cast(x, onnx.TensorProto.FLOAT)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -23,7 +24,7 @@ def test_Cast_x_is_op():
 
     input_op = Input((1, 3, 2, 2), np.dtype(np.int64))
     op = Cast(input_op, onnx.TensorProto.FLOAT)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [x])
     assert len(results) == 1

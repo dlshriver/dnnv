@@ -1,13 +1,14 @@
 import numpy as np
-import onnxruntime
+import onnxruntime.backend
 
-from dnnv.nn.converters.onnx import *
+from dnnv.nn.converters.onnx import OnnxConverter
+from dnnv.nn.graph import OperationGraph
 from dnnv.nn.operations import *
 
 
 def test_Atan_const():
-    op = Atan(3.0)
-    onnx_model = convert(OperationGraph([op]))
+    op = Atan(np.float32(3.0))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -17,7 +18,7 @@ def test_Atan_const():
 
 def test_Atan_x_is_op():
     op = Atan(Input((1, 5), np.dtype(np.float32)))
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     x = np.array([[-0.2, -0.1, 0.0, 0.1, 0.2]], dtype=np.float32)
     results = onnxruntime.backend.run(onnx_model, [x])

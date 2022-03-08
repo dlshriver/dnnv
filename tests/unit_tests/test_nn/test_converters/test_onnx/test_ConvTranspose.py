@@ -1,8 +1,9 @@
 import numpy as np
-import onnxruntime
+import onnxruntime.backend
 import pytest
 
-from dnnv.nn.converters.onnx import *
+from dnnv.nn.converters.onnx import OnnxConverter
+from dnnv.nn.graph import OperationGraph
 from dnnv.nn.operations import *
 
 
@@ -22,7 +23,7 @@ def test_ConvTranspose_x_is_op():
 
     input_op = Input((1, 1, 3, 3), np.dtype(np.float32))
     op = ConvTranspose(input_op, w, b)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [x])
     assert len(results) == 1
@@ -57,7 +58,7 @@ def test_ConvTranspose_1d():
     b = None
 
     op = ConvTranspose(x, W, b)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [x])
     assert len(results) == 1
@@ -119,7 +120,7 @@ def test_ConvTranspose_3d():
     b = None
 
     op = ConvTranspose(x, W, b)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [x])
     assert len(results) == 1
@@ -236,7 +237,7 @@ def test_ConvTranspose_attributes():
     op = ConvTranspose(
         x, W, b, strides=np.array([3, 2]), output_shape=np.array([10, 8])
     )
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [x])
     assert len(results) == 1
@@ -277,7 +278,7 @@ def test_ConvTranspose_attributes():
     op = ConvTranspose(
         x, W, b, strides=np.array([3, 2]), output_padding=np.array([1, 1])
     )
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [x])
     assert len(results) == 1
@@ -302,7 +303,7 @@ def test_ConvTranspose_autopad_same():
     b = None
 
     op = ConvTranspose(x, W, b, auto_pad="SAME_UPPER", strides=np.array([2, 2]))
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [x])
     assert len(results) == 1
@@ -342,7 +343,7 @@ def test_ConvTranspose_dilations():
     b = None
 
     op = ConvTranspose(x, W, b, dilations=np.array([2, 2]))
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [x])
     assert len(results) == 1
@@ -380,7 +381,7 @@ def test_ConvTranspose_pads():
     b = None
 
     op = ConvTranspose(x, W, b, strides=np.array([3, 2]), pads=np.array([1, 2, 1, 2]))
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [x])
     assert len(results) == 1

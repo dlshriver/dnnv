@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import numpy as np
-
 from copy import deepcopy
 from typing import Optional, Sequence, Union
 
@@ -11,41 +9,10 @@ from ..operations import Input, Operation
 from .base import OperationTransformer
 
 
-class DropPrefix(OperationTransformer):
-    def __init__(self, prefix_graph: OperationGraph):
-        super().__init__()
-        self.prefix_graph = prefix_graph
-
-    def visit(self, operation: Operation) -> Operation:
-        if operation not in self._cache:
-            if operation not in self.prefix_graph.output_operations:
-                result = super().visit(operation)
-            else:
-                y = OperationGraph([operation]).output_details
-                if len(y) > 1:
-                    raise ValueError(
-                        "Dropping prefixes with multiple output values is currently not supported"
-                    )
-                new_input_shape = np.asarray(y[0].shape)
-                result = Input(new_input_shape, y[0].dtype)
-            self._cache[operation] = result
-        return self._cache[operation]
-
-    def generic_visit(self, operation: Operation) -> Operation:
-        kwargs = {}
-        for name, value in operation.__dict__.items():
-            if isinstance(value, Operation):
-                new_value = self.visit(value)
-                kwargs[name] = new_value
-            else:
-                kwargs[name] = deepcopy(value)
-        return operation.__class__(**kwargs)
-
-
 class Slicer(OperationTransformer):
+    # TODO : This class needs a refactor
     def __init__(self, start: Optional[int], stop: Optional[int]):
         super().__init__(cached=False)
-        # TODO : This class needs a refactor
         self.start = start or 0
         self.stop = stop
 
@@ -136,4 +103,4 @@ class Slicer(OperationTransformer):
             raise ValueError(f"Unknown slicing pass: {self.current_pass}")
 
 
-__all__ = ["DropPrefix", "Slicer"]
+__all__ = ["Slicer"]

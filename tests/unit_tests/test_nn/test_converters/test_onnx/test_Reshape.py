@@ -1,12 +1,12 @@
 import numpy as np
-import onnxruntime
+import onnxruntime.backend
 import pytest
 
-from dnnv.nn.converters.onnx import *
+from dnnv.nn.converters.onnx import OnnxConverter
+from dnnv.nn.graph import OperationGraph
 from dnnv.nn.operations import *
 
-# TODO : allowzero requires newer onnx opset
-@pytest.mark.xfail
+
 def test_Reshape():
     original_shape = [0, 3, 4]
     data = np.random.random_sample(original_shape).astype(np.float32)
@@ -14,7 +14,7 @@ def test_Reshape():
     y = np.reshape(data, new_shape)
 
     op = Reshape(data, new_shape, allowzero=True)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter.convert(OperationGraph([op]), opset=14)
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -23,10 +23,10 @@ def test_Reshape():
 
     op = Reshape(
         Input((0, 3, 4), np.dtype(np.float32)),
-        Input((3,), np.dtype(np.int64)),
+        new_shape,
         allowzero=True,
     )
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter.convert(OperationGraph([op]), ir_version=8, opset=14)
 
     results = onnxruntime.backend.run(onnx_model, [data, new_shape])
     assert len(results) == 1
@@ -41,7 +41,7 @@ def test_Reshape_reordered_all_dims():
     y = np.reshape(data, new_shape)
 
     op = Reshape(data, new_shape)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -56,7 +56,7 @@ def test_Reshape_reordered_last_dims():
     y = np.reshape(data, new_shape)
 
     op = Reshape(data, new_shape)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -71,7 +71,7 @@ def test_Reshape_reduced_dims():
     y = np.reshape(data, new_shape)
 
     op = Reshape(data, new_shape)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -86,7 +86,7 @@ def test_Reshape_extended_dims():
     y = np.reshape(data, new_shape)
 
     op = Reshape(data, new_shape)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -101,7 +101,7 @@ def test_Reshape_one_dim():
     y = np.reshape(data, new_shape)
 
     op = Reshape(data, new_shape)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -116,7 +116,7 @@ def test_Reshape_negative_dim():
     y = np.reshape(data, new_shape)
 
     op = Reshape(data, new_shape)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -131,7 +131,7 @@ def test_Reshape_negative_extended_dims():
     y = np.reshape(data, new_shape)
 
     op = Reshape(data, new_shape)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -146,7 +146,7 @@ def test_Reshape_zero_dim():
     y = np.reshape(data, [2, 3, 4, 1])
 
     op = Reshape(data, new_shape)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -161,7 +161,7 @@ def test_Reshape_zero_and_negative_dim():
     y = np.reshape(data, [2, 3, 1, -1])
 
     op = Reshape(data, new_shape)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1

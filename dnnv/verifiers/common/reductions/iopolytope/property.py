@@ -50,14 +50,14 @@ class IOPolytopeProperty(Property):
         return "\n".join(strs)
 
     def validate_counter_example(
-        self, cex: np.ndarray, threshold=1e-6
+        self, *cex: np.ndarray, threshold=1e-6
     ) -> Tuple[bool, Optional[str]]:
         if np.any(np.isnan(cex)):
             return False, "NaN values in input."
-        if not self.input_constraint.validate(cex, threshold=threshold):
+        if not self.input_constraint.validate(*cex, threshold=threshold):
             return False, "Invalid counter example found: input outside bounds."
-        output = self.op_graph(cex)
-        if not self.output_constraint.validate(output, threshold=threshold):
+        output = self.op_graph(*cex)
+        if not self.output_constraint.validate(*output, threshold=threshold):
             return False, "Invalid counter example found: output outside bounds."
         return True, None
 
@@ -137,7 +137,7 @@ class IOPolytopeProperty(Property):
             self.input_constraint.lower_bounds,
             self.input_constraint.upper_bounds,
         )
-        prefixed_op_graph = OperationGraph(suffixed_op_graph.walk(prefix_transformer))
+        prefixed_op_graph = prefix_transformer.transform(suffixed_op_graph)
         if return_new_bounds and return_prefixes:
             return (
                 prefixed_op_graph,
@@ -157,12 +157,10 @@ class IOPolytopeProperty(Property):
 
     def suffixed_op_graph(self) -> OperationGraph:
         op_graph = self.op_graph.copy()
-        if len(op_graph.output_operations) == 1:
-            new_output_op = op_graph.output_operations[0]
+        if len(op_graph.outputs) == 1:
+            new_output_op = operations.Flatten(op_graph.outputs[0])
         else:
-            output_operations = [
-                operations.Flatten(o) for o in op_graph.output_operations
-            ]
+            output_operations = [operations.Flatten(o) for o in op_graph.outputs]
             new_output_op = operations.Concat(output_operations, axis=1)
         dtype = OperationGraph([new_output_op]).output_details[0].dtype
         size = self.output_constraint.size()

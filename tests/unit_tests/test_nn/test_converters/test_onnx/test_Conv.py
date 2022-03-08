@@ -1,7 +1,8 @@
 import numpy as np
-import onnxruntime
+import onnxruntime.backend
 
-from dnnv.nn.converters.onnx import *
+from dnnv.nn.converters.onnx import OnnxConverter
+from dnnv.nn.graph import OperationGraph
 from dnnv.nn.operations import *
 
 
@@ -38,7 +39,7 @@ def test_Conv_x_is_op():
     op = Conv(
         input_op, w, b, kernel_shape=np.array([3, 3]), pads=np.array([1, 1, 1, 1])
     )
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [x])
     assert len(results) == 1
@@ -91,7 +92,7 @@ def test_Conv_with_padding():
     b = np.array([0], dtype=np.float32)
 
     op = Conv(x, w, b, kernel_shape=np.array([3, 3]), pads=np.array([1, 1, 1, 1]))
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -144,7 +145,7 @@ def test_Conv_without_padding():
     b = np.array([0], dtype=np.float32)
 
     op = Conv(x, w, b, kernel_shape=np.array([3, 3]))
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -204,7 +205,7 @@ def test_Conv_with_padding_and_strides():
         pads=np.array([1, 1, 1, 1]),
         strides=np.array([2, 2]),
     )
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -264,7 +265,7 @@ def test_Conv_without_padding_with_strides():
         kernel_shape=np.array([3, 3]),
         strides=np.array([2, 2]),
     )
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1

@@ -1,7 +1,8 @@
 import numpy as np
-import onnxruntime
+import onnxruntime.backend
 
-from dnnv.nn.converters.onnx import *
+from dnnv.nn.converters.onnx import OnnxConverter
+from dnnv.nn.graph import OperationGraph
 from dnnv.nn.operations import *
 
 
@@ -9,7 +10,7 @@ def test_MatMul_2d():
     a = np.random.randn(3, 4).astype(np.float32)
     b = np.random.randn(4, 3).astype(np.float32)
     op = MatMul(a, b)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -21,7 +22,7 @@ def test_MatMul_2d():
     op = MatMul(
         Input((3, 4), np.dtype(np.float32)), Input((4, 3), np.dtype(np.float32))
     )
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [a, b])
     assert len(results) == 1
@@ -34,7 +35,7 @@ def test_MatMul_3d():
     a = np.random.randn(2, 3, 4).astype(np.float32)
     b = np.random.randn(2, 4, 3).astype(np.float32)
     op = MatMul(a, b)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -48,7 +49,7 @@ def test_MatMul_4d():
     a = np.random.randn(1, 2, 3, 4).astype(np.float32)
     b = np.random.randn(1, 2, 4, 3).astype(np.float32)
     op = MatMul(a, b)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -64,7 +65,7 @@ def test_MatMul_mixedD():
         4,
     ).astype(np.float32)
     op = MatMul(a, b)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -78,7 +79,7 @@ def test_MatMul_mixedD():
     ).astype(np.float32)
     b = np.random.randn(4, 3).astype(np.float32)
     op = MatMul(a, b)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1

@@ -2,84 +2,14 @@ from __future__ import annotations
 
 import numpy as np
 
-from typing import List, Type
-
-from . import operations
-from .operations import Operation
-from .utils import TensorDetails
-
-
-class OperationVisitor:
-    def visit(self, operation: Operation):
-        method_name = "visit_%s" % operation.__class__.__name__
-        visitor = getattr(self, method_name, self.generic_visit)
-        return visitor(operation)
-
-    def generic_visit(self, operation: Operation):
-        for value in operation.__dict__.values():
-            if isinstance(value, Operation):
-                self.visit(value)
-            elif isinstance(value, (list, tuple)):
-                for sub_value in value:
-                    if isinstance(sub_value, Operation):
-                        self.visit(sub_value)
-        return operation
-
-
-class GetInputDetails(OperationVisitor):
-    def __init__(self):
-        self.visited = set()
-        self.input_details = []
-
-    def visit(self, operation: Operation):
-        if id(operation) not in self.visited:
-            super().visit(operation)
-            self.visited.add(id(operation))
-        return tuple(self.input_details)
-
-    def visit_Input(self, operation: operations.Input):
-        self.input_details.append(
-            TensorDetails(tuple(int(i) for i in operation.shape), operation.dtype)
-        )
-
-
-class OperationCounter(OperationVisitor):
-    def __init__(self):
-        self.visited = set()
-
-    def visit(self, operation: Operation):
-        if id(operation) not in self.visited:
-            self.visited.add(id(operation))
-            super().generic_visit(operation)
-        return len(self.visited)
-
-
-class EnsureSupportVisitor(OperationVisitor):
-    def __init__(
-        self,
-        supported_operations: List[Type[Operation]],
-        error_type: Type[Exception] = RuntimeError,
-    ):
-        self.supported = set(supported_operations)
-        self.error_type = error_type
-
-    def visit(self, operation: Operation):
-        if type(operation) not in self.supported:
-            raise self.error_type(f"{type(operation)} operations are not supported.")
-        return super().visit(operation)
+from .base import OperationVisitor
+from .. import operations, Operation
 
 
 class PrintVisitor(OperationVisitor):
     def __init__(self):
         super().__init__()
-        self.visited = set()
         self.identifiers = {"count": {}, "op": {}}
-
-    def visit(self, operation: Operation):
-        if operation in self.visited:
-            return
-        self.visited.add(operation)
-        return super().visit(operation)
 
     def generic_visit(self, operation: Operation):
         if not hasattr(self, "visit_%s" % operation.__class__.__name__):
@@ -376,10 +306,4 @@ class PrintVisitor(OperationVisitor):
         print("Unsqueeze(%s, axes=%s)" % (self.get_op_id(operation.x), operation.axes))
 
 
-__all__ = [
-    "OperationVisitor",
-    "GetInputDetails",
-    "OperationCounter",
-    "EnsureSupportVisitor",
-    "PrintVisitor",
-]
+__all__ = ["PrintVisitor"]

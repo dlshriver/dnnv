@@ -1,8 +1,9 @@
 import numpy as np
-import onnxruntime
+import onnxruntime.backend
 import pytest
 
-from dnnv.nn.converters.onnx import *
+from dnnv.nn.converters.onnx import OnnxConverter
+from dnnv.nn.graph import OperationGraph
 from dnnv.nn.operations import *
 
 
@@ -10,7 +11,7 @@ def test_AveragePool_1d_default_const():
     op = AveragePool(
         np.array([[[1, 2, 3], [4, 5, 6], [7, 8, 9]]], dtype=np.float32), np.array([2])
     )
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -23,7 +24,7 @@ def test_AveragePool_1d_default_const():
 def test_AveragePool_1d_default():
     input_op = Input((1, 3, 3), np.dtype(np.float32))
     op = AveragePool(input_op, np.array([2]))
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     x = np.array([[[1, 2, 3], [4, 5, 6], [7, 8, 9]]], dtype=np.float32)
     results = onnxruntime.backend.run(onnx_model, [x])
@@ -38,7 +39,7 @@ def test_AveragePool_1d_default():
 def test_AveragePool_2d_ceil():
     input_op = Input((1, 1, 4, 4), np.dtype(np.float32))
     op = AveragePool(input_op, np.array([3, 3]), strides=[2, 2], ceil_mode=True)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     x = np.array(
         [
@@ -64,7 +65,7 @@ def test_AveragePool_2d_ceil():
 def test_AveragePool_2d_default():
     input_op = Input((1, 3, 2, 2), np.dtype(np.float32))
     op = AveragePool(input_op, np.array([2, 2]))
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     x = np.array(
         [[[[1, -6], [2, -5]], [[3, -4], [4, -3]], [[5, -2], [6, -1]]]], dtype=np.float32
@@ -81,7 +82,7 @@ def test_AveragePool_2d_default():
 def test_AveragePool_2d_pads():
     input_op = Input((1, 3, 28, 28), np.dtype(np.float32))
     op = AveragePool(input_op, np.array([3, 3]), pads=np.array([2, 2, 2, 2]))
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     x = np.random.randn(1, 3, 28, 28).astype(np.float32)
     results = onnxruntime.backend.run(onnx_model, [x])
@@ -97,7 +98,7 @@ def test_AveragePool_2d_pads_count_include_pad():
     op = AveragePool(
         input_op, np.array([3, 3]), pads=np.array([2, 2, 2, 2]), count_include_pad=True
     )
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     x = np.random.randn(1, 3, 28, 28).astype(np.float32)
     results = onnxruntime.backend.run(onnx_model, [x])
@@ -112,7 +113,7 @@ def test_AveragePool_2d_pads_count_include_pad():
 def test_AveragePool_2d_precomputed_pads():
     input_op = Input((1, 1, 5, 5), np.dtype(np.float32))
     op = AveragePool(input_op, np.array([5, 5]), pads=[2, 2, 2, 2])
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     x = np.array(
         [
@@ -154,7 +155,7 @@ def test_AveragePool_2d_precomputed_pads_include_pad():
     op = AveragePool(
         input_op, np.array([5, 5]), pads=[2, 2, 2, 2], count_include_pad=True
     )
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     x = np.array(
         [
@@ -194,7 +195,7 @@ def test_AveragePool_2d_precomputed_pads_include_pad():
 def test_AveragePool_2d_precomputed_strides():
     input_op = Input((1, 1, 5, 5), np.dtype(np.float32))
     op = AveragePool(input_op, np.array([2, 2]), strides=[2, 2])
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     x = np.array(
         [
@@ -224,7 +225,7 @@ def test_AveragePool_2d_precomputed_strides():
 def test_AveragePool_2d_strides():
     input_op = Input((1, 3, 32, 32), np.dtype(np.float32))
     op = AveragePool(input_op, np.array([5, 5]), strides=[3, 3])
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     x = np.random.randn(1, 3, 32, 32).astype(np.float32)
     results = onnxruntime.backend.run(onnx_model, [x])
@@ -238,7 +239,7 @@ def test_AveragePool_2d_strides():
 def test_AveragePool_3d_default():
     input_op = Input((1, 3, 32, 32, 32), np.dtype(np.float32))
     op = AveragePool(input_op, np.array([2, 2, 2]))
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     x = np.random.randn(1, 3, 32, 32, 32).astype(np.float32)
     results = onnxruntime.backend.run(onnx_model, [x])

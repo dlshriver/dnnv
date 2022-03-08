@@ -299,7 +299,7 @@ class IOPolytopeReduction(Reduction):
         # TODO : handle networks with multiple inputs
         if expression not in self.networks:
             self.networks.append(expression)
-            if len(expression.value.output_operations) > 1:
+            if len(expression.value.outputs) > 1:
                 raise NotImplementedError(
                     "Networks with multiple output operations are not currently supported"
                 )

@@ -1,7 +1,8 @@
 import numpy as np
-import onnxruntime
+import onnxruntime.backend
 
-from dnnv.nn.converters.onnx import *
+from dnnv.nn.converters.onnx import OnnxConverter
+from dnnv.nn.graph import OperationGraph
 from dnnv.nn.operations import *
 
 
@@ -11,7 +12,7 @@ def test_Expand_dim_changed():
     new_shape = np.array([2, 1, 6])
 
     op = Expand(data, new_shape)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -30,7 +31,7 @@ def test_Expand_dim_unchanged():
 
     input_op = Input(shape, np.dtype(np.float32))
     op = Expand(input_op, new_shape)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [data])
     assert len(results) == 1

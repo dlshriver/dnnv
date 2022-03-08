@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from dnnv.nn import OperationGraph, operations
-from dnnv.nn.transformers.slicers import DropPrefix, Slicer
+from dnnv.nn.transformers.slicers import Slicer
 
 
 @pytest.fixture
@@ -18,13 +18,15 @@ def op_graph():
 
 
 def test_slicer_stop_0(op_graph):
-    output_ops = op_graph.walk(Slicer(None, 0))[0]
+    new_op_graph = Slicer(None, 0).transform(op_graph)
+    output_ops = new_op_graph.outputs
 
     assert len(output_ops) == 0
 
 
 def test_slicer_all(op_graph):
-    output_ops = op_graph.walk(Slicer(None, None))[0]
+    new_op_graph = Slicer(None, None).transform(op_graph)
+    output_ops = new_op_graph.outputs
 
     assert len(output_ops) == 1
     output_op = output_ops[0]
@@ -39,7 +41,8 @@ def test_slicer_all(op_graph):
 
 
 def test_slicer_end(op_graph):
-    output_ops = op_graph.walk(Slicer(-1, None))[0]
+    new_op_graph = Slicer(-1, None).transform(op_graph)
+    output_ops = new_op_graph.outputs
 
     assert len(output_ops) == 1
     output_op = output_ops[0]
@@ -57,15 +60,4 @@ def test_slicer_cycle():
     op_graph = OperationGraph([relu_op])
 
     with pytest.raises(ValueError, match="Slicing cyclic graphs is not supported."):
-        output_ops = op_graph.walk(Slicer(None, None))[0]
-
-
-def test_drop_prefix(op_graph):
-    prefix = op_graph[:3]
-    output_ops = op_graph.walk(DropPrefix(prefix))
-
-    assert len(output_ops) == 1
-    output_op = output_ops[0]
-    assert isinstance(output_op, operations.Sub)
-    assert isinstance(output_op.b, operations.Relu)
-    assert isinstance(output_op.b.x, operations.Input)
+        _ = Slicer(None, None).transform(op_graph)

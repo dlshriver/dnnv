@@ -220,7 +220,7 @@ def to_mipverify_inputs(
     assert np.all(center <= 1)
 
     builder = MIPVerifyInputBuilder(translator_error=translator_error)
-    _ = op_graph.walk(builder)
+    builder.walk(op_graph)
 
     with tempfile.NamedTemporaryFile(
         dir=dirname, suffix=".mat", delete=False

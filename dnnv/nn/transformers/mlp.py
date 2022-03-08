@@ -27,15 +27,14 @@ class MLPTransformer(OperationTransformer):
         self.uses: Dict[operations.Operation, Set[operations.Operation]] = {}
 
     def transform(self, op_graph: OperationGraph) -> OperationGraph:
-        if len(op_graph.output_operations) > 1:
-            output_operations = [
-                operations.Flatten(o) for o in op_graph.output_operations
-            ]
+        if len(op_graph.outputs) > 1:
+            output_operations = [operations.Flatten(o) for o in op_graph.outputs]
             output_op = operations.Concat(output_operations, axis=1)
             op_graph = OperationGraph([output_op])
         simplified_op_graph = op_graph.simplify()
-        mlp_op_graph = super().transform(simplified_op_graph).simplify()
-        return mlp_op_graph
+        mlp_op_graph = super().transform(simplified_op_graph)
+        simplified_mlp_op_graph = mlp_op_graph.simplify()
+        return simplified_mlp_op_graph
 
     def visit_Add(self, operation: operations.Add):
         if not isinstance(operation.a, operations.Operation) or not isinstance(

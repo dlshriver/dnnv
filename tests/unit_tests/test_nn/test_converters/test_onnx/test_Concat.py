@@ -1,7 +1,8 @@
 import numpy as np
-import onnxruntime
+import onnxruntime.backend
 
-from dnnv.nn.converters.onnx import *
+from dnnv.nn.converters.onnx import OnnxConverter
+from dnnv.nn.graph import OperationGraph
 from dnnv.nn.operations import *
 
 
@@ -10,7 +11,7 @@ def test_Concat_consts():
     x1 = np.arange(10, 20)
 
     op = Concat([x0, x1], 0)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -26,7 +27,7 @@ def test_Concat_x0_is_op():
 
     input_op0 = Input((5,), np.dtype(np.int64))
     op = Concat([input_op0, x1], 0)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [x0])
     assert len(results) == 1
@@ -42,7 +43,7 @@ def test_Concat_x1_is_op():
 
     input_op1 = Input((10,), np.dtype(np.int64))
     op = Concat([x0, input_op1], 0)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [x1])
     assert len(results) == 1
@@ -59,7 +60,7 @@ def test_Concat_x0_x1_are_op():
     input_op0 = Input((5,), np.dtype(np.int64))
     input_op1 = Input((10,), np.dtype(np.int64))
     op = Concat([input_op0, input_op1], 0)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [x0, x1])
     assert len(results) == 1
@@ -74,7 +75,7 @@ def test_Concat_1d():
     x1 = np.array([3, 4], dtype=np.float32)
 
     op = Concat([x0, x1], 0)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -84,7 +85,7 @@ def test_Concat_1d():
     assert np.all(result == y)
 
     op = Concat([x0, x1], -1)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -99,7 +100,7 @@ def test_Concat_2d():
     x1 = np.array([[5, 6], [7, 8]], dtype=np.float32)
 
     op = Concat([x0, x1], 0)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -109,7 +110,7 @@ def test_Concat_2d():
     assert np.all(result == y)
 
     op = Concat([x0, x1], 1)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -119,7 +120,7 @@ def test_Concat_2d():
     assert np.all(result == y)
 
     op = Concat([x0, x1], -1)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -129,7 +130,7 @@ def test_Concat_2d():
     assert np.all(result == y)
 
     op = Concat([x0, x1], -2)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -144,7 +145,7 @@ def test_Concat_3d():
     x1 = np.array([[[9, 10], [11, 12]], [[13, 14], [15, 16]]], dtype=np.float32)
 
     op = Concat([x0, x1], 0)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -157,7 +158,7 @@ def test_Concat_3d():
     assert np.all(result == y)
 
     op = Concat([x0, x1], 1)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -170,7 +171,7 @@ def test_Concat_3d():
     assert np.all(result == y)
 
     op = Concat([x0, x1], 2)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -183,7 +184,7 @@ def test_Concat_3d():
     assert np.all(result == y)
 
     op = Concat([x0, x1], -1)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -196,7 +197,7 @@ def test_Concat_3d():
     assert np.all(result == y)
 
     op = Concat([x0, x1], -2)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -209,7 +210,7 @@ def test_Concat_3d():
     assert np.all(result == y)
 
     op = Concat([x0, x1], -3)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1

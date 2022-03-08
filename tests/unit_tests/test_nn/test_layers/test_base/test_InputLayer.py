@@ -18,7 +18,7 @@ def test_match():
     layer_match = InputLayer.match(op_graph)
     assert layer_match is not None
     assert isinstance(layer_match.layer, InputLayer)
-    assert len(layer_match.input_op_graph.output_operations) == 0
+    assert len(layer_match.input_op_graph.outputs) == 0
 
 
 def test_match_false():

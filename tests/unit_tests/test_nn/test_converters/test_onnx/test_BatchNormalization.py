@@ -1,7 +1,8 @@
 import numpy as np
-import onnxruntime
+import onnxruntime.backend
 
-from dnnv.nn.converters.onnx import *
+from dnnv.nn.converters.onnx import OnnxConverter
+from dnnv.nn.graph import OperationGraph
 from dnnv.nn.operations import *
 
 
@@ -13,7 +14,7 @@ def test_BatchNormalization_consts():
     var = np.full(3, 11.9, dtype=np.float32)
 
     op = BatchNormalization(x, scale, bias, mean, var)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [])
     assert len(results) == 1
@@ -41,7 +42,7 @@ def test_BatchNormalization_x_is_op():
 
     input_op = Input((1, 3, 2, 2), np.dtype(np.float32))
     op = BatchNormalization(input_op, scale, bias, mean, var)
-    onnx_model = convert(OperationGraph([op]))
+    onnx_model = OnnxConverter().convert(OperationGraph([op]))
 
     results = onnxruntime.backend.run(onnx_model, [x])
     assert len(results) == 1
