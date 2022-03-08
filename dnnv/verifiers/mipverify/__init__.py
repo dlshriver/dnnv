@@ -35,7 +35,7 @@ class MIPVerify(Verifier):
             self._tmp_input_denormalizer = input_denormalizers[0]
         output_dtype = op_graph.output_details[0].dtype
         two_class_output = operations.Gemm(
-            op_graph.output_operations[0],
+            op_graph.outputs[0],
             np.array([[-1.0, 1.0]], dtype=output_dtype),
         )
         robustness_op_graph = OperationGraph([two_class_output]).simplify()

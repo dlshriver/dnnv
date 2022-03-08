@@ -10,8 +10,8 @@ def test_0():
     op_graph_1 = OperationGraph([Add(Input((), np.dtype(np.float32)), 2.0)])
 
     composed_op_graph = op_graph_1.compose(op_graph_0)
-    assert len(composed_op_graph.output_operations) == 1
-    output_op = composed_op_graph.output_operations[0]
+    assert len(composed_op_graph.outputs) == 1
+    output_op = composed_op_graph.outputs[0]
     assert isinstance(output_op, Add)
     assert len(output_op.inputs) == 1
     add_input_op = output_op.inputs[0]
@@ -58,8 +58,8 @@ def test_3():
 
     composed_op_graph = op_graph_1.compose(op_graph_0)
 
-    assert len(composed_op_graph.output_operations) == 1
-    output_op = composed_op_graph.output_operations[0]
+    assert len(composed_op_graph.outputs) == 1
+    output_op = composed_op_graph.outputs[0]
     assert isinstance(output_op, Add)
     assert len(output_op.inputs) == 1
 
@@ -92,8 +92,8 @@ def test_4():
 
     composed_op_graph.pprint()
 
-    assert len(composed_op_graph.output_operations) == 1
-    output_op = composed_op_graph.output_operations[0]
+    assert len(composed_op_graph.outputs) == 1
+    output_op = composed_op_graph.outputs[0]
     assert isinstance(output_op, Concat)
     assert len(output_op.inputs) == 2
 

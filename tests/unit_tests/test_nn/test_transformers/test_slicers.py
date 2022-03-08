@@ -18,13 +18,13 @@ def op_graph():
 
 
 def test_slicer_stop_0(op_graph):
-    output_ops = op_graph.walk(Slicer(None, 0))[0]
+    output_ops = Slicer(None, 0).walk(op_graph)[0]
 
     assert len(output_ops) == 0
 
 
 def test_slicer_all(op_graph):
-    output_ops = op_graph.walk(Slicer(None, None))[0]
+    output_ops = Slicer(None, None).walk(op_graph)[0]
 
     assert len(output_ops) == 1
     output_op = output_ops[0]
@@ -39,7 +39,7 @@ def test_slicer_all(op_graph):
 
 
 def test_slicer_end(op_graph):
-    output_ops = op_graph.walk(Slicer(-1, None))[0]
+    output_ops = Slicer(-1, None).walk(op_graph)[0]
 
     assert len(output_ops) == 1
     output_op = output_ops[0]
@@ -57,12 +57,12 @@ def test_slicer_cycle():
     op_graph = OperationGraph([relu_op])
 
     with pytest.raises(ValueError, match="Slicing cyclic graphs is not supported."):
-        output_ops = op_graph.walk(Slicer(None, None))[0]
+        output_ops = Slicer(None, None).walk(op_graph)[0]
 
 
 def test_drop_prefix(op_graph):
     prefix = op_graph[:3]
-    output_ops = op_graph.walk(DropPrefix(prefix))
+    output_ops = DropPrefix(prefix).transform(op_graph)
 
     assert len(output_ops) == 1
     output_op = output_ops[0]

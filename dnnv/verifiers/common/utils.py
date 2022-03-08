@@ -23,7 +23,7 @@ def as_layers(
             break
         layers.insert(0, layer_match.layer)
         op_graph = layer_match.input_op_graph
-    if len(op_graph.output_operations) > 0:
+    if len(op_graph.outputs) > 0:
         raise translator_error("Unsupported computation graph detected")
     return layers
 

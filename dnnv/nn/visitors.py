@@ -2,20 +2,26 @@ from __future__ import annotations
 
 import numpy as np
 
-from typing import List, Type
+from typing import List, NoReturn, Type
 
 from . import operations
+from .graph import OperationGraph
 from .operations import Operation
-from .utils import TensorDetails
 
 
 class OperationVisitor:
-    def visit(self, operation: Operation):
-        method_name = "visit_%s" % operation.__class__.__name__
-        visitor = getattr(self, method_name, self.generic_visit)
-        return visitor(operation)
+    def __init__(self, cached=True):
+        self.cached = cached
+        self.visited = set()
 
-    def generic_visit(self, operation: Operation):
+    def visit(self, operation: Operation) -> NoReturn:
+        if not self.cached or operation not in self.visited:
+            self.visited.add(operation)
+            method_name = "visit_%s" % operation.__class__.__name__
+            visitor = getattr(self, method_name, self.generic_visit)
+            visitor(operation)
+
+    def generic_visit(self, operation: Operation) -> NoReturn:
         for value in operation.__dict__.values():
             if isinstance(value, Operation):
                 self.visit(value)
@@ -23,34 +29,19 @@ class OperationVisitor:
                 for sub_value in value:
                     if isinstance(sub_value, Operation):
                         self.visit(sub_value)
-        return operation
 
-
-class GetInputDetails(OperationVisitor):
-    def __init__(self):
-        self.visited = set()
-        self.input_details = []
-
-    def visit(self, operation: Operation):
-        if id(operation) not in self.visited:
-            super().visit(operation)
-            self.visited.add(id(operation))
-        return tuple(self.input_details)
-
-    def visit_Input(self, operation: operations.Input):
-        self.input_details.append(
-            TensorDetails(tuple(int(i) for i in operation.shape), operation.dtype)
-        )
+    def walk(self, op_graph: OperationGraph) -> NoReturn:
+        for op in op_graph.outputs:
+            self.visit(op)
 
 
 class OperationCounter(OperationVisitor):
-    def __init__(self):
-        self.visited = set()
+    def visit(self, operation: Operation) -> int:
+        super().visit(operation)
+        return len(self.visited)
 
-    def visit(self, operation: Operation):
-        if id(operation) not in self.visited:
-            self.visited.add(id(operation))
-            super().generic_visit(operation)
+    def walk(self, op_graph: OperationGraph) -> int:
+        super().walk(op_graph)
         return len(self.visited)
 
 
@@ -60,26 +51,20 @@ class EnsureSupportVisitor(OperationVisitor):
         supported_operations: List[Type[Operation]],
         error_type: Type[Exception] = RuntimeError,
     ):
+        super().__init__()
         self.supported = set(supported_operations)
         self.error_type = error_type
 
     def visit(self, operation: Operation):
         if type(operation) not in self.supported:
             raise self.error_type(f"{type(operation)} operations are not supported.")
-        return super().visit(operation)
+        super().visit(operation)
 
 
 class PrintVisitor(OperationVisitor):
     def __init__(self):
         super().__init__()
-        self.visited = set()
         self.identifiers = {"count": {}, "op": {}}
-
-    def visit(self, operation: Operation):
-        if operation in self.visited:
-            return
-        self.visited.add(operation)
-        return super().visit(operation)
 
     def generic_visit(self, operation: Operation):
         if not hasattr(self, "visit_%s" % operation.__class__.__name__):
@@ -378,7 +363,6 @@ class PrintVisitor(OperationVisitor):
 
 __all__ = [
     "OperationVisitor",
-    "GetInputDetails",
     "OperationCounter",
     "EnsureSupportVisitor",
     "PrintVisitor",

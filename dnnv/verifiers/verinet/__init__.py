@@ -39,11 +39,11 @@ class VeriNet(Verifier):
                 operations.Sigmoid,
                 operations.Tanh,
             ]
-            op_graph.walk(
-                EnsureSupportVisitor(supported_operations, self.translator_error)
+            EnsureSupportVisitor(supported_operations, self.translator_error).walk(
+                op_graph
             )
 
-            output_op = op_graph.output_operations[0]
+            output_op = op_graph.outputs[0]
             b = output_op.b
             if output_op.transpose_b:
                 b = b.T

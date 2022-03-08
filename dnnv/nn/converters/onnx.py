@@ -5,11 +5,11 @@ import onnx
 from collections import defaultdict
 from typing import Any, Dict, List, Union
 
+from .base import OperationConverter
 from .. import operations
 from ..graph import OperationGraph
 from ..operations import Operation
 from ..utils import NUMPY_TO_ONNX_DTYPE
-from ..visitors import OperationVisitor
 
 
 def convert(op_graph: OperationGraph, *, add_missing_optional_inputs=False):
@@ -21,13 +21,14 @@ def convert(op_graph: OperationGraph, *, add_missing_optional_inputs=False):
     return model
 
 
-class OnnxConverter(OperationVisitor):
+class OnnxConverter(OperationConverter):
     def __init__(self, op_graph: OperationGraph, add_missing_optional_inputs=False):
+        super().__init__()
         self.op_graph = op_graph
         self.inputs: List[onnx.ValueInfoProto] = []
         self.outputs: List[onnx.ValueInfoProto] = []
         self.initializer: List[onnx.TensorProto] = []
-        self.visited: Dict[Operation, onnx.NodeProto] = {}
+        self.visited: Dict[Operation, onnx.NodeProto] = self._cache
         self.op_counts: Dict[str, int] = defaultdict(int)
         self.add_missing_optional_inputs = add_missing_optional_inputs
 
@@ -35,7 +36,7 @@ class OnnxConverter(OperationVisitor):
         output_details = (
             self.op_graph.output_details
         )  # TODO: don't rely on tensorflow converter
-        for op, (shape, dtype) in zip(self.op_graph.output_operations, output_details):
+        for op, (shape, dtype) in zip(self.op_graph.outputs, output_details):
             output_op = self.visit(op)
             node = onnx.helper.make_tensor_value_info(
                 output_op.name, NUMPY_TO_ONNX_DTYPE[dtype], shape
@@ -60,19 +61,6 @@ class OnnxConverter(OperationVisitor):
         model_def = onnx.shape_inference.infer_shapes(model_def)
         onnx.checker.check_model(model_def, full_check=True)
         return model_def
-
-    def visit(self, operation: Operation) -> Union[onnx.NodeProto, onnx.ValueInfoProto]:
-        if operation not in self.visited:
-            result = super().visit(operation)
-            self.visited[operation] = result
-        return self.visited[operation]
-
-    def generic_visit(self, operation: Operation):
-        if not hasattr(self, "visit_%s" % operation.__class__.__name__):
-            raise ValueError(
-                f"ONNX converter not implemented for operation type {type(operation).__name__}"
-            )
-        return super().generic_visit(operation)
 
     def _to_onnx_proto(
         self, value: Any, opname: str

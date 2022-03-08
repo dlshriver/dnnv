@@ -13,7 +13,7 @@ def test_missing():
     with pytest.raises(ValueError) as excinfo:
         OnnxConverter(OperationGraph([])).visit(FakeOperation())
     assert str(excinfo.value).startswith(
-        "ONNX converter not implemented for operation type"
+        "OnnxConverter not implemented for operation type"
     )
 
 

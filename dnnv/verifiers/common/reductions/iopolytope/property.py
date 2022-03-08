@@ -137,7 +137,7 @@ class IOPolytopeProperty(Property):
             self.input_constraint.lower_bounds,
             self.input_constraint.upper_bounds,
         )
-        prefixed_op_graph = OperationGraph(suffixed_op_graph.walk(prefix_transformer))
+        prefixed_op_graph = prefix_transformer.transform(suffixed_op_graph)
         if return_new_bounds and return_prefixes:
             return (
                 prefixed_op_graph,
@@ -157,12 +157,10 @@ class IOPolytopeProperty(Property):
 
     def suffixed_op_graph(self) -> OperationGraph:
         op_graph = self.op_graph.copy()
-        if len(op_graph.output_operations) == 1:
-            new_output_op = op_graph.output_operations[0]
+        if len(op_graph.outputs) == 1:
+            new_output_op = op_graph.outputs[0]
         else:
-            output_operations = [
-                operations.Flatten(o) for o in op_graph.output_operations
-            ]
+            output_operations = [operations.Flatten(o) for o in op_graph.outputs]
             new_output_op = operations.Concat(output_operations, axis=1)
         dtype = OperationGraph([new_output_op]).output_details[0].dtype
         size = self.output_constraint.size()

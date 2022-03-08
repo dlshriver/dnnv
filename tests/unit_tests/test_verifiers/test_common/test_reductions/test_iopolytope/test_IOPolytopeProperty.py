@@ -28,13 +28,13 @@ def test_init_merge():
 
     prop = IOPolytopeProperty([N0, N1], input_constraint, output_constraint, False)
     prop.op_graph.pprint()
-    assert len(prop.op_graph.output_operations) == 1
-    assert isinstance(prop.op_graph.output_operations[0], operations.Concat)
-    assert len(prop.op_graph.output_operations[0].x) == 2
-    assert isinstance(prop.op_graph.output_operations[0].x[0], operations.Flatten)
-    assert isinstance(prop.op_graph.output_operations[0].x[1], operations.Flatten)
-    assert isinstance(prop.op_graph.output_operations[0].x[0].x, operations.Add)
-    assert isinstance(prop.op_graph.output_operations[0].x[1].x, operations.Sub)
+    assert len(prop.op_graph.outputs) == 1
+    assert isinstance(prop.op_graph.outputs[0], operations.Concat)
+    assert len(prop.op_graph.outputs[0].x) == 2
+    assert isinstance(prop.op_graph.outputs[0].x[0], operations.Flatten)
+    assert isinstance(prop.op_graph.outputs[0].x[1], operations.Flatten)
+    assert isinstance(prop.op_graph.outputs[0].x[0].x, operations.Add)
+    assert isinstance(prop.op_graph.outputs[0].x[1].x, operations.Sub)
     assert len(prop.op_graph.input_details) == 1
 
 

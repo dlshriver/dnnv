@@ -163,7 +163,7 @@ class MaxPoolLayer(_PlanetLayerBase):
 
     @classmethod
     def from_operation_graph(cls, operation_graph):
-        op = operation_graph.output_operations
+        op = operation_graph.outputs
         assert len(op) == 1
         op = op[0]
         if not isinstance(op, MaxPool):
@@ -230,7 +230,7 @@ class Residual(_PlanetLayerBase):
 
     @classmethod
     def from_operation_graph(cls, operation_graph):
-        op = operation_graph.output_operations
+        op = operation_graph.outputs
         assert len(op) == 1
         op = op[0]
         activation = None

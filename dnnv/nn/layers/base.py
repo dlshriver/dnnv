@@ -70,7 +70,7 @@ class Layer(metaclass=_Layer):
         for layer_type in layer_types:
             if layer_type.OP_PATTERN is None:
                 continue
-            matches = layer_type.OP_PATTERN.match(operation_graph.output_operations)
+            matches = layer_type.OP_PATTERN.match(operation_graph.outputs)
             for match in matches:
                 op_count = 0
                 visitor = OperationCounter()
@@ -83,7 +83,7 @@ class Layer(metaclass=_Layer):
         if best_match is None:
             return None
         input_op_graph = OperationGraph(best_match)
-        op_graph = OperationGraph(operation_graph.walk(DropPrefix(input_op_graph)))
+        op_graph = DropPrefix(input_op_graph).transform(operation_graph)
         return LayerMatch(
             best_layer_type.from_operation_graph(op_graph), input_op_graph
         )
@@ -98,10 +98,8 @@ class InputLayer(Layer):
 
     @classmethod
     def from_operation_graph(cls, operation_graph):
-        shape = tuple(
-            d if d >= 0 else 1 for d in operation_graph.output_operations[0].shape
-        )
-        dtype = operation_graph.output_operations[0].dtype
+        shape = tuple(d if d >= 0 else 1 for d in operation_graph.outputs[0].shape)
+        dtype = operation_graph.outputs[0].dtype
         return cls(shape, dtype)
 
 
@@ -127,7 +125,7 @@ class FullyConnected(Layer):
     @classmethod
     def from_operation_graph(cls, operation_graph):
         # check activation type
-        op = operation_graph.output_operations
+        op = operation_graph.outputs
         assert len(op) == 1
         op = op[0]
         activation = None
@@ -250,7 +248,7 @@ class Convolutional(Layer):
 
     @classmethod
     def from_operation_graph(cls, operation_graph):
-        op = operation_graph.output_operations
+        op = operation_graph.outputs
         assert len(op) == 1
         op = op[0]
 

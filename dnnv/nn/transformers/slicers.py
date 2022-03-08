@@ -18,7 +18,7 @@ class DropPrefix(OperationTransformer):
 
     def visit(self, operation: Operation) -> Operation:
         if operation not in self._cache:
-            if operation not in self.prefix_graph.output_operations:
+            if operation not in self.prefix_graph.outputs:
                 result = super().visit(operation)
             else:
                 y = OperationGraph([operation]).output_details
