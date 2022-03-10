@@ -301,9 +301,10 @@ class HalfspacePolytope(Constraint):
                 return False
             x_flat_.append(x_.flatten())
         x_flat = np.concatenate(x_flat_)
+        cast = np.cast[x_flat.dtype]
         for hs in self.halfspaces:
-            t = sum(c * x_flat[i] for c, i in zip(hs.coefficients, hs.indices))
-            b = hs.b
+            t = sum(cast(c) * x_flat[i] for c, i in zip(hs.coefficients, hs.indices))
+            b = cast(hs.b)
             if hs.is_open:
                 b = np.nextafter(b, b - 1)
             if (t - b) > threshold:
