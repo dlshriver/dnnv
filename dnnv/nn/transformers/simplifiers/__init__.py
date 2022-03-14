@@ -4,7 +4,6 @@ from copy import copy
 from typing import Any, Dict, List, Optional, Set, Type, Union
 
 from ... import operations
-from ...analyzers import Analysis, SplitAnalysis
 from ...graph import OperationGraph
 from ...operations import Operation
 from ....utils import get_subclasses

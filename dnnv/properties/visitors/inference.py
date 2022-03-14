@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence
 
 from .base import ExpressionVisitor
 from .. import expressions, Expression, Constant, Context, get_context

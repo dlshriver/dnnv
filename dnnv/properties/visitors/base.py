@@ -4,9 +4,38 @@ from ..expressions import Expression
 
 
 class ExpressionVisitor:
-    def __init__(self):
+    def __init__(self, recursive=True):
+        self.recursive = recursive
         self.visited = {}
         self._top_level = True
+
+    def _recursive_visit(self, expression):
+        method_name = "visit_%s" % expression.__class__.__name__
+        visitor = getattr(self, method_name, self.generic_visit)
+        self.visited[expression] = visitor(expression)
+        return self.visited[expression]
+
+    def _visit(self, expression):
+        stack = [expression]
+        visit_stack = []
+        while len(stack):
+            expression = stack.pop()
+            visit_stack.append(expression)
+            for value in expression.__dict__.values():
+                if isinstance(value, Expression):
+                    stack.append(value)
+                elif isinstance(value, (list, tuple, set)):
+                    for sub_value in value:
+                        if isinstance(sub_value, Expression):
+                            stack.append(sub_value)
+        while len(visit_stack):
+            expression = visit_stack.pop()
+            if expression not in self.visited:
+                method_name = "visit_%s" % expression.__class__.__name__
+                visitor = getattr(self, method_name, self.generic_visit)
+                result = visitor(expression)
+                self.visited[expression] = result
+                self.visited[result] = result
 
     def visit(self, expression):
         is_top_level = False
@@ -14,9 +43,10 @@ class ExpressionVisitor:
             is_top_level = True
             self._top_level = False
         if expression not in self.visited:
-            method_name = "visit_%s" % expression.__class__.__name__
-            visitor = getattr(self, method_name, self.generic_visit)
-            self.visited[expression] = visitor(expression)
+            if self.recursive:
+                self._recursive_visit(expression)
+            else:
+                self._visit(expression)
         if is_top_level:
             self._top_level = True
         return self.visited[expression]

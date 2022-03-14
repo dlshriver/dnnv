@@ -59,7 +59,8 @@ class OperationGraph:
                 *[
                     np.ones([i if i >= 0 else 1 for i in d.shape], dtype=d.dtype)
                     for d in self.input_details
-                ]
+                ],
+                _squeeze=False,
             )
             self._output_details = tuple(
                 TensorDetails(o.shape, o.dtype) for o in output
@@ -192,12 +193,14 @@ class OperationGraph:
 
         return simplify(self.copy())
 
-    def __call__(self, *x, **kwargs):
+    def __call__(self, *x, _squeeze=True, **kwargs):
         assert len(kwargs) == 0
         import onnxruntime.backend
 
         onnx_model = self.as_onnx()
         y = onnxruntime.backend.run(onnx_model, list(x))
+        if _squeeze and len(y) == 1:
+            return y[0]
         return y
 
     def __getitem__(self, index):

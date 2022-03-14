@@ -24,6 +24,8 @@ class ExpressionTransformer(ExpressionVisitor):
 
 class GenericExpressionTransformer(ExpressionTransformer):
     def visit(self, expression: Expression) -> Expression:
+        if not isinstance(expression, Expression):
+            return Constant(expression)
         result = super().visit(expression)
         setattr(
             result,
@@ -33,8 +35,6 @@ class GenericExpressionTransformer(ExpressionTransformer):
         return result
 
     def generic_visit(self, expression: Expression) -> Expression:
-        if not isinstance(expression, Expression):
-            return Constant(expression)
         if isinstance(expression, AssociativeExpression):
             return self.visit_AssociativeExpression(expression)
         if isinstance(expression, BinaryExpression):

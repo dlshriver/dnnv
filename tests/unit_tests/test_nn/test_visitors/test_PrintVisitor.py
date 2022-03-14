@@ -7,7 +7,7 @@ from dnnv.utils import get_subclasses
 
 
 def test_missing():
-    class FakeOperation:
+    class FakeOperation(Operation):
         pass
 
     with pytest.raises(ValueError) as excinfo:
@@ -20,6 +20,8 @@ def test_missing():
 def test_all():
     print_visitor = PrintVisitor()
     for operation in get_subclasses(Operation):
+        if "Fake" in operation.__name__:
+            continue
         assert hasattr(print_visitor, f"visit_{operation}")
 
 
@@ -427,6 +429,16 @@ def test_Pad(capsys):
     expected_output = """\
 Input_0                         : Input((1, 3, 4, 4), dtype=float32)
 Pad_0                           : Pad(Input_0, pads=(0, 0, 0, 0))
+"""
+    assert captured.out == expected_output
+
+
+def test_RandomUniform(capsys):
+    rand_op = RandomUniform((1, 5), dtype=np.dtype(np.float32))
+    PrintVisitor().visit(rand_op)
+    captured = capsys.readouterr()
+    expected_output = """\
+RandomUniform_0                 : RandomUniform(shape=(1, 5), dtype=float32, low=0.0, high=1.0, seed=None)
 """
     assert captured.out == expected_output
 

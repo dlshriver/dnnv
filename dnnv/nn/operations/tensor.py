@@ -82,7 +82,7 @@ class Identity(Operation):
 
 class Pad(Operation):
     def __init__(
-        self, x, pads, *, mode="constant", value=0.0, name: Optional[str] = None
+        self, x, pads, *, mode="constant", value=0, name: Optional[str] = None
     ):
         super().__init__(name=name)
         self.x = x

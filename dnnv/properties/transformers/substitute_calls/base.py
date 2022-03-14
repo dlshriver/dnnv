@@ -10,7 +10,7 @@ from ...visitors import DetailsInference
 
 class SubstituteCalls(GenericExpressionTransformer):
     def __init__(self, form="dnf"):
-        super().__init__()
+        super().__init__(recursive=True)
         # `form` provides a hint to the substitutor on how to efficiently
         # format the substitution expression
         self.form = form

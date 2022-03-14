@@ -14,7 +14,7 @@ def test_Sign():
     result = tf_op().numpy()
     assert np.allclose(result, y)
 
-    op = Sign(Input((12,), np.dtype(np.float32)))
+    op = Sign(Input((11,), np.dtype(np.float32)))
     tf_op = TensorflowConverter().visit(op)
     result = tf_op(x).numpy()
     assert np.allclose(result, y)

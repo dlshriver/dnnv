@@ -27,7 +27,6 @@ def test_init_merge():
     output_constraint = HalfspacePolytope()
 
     prop = IOPolytopeProperty([N0, N1], input_constraint, output_constraint, False)
-    prop.op_graph.pprint()
     assert len(prop.op_graph.outputs) == 1
     assert isinstance(prop.op_graph.outputs[0], operations.Concat)
     assert len(prop.op_graph.outputs[0].x) == 2

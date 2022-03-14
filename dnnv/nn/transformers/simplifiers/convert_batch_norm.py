@@ -4,18 +4,12 @@ from copy import copy
 
 from .base import Simplifier
 from ... import operations
-from ...analyzers import SplitAnalysis
 
 
 class ConvertBatchNorm(Simplifier):
-    ANALYSES = {"is_split": SplitAnalysis}
-
     def visit_BatchNormalization(self, operation: operations.BatchNormalization):
         input_op = operation.x
-        if (
-            isinstance(input_op, operations.Conv)
-            and not self.analysis["is_split"][input_op]
-        ):
+        if isinstance(input_op, operations.Conv):
             std = np.sqrt(operation.variance + operation.epsilon)
             a = operation.scale / std
             b = operation.bias - operation.scale * operation.mean / std
@@ -32,10 +26,7 @@ class ConvertBatchNorm(Simplifier):
             new_operation.w = weights
             new_operation.b = bias
             return new_operation
-        elif (
-            isinstance(input_op, operations.Gemm)
-            and not self.analysis["is_split"][input_op]
-        ):
+        elif isinstance(input_op, operations.Gemm):
             std = np.sqrt(operation.variance + operation.epsilon)
             a = operation.scale / std
             b = operation.bias - operation.mean * a

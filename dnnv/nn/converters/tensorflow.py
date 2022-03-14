@@ -49,7 +49,10 @@ class TensorflowConverter(OperationConverter):
         super().__init__()
         self.input_count = 0
         self.results = {}
-        # self._cache = {}
+
+    @classmethod
+    def convert(cls, op_graph: OperationGraph):
+        return convert(op_graph)
 
     def _cached(self, func):
         def wrapped_func(*args, **kwargs):
@@ -647,6 +650,20 @@ class TensorflowConverter(OperationConverter):
             return result
 
         return pad_func
+
+    def visit_RandomUniform(self, operation):
+        @self._cached
+        def rand_func(*inputs):
+            result = tf.random.uniform(
+                operation.shape,
+                minval=operation.low,
+                maxval=operation.high,
+                dtype=operation.dtype,
+                seed=operation.seed,
+            )
+            return result
+
+        return rand_func
 
     def visit_Relu(self, operation):
         x_ = operation.x

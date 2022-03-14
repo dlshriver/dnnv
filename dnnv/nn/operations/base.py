@@ -4,7 +4,7 @@ import logging
 import numpy as np
 import onnx
 
-from typing import Optional, Sequence, Union
+from typing import Optional, Sequence
 
 from .patterns import Or, Parallel, Sequential
 from ..utils import ONNX_TO_NUMPY_DTYPE

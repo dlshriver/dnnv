@@ -9,7 +9,7 @@ from ..visitors import ExpressionVisitor
 
 class LimitQuantifiers(ExpressionVisitor):
     def __init__(self):
-        super().__init__()
+        super().__init__(recursive=True)
         self.at_top_level = True
         self.top_level_quantifier = None
 

@@ -217,6 +217,13 @@ class PrintVisitor(OperationVisitor):
         self.print_op_id(operation)
         print("Pad(%s, pads=%s)" % (self.get_op_id(operation.x), operation.pads))
 
+    def visit_RandomUniform(self, operation: operations.RandomUniform) -> None:
+        self.generic_visit(operation)
+        self.print_op_id(operation)
+        print(
+            f"RandomUniform(shape={operation.shape}, dtype={operation.dtype.name}, low={operation.low}, high={operation.high}, seed={operation.seed})"
+        )
+
     def visit_Relu(self, operation: operations.Relu) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)

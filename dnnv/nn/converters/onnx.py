@@ -74,7 +74,8 @@ class OnnxConverter(OperationConverter):
         }
         for value_info in model_def.graph.input:
             value_info_map[value_info.name] = value_info
-        model_def.graph.output.extend([value_info_map[name] for name in output_names])
+        output_value_info = [value_info_map[name] for name in output_names]
+        model_def.graph.output.extend(output_value_info)
         onnx.checker.check_model(model_def, full_check=True)
         return model_def
 
@@ -417,15 +418,58 @@ class OnnxConverter(OperationConverter):
 
         return node
 
+    def visit_Identity(self, operation: operations.Identity) -> onnx.NodeProto:
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        x = self._to_onnx_proto(operation.x, f"{opname}.x")
+
+        node = onnx.helper.make_node(
+            op_type, inputs=[x.name], outputs=[opname], name=opname
+        )
+
+        return node
+
     def visit_Input(self, operation: operations.Input) -> onnx.ValueInfoProto:
         idx = self.op_counts["Input"] = self.op_counts["Input"] + 1
         opname = f"Input_{idx}"
 
         shape = [d if d >= 0 else 1 for d in np.asarray(operation.shape).tolist()]
-        dtype = NUMPY_TO_ONNX_DTYPE[operation.dtype]
+        dtype = NUMPY_TO_ONNX_DTYPE[np.dtype(operation.dtype)]
 
         node = onnx.helper.make_tensor_value_info(opname, dtype, shape)
         self.inputs.append(node)
+
+        return node
+
+    def visit_LeakyRelu(self, operation: operations.LeakyRelu) -> onnx.NodeProto:
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        x = self._to_onnx_proto(operation.x, f"{opname}.x")
+
+        node = onnx.helper.make_node(
+            op_type,
+            inputs=[x.name],
+            outputs=[opname],
+            name=opname,
+            alpha=operation.alpha,
+        )
+
+        return node
+
+    def visit_LogSoftmax(self, operation: operations.LogSoftmax) -> onnx.NodeProto:
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        x = self._to_onnx_proto(operation.x, f"{opname}.x")
+
+        node = onnx.helper.make_node(
+            op_type, inputs=[x.name], outputs=[opname], name=opname, axis=operation.axis
+        )
 
         return node
 
@@ -506,45 +550,155 @@ class OnnxConverter(OperationConverter):
 
         return node
 
+    def visit_Pad(self, operation: operations.Pad) -> onnx.NodeProto:
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        x = self._to_onnx_proto(operation.x, f"{opname}.x")
+        mode = operation.mode
+        pads = self._to_onnx_proto(operation.pads, f"{opname}.pads")
+
+        if mode == "constant" and operation.value:
+            value = self._to_onnx_proto(operation.value, f"{opname}.value")
+            node = onnx.helper.make_node(
+                op_type,
+                inputs=[x.name, pads.name, value.name],
+                outputs=[opname],
+                name=opname,
+                mode=mode,
+            )
+        else:
+            node = onnx.helper.make_node(
+                op_type,
+                inputs=[x.name, pads.name],
+                outputs=[opname],
+                name=opname,
+                mode=mode,
+            )
+
+        return node
+
+    def visit_RandomUniform(
+        self, operation: operations.RandomUniform
+    ) -> onnx.NodeProto:
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        node = onnx.helper.make_node(
+            op_type,
+            inputs=[],
+            outputs=[opname],
+            name=opname,
+            shape=operation.shape,
+            dtype=NUMPY_TO_ONNX_DTYPE[np.dtype(operation.dtype)],
+            high=operation.high,
+            low=operation.low,
+            seed=operation.seed,
+        )
+
+        return node
+
     def visit_Relu(self, operation: operations.Relu) -> onnx.NodeProto:
-        idx = self.op_counts["Relu"] = self.op_counts["Relu"] + 1
-        opname = f"Relu_{idx}"
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
 
         x = self._to_onnx_proto(operation.x, f"{opname}.x")
 
         node = onnx.helper.make_node(
-            "Relu", inputs=[x.name], outputs=[opname], name=opname
+            op_type, inputs=[x.name], outputs=[opname], name=opname
         )
 
         return node
 
     def visit_Reshape(self, operation: operations.Reshape) -> onnx.NodeProto:
-        idx = self.op_counts["Reshape"] = self.op_counts["Reshape"] + 1
-        opname = f"Reshape_{idx}"
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
 
         x = self._to_onnx_proto(operation.x, f"{opname}.x")
         shape = self._to_onnx_proto(operation.shape, f"{opname}.shape")
 
         if self.opset < 13 and operation.allowzero:
-            raise ValueError("Reshape allowzero is not supported below ONNX opset 14")
+            raise ValueError(
+                f"{op_type} allowzero is not supported below ONNX opset 14"
+            )
 
         if self.opset >= 14:
             node = onnx.helper.make_node(
-                "Reshape",
+                op_type,
                 inputs=[x.name, shape.name],
                 allowzero=operation.allowzero,
                 outputs=[opname],
                 name=opname,
             )
-            print("TEST!")
-            print(node)
         else:
             node = onnx.helper.make_node(
-                "Reshape",
+                op_type,
                 inputs=[x.name, shape.name],
                 outputs=[opname],
                 name=opname,
             )
+
+        return node
+
+    def visit_Resize(self, operation: operations.Resize) -> onnx.NodeProto:
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        x = self._to_onnx_proto(operation.x, f"{opname}.x")
+
+        attributes = {}
+        roi_name = ""
+        scales_name = ""
+        sizes_name = ""
+        if operation.coordinate_transformation_mode == "tf_crop_and_resize":
+            roi = self._to_onnx_proto(operation.roi, f"{opname}.roi")
+            roi_name = roi.name
+            if operation.extrapolation_value:
+                attributes["extrapolation_value"] = operation.extrapolation_value
+        if operation.scales is not None and operation.scales.size > 0:
+            assert operation.sizes is None or operation.sizes.size == 0
+            scales = self._to_onnx_proto(operation.scales, f"{opname}.scales")
+            scales_name = scales.name
+        else:
+            sizes = self._to_onnx_proto(operation.sizes, f"{opname}.sizes")
+            sizes_name = sizes.name
+
+        if operation.mode == "cubic":
+            attributes["cubic_coeff_a"] = operation.cubic_coeff_a
+        elif operation.mode == "nearest":
+            attributes["nearest_mode"] = operation.nearest_mode
+
+        node = onnx.helper.make_node(
+            op_type,
+            inputs=[x.name, roi_name, scales_name, sizes_name],
+            outputs=[opname],
+            name=opname,
+            coordinate_transformation_mode=operation.coordinate_transformation_mode,
+            mode=operation.mode,
+            exclude_outside=operation.exclude_outside,
+            **attributes,
+        )
+
+        return node
+
+    def visit_Shape(self, operation: operations.Shape) -> onnx.NodeProto:
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        x = self._to_onnx_proto(operation.x, f"{opname}.x")
+
+        node = onnx.helper.make_node(
+            op_type,
+            inputs=[x.name],
+            outputs=[opname],
+            name=opname,
+        )
 
         return node
 
@@ -557,6 +711,32 @@ class OnnxConverter(OperationConverter):
 
         node = onnx.helper.make_node(
             op_type, inputs=[x.name], outputs=[opname], name=opname
+        )
+
+        return node
+
+    def visit_Sign(self, operation: operations.Sign) -> onnx.NodeProto:
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        x = self._to_onnx_proto(operation.x, f"{opname}.x")
+
+        node = onnx.helper.make_node(
+            op_type, inputs=[x.name], outputs=[opname], name=opname
+        )
+
+        return node
+
+    def visit_Softmax(self, operation: operations.Softmax) -> onnx.NodeProto:
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        x = self._to_onnx_proto(operation.x, f"{opname}.x")
+
+        node = onnx.helper.make_node(
+            op_type, inputs=[x.name], outputs=[opname], name=opname, axis=operation.axis
         )
 
         return node
@@ -591,6 +771,20 @@ class OnnxConverter(OperationConverter):
 
         return node
 
+    def visit_Tile(self, operation: operations.Tile) -> onnx.NodeProto:
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        x = self._to_onnx_proto(operation.x, f"{opname}.x")
+        repeats = self._to_onnx_proto(operation.repeats, f"{opname}.repeats")
+
+        node = onnx.helper.make_node(
+            op_type, inputs=[x.name, repeats.name], outputs=[opname], name=opname
+        )
+
+        return node
+
     def visit_Transpose(self, operation: operations.Transpose) -> onnx.NodeProto:
         idx = self.op_counts["Transpose"] = self.op_counts["Transpose"] + 1
         opname = f"Transpose_{idx}"
@@ -603,6 +797,20 @@ class OnnxConverter(OperationConverter):
             outputs=[opname],
             name=opname,
             perm=list(operation.permutation),
+        )
+
+        return node
+
+    def visit_Unsqueeze(self, operation: operations.Unsqueeze) -> onnx.NodeProto:
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        x = self._to_onnx_proto(operation.x, f"{opname}.x")
+        axes = self._to_onnx_proto(operation.axes, f"{opname}.axes")
+
+        node = onnx.helper.make_node(
+            op_type, inputs=[x.name, axes.name], outputs=[opname], name=opname
         )
 
         return node
