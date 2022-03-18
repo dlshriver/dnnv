@@ -60,7 +60,7 @@ def _parse_onnx_model(onnx_model: onnx.ModelProto) -> OperationGraph:
         topo_sort(node)
 
     for i, operation in enumerate(operations, 1):
-        logger.debug("%3d: %s", i, operation)
+        logger.debug("%3d: %s(%s)", i, operation, operation.name)
 
     output_operations = []
     for output_info in onnx_model.graph.output:

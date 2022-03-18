@@ -6,7 +6,7 @@ from .base import GenericExpressionTransformer
 
 class RemoveIfThenElse(GenericExpressionTransformer):
     def __init__(self, form="dnf"):
-        super().__init__()
+        super().__init__(recursive=True)
         # `form` provides a hint on how to efficiently format the IfThenElse replacement expression
         self.form = form
 

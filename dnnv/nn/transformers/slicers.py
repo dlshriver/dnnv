@@ -82,23 +82,7 @@ class Slicer(OperationTransformer):
             ):
                 y = OperationGraph([operation]).output_details
                 return Input(y[0].shape, y[0].dtype)
-            kwargs = {}
-            for name, value in operation.__dict__.items():
-                if isinstance(value, Operation):
-                    new_value = self.visit(value)
-                    kwargs[name] = new_value
-                elif isinstance(value, (tuple, list, set)):
-                    new_value = []
-                    for value_ in value:
-                        if isinstance(value_, Operation):
-                            new_value_ = self.visit(value_)
-                            new_value.append(new_value_)
-                        else:
-                            new_value.append(deepcopy(value_))
-                    kwargs[name] = type(value)(new_value)
-                else:
-                    kwargs[name] = deepcopy(value)
-            return operation.__class__(**kwargs)
+            return super().generic_visit(operation)
         else:
             raise ValueError(f"Unknown slicing pass: {self.current_pass}")
 

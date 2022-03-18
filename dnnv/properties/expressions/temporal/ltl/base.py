@@ -8,8 +8,8 @@ class LTL(TemporalExpression, LogicalExpression):
     pass
 
 
-class LTLUnwindingBoundReached(Exception):
+class LTLMaxStepReached(Exception):
     pass
 
 
-__all__ = ["LTL", "LTLUnwindingBoundReached"]
+__all__ = ["LTL", "LTLMaxStepReached"]

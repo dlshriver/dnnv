@@ -11,7 +11,7 @@ from .base import OperationConverter
 from .. import operations
 from ..graph import OperationGraph
 from ..operations import Operation
-from ..utils import NUMPY_TO_ONNX_DTYPE
+from ..utils import NUMPY_TO_ONNX_DTYPE, ONNX_TO_NUMPY_DTYPE, TensorDetails
 
 
 class OnnxConverter(OperationConverter):

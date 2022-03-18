@@ -1,7 +1,4 @@
-import numpy as np
-
-from copy import copy
-from typing import Any, Dict, List, Optional, Set, Type, Union
+from typing import Optional
 
 from ... import operations
 from ...graph import OperationGraph
@@ -41,7 +38,7 @@ def simplify(
 ) -> OperationGraph:
     if simplifier is None:
         simplifier = ComposeSimplifiers(
-            dnn, *[c for c in get_subclasses(Simplifier) if not c is ComposeSimplifiers]
+            *[c for c in get_subclasses(Simplifier) if not c is ComposeSimplifiers]
         )
     simplified_graph = simplifier.transform(dnn)
     simplified_graph._input_details = dnn._input_details

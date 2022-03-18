@@ -116,17 +116,21 @@ class Verifier(ABC):
             else:
                 self.logger.warning("Property is trivially SAT.")
                 return VerificationResult(SAT)
+        result = VerificationResult()
         orig_tempdir = tempfile.tempdir
         try:
             with tempfile.TemporaryDirectory() as tempdir:
                 tempfile.tempdir = tempdir
-                result = VerificationResult()
                 for subproperty in self.reduce_property():
                     subproblem_result = self.check(subproperty)
                     self.logger.info("Sub-problem result: %s", subproblem_result)
                     result |= subproblem_result
                     if self.eager_exit and result.result == SAT:
                         return result
+        except KeyboardInterrupt:
+            if result.result != SAT:
+                result.result = PropertyCheckResult("Unknown(Received Signal: SIGINT)")
+            return result
         finally:
             tempfile.tempdir = orig_tempdir
         return result

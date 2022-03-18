@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+from typing import List
+
 from ..expressions import Expression
 
 
 class ExpressionVisitor:
-    def __init__(self, recursive=True):
+    def __init__(self, recursive=False):
         self.recursive = recursive
         self.visited = {}
         self._top_level = True
+        self._visit_stack = []
 
     def _recursive_visit(self, expression):
         method_name = "visit_%s" % expression.__class__.__name__
@@ -16,18 +19,13 @@ class ExpressionVisitor:
         return self.visited[expression]
 
     def _visit(self, expression):
-        stack = [expression]
+        stack: List[Expression] = [expression]
         visit_stack = []
         while len(stack):
             expression = stack.pop()
             visit_stack.append(expression)
-            for value in expression.__dict__.values():
-                if isinstance(value, Expression):
-                    stack.append(value)
-                elif isinstance(value, (list, tuple, set)):
-                    for sub_value in value:
-                        if isinstance(sub_value, Expression):
-                            stack.append(sub_value)
+            for child_expr in expression.iter(max_depth=1, include_self=False):
+                stack.append(child_expr)
         while len(visit_stack):
             expression = visit_stack.pop()
             if expression not in self.visited:
@@ -35,7 +33,6 @@ class ExpressionVisitor:
                 visitor = getattr(self, method_name, self.generic_visit)
                 result = visitor(expression)
                 self.visited[expression] = result
-                self.visited[result] = result
 
     def visit(self, expression):
         is_top_level = False

@@ -5,6 +5,7 @@ import tensorflow as tf
 from collections import namedtuple
 from onnx import numpy_helper
 
+
 TensorDetails = namedtuple("TensorDetails", ["shape", "dtype"])
 
 ONNX_TO_NUMPY_DTYPE = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE

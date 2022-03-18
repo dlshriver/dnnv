@@ -95,7 +95,7 @@ def build_known_behavior_artifacts():
 
 class Flatten(nn.Module):
     def forward(self, x):
-        return x.reshape(x.size(0), -1)
+        return x.flatten(1)
 
 
 class Residual(nn.Module):

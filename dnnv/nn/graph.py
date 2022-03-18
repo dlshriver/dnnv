@@ -17,6 +17,17 @@ class OperationGraph:
         self._input_details: Optional[Sequence[TensorDetails]] = None
         self._output_details: Optional[Sequence[TensorDetails]] = None
         self._is_linear: Optional[bool] = None
+        self._tensor_details: Optional[Dict[Operation, TensorDetails]] = None
+
+    @property
+    def tensor_details(self) -> Dict[Operation, TensorDetails]:
+        if self._tensor_details is None:
+            from .visitors.inference import DetailsInference
+
+            inference_visitor = DetailsInference()
+            inference_visitor.walk(self)
+            self._tensor_details = inference_visitor.tensor_details
+        return self._tensor_details
 
     @property
     def inputs(self) -> Sequence[Input]:
@@ -191,7 +202,7 @@ class OperationGraph:
     def simplify(self) -> OperationGraph:
         from .transformers import simplify
 
-        return simplify(self.copy())
+        return simplify(self)
 
     def __call__(self, *x, _squeeze=True, **kwargs):
         assert len(kwargs) == 0

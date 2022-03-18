@@ -15,6 +15,7 @@ from . import logging_utils as logging
 from . import nn
 from . import properties
 from . import utils
+from .verifiers.common.results import VerificationResult
 
 if typing.TYPE_CHECKING:
     from dnnv.verifiers.common.base import Verifier
@@ -76,33 +77,32 @@ def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
     verifier: Type[Verifier] = args.verifiers[0]
     verifier_name = verifier.__name__.lower()
     start_t = time.time()
+    params = args.verifier_parameters.get(verifier_name, {})
+    params["eager_exit"] = not args.no_eager_exit
     try:
-        params = args.verifier_parameters.get(verifier_name, {})
-        params["eager_exit"] = not args.no_eager_exit
         verification_result = verifier.verify(phi, **params)
         result_str = str(verification_result.result)
-        cex = verification_result.cex
-        vtimes: Optional[Collection[float]] = verification_result.vtimes
     except errors.DNNVError as e:
+        verification_result = VerificationResult()
         result_str = f"{type(e).__name__}({e})"
         logger.debug("Error traceback:", exc_info=True)
-        cex = None
-        vtimes = None
     except SystemExit:
         if verifier.__module__ != "dnnv.verifiers.convert":
             logger.error(f"Verifier {verifier_name} called exit()")
             raise
         return 0
     end_t = time.time()
+    cex = verification_result.cex
+    vtimes: Optional[Collection[float]] = verification_result.vtimes
     if args.save_violation is not None and cex is not None:
         np.save(args.save_violation, cex)
     print(f"{verifier.__module__}")
     print(f"  result: {result_str}")
     print(f"  total time: {(end_t - start_t):.4f}")
-    if vtimes is not None:
-        print(f"  verification stats:")
-        print(f"    num solved subproblems: {len(vtimes)}")
-        print(f"    total time            : {sum(vtimes):.4f}")
+    print(f"  verification stats:")
+    print(f"    num solved subproblems: {len(vtimes)}")
+    print(f"    total time            : {sum(vtimes):.4f}")
+    if len(vtimes) > 0:
         print(f"    mean time             : {sum(vtimes)/len(vtimes):.4f}")
         print(f"    min time              : {min(vtimes):.4f}")
         print(f"    max time              : {max(vtimes):.4f}")
@@ -128,7 +128,10 @@ def _main():
         ]
     )
     # TODO : only modify path if not in VIRTUAL_ENV
-    return exit(main(*cli.parse_args()))
+    try:
+        return exit(main(*cli.parse_args()))
+    except KeyboardInterrupt:
+        return 0
 
 
 if __name__ == "__main__":

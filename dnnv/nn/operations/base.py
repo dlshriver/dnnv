@@ -43,12 +43,23 @@ class Operation(metaclass=Op):
             Operation.__id += 1
         else:
             self.name = name
+        self._inputs = None
+        self._parameters = None
 
     def __eq__(self, other):
+        if other is self:
+            return True
         if type(other) != type(self):
             return False
-        for name, value in self.__dict__.items():
-            if np.any(other.__dict__[name] != value):
+        for name, value in sorted(
+            self.__dict__.items(),
+            key=lambda kv: kv[1] is not None and isinstance(kv[1], Operation),
+        ):
+            other_value = other.__dict__[name]
+            if value is not None and isinstance(value, Operation):
+                if type(value) != type(other_value) or value.name != other_value.name:
+                    return False
+            if np.any(other_value != value):
                 return False
         return True
 
@@ -63,15 +74,28 @@ class Operation(metaclass=Op):
 
     @property
     def inputs(self):
-        inputs = []
-        for value in self.__dict__.values():
-            if isinstance(value, Operation):
-                inputs.append(value)
-            elif isinstance(value, (list, tuple)):
-                for sub_value in value:
-                    if isinstance(sub_value, Operation):
-                        inputs.append(sub_value)
-        return inputs
+        if self._inputs is None:
+            inputs = []
+            for value in self.__dict__.values():
+                if isinstance(value, Operation):
+                    inputs.append(value)
+                elif isinstance(value, (list, tuple)):
+                    for sub_value in value:
+                        if isinstance(sub_value, Operation):
+                            inputs.append(sub_value)
+            self._inputs = inputs
+        return self._inputs
+
+    @property
+    def parameters(self):
+        if self._parameters is None:
+            import inspect
+
+            self._parameters = {
+                name: getattr(self, name)
+                for name in inspect.signature(type(self)).parameters
+            }
+        return self._parameters
 
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):

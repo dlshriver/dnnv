@@ -221,7 +221,7 @@ class PrintVisitor(OperationVisitor):
         self.generic_visit(operation)
         self.print_op_id(operation)
         print(
-            f"RandomUniform(shape={operation.shape}, dtype={operation.dtype.name}, low={operation.low}, high={operation.high}, seed={operation.seed})"
+            f"RandomUniform(shape={operation.shape}, dtype={np.dtype(operation.dtype).name}, low={operation.low}, high={operation.high}, seed={operation.seed})"
         )
 
     def visit_Relu(self, operation: operations.Relu) -> None:

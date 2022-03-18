@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import numpy as np
 
-from typing import Callable, Dict, List, Set, Union
+from collections import defaultdict
+from typing import Callable, Dict, List, Optional, Set, Type, Union
 
 from .base import OperationTransformer
 from .. import operations
 from ..graph import OperationGraph
+from ..operations import Operation
+from ..utils import TensorDetails
 
 
 def diagonalize(*A):
@@ -21,172 +24,54 @@ def diagonalize(*A):
     return np.block(blocks)
 
 
-class MLPTransformer(OperationTransformer):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.uses: Dict[operations.Operation, Set[operations.Operation]] = {}
+class FlatteningTransformer(OperationTransformer):
+    def __init__(self, tensor_details):
+        super().__init__(recursive=False)
+        self._tensor_details: Optional[Dict[Operation, TensorDetails]] = tensor_details
+        self._inputs = []
 
     def transform(self, op_graph: OperationGraph) -> OperationGraph:
-        if len(op_graph.outputs) > 1:
-            output_operations = [operations.Flatten(o) for o in op_graph.outputs]
-            output_op = operations.Concat(output_operations, axis=1)
-            op_graph = OperationGraph([output_op])
-        simplified_op_graph = op_graph.simplify()
-        mlp_op_graph = super().transform(simplified_op_graph)
-        simplified_mlp_op_graph = mlp_op_graph.simplify()
-        return simplified_mlp_op_graph
+        self._inputs = []
+        new_op_graph = super().transform(op_graph)
+        new_op_graph._inputs = self._inputs
+        new_op_graph._input_details = [self._tensor_details[op] for op in self._inputs]
+        new_op_graph._output_details = [
+            self._tensor_details[op] for op in new_op_graph.outputs
+        ]
+        new_op_graph._is_linear = op_graph._is_linear
+        return new_op_graph
 
     def visit_Add(self, operation: operations.Add):
         if not isinstance(operation.a, operations.Operation) or not isinstance(
             operation.b, operations.Operation
         ):
             return super().visit(operation)
-        a_shape, a_dtype = OperationGraph([operation.a]).output_details[0]
-        b_shape, b_dtype = OperationGraph([operation.b]).output_details[0]
+        a_shape, a_dtype = self._tensor_details[operation.a]
+        b_shape, b_dtype = self._tensor_details[operation.b]
         assert a_shape == b_shape
         assert a_shape[0] == 1
         dtype = np.result_type(a_dtype, b_dtype)
         size = np.product(a_shape)
         I = np.eye(size, dtype=dtype)
-        new_concat_op = operations.Concat(
-            [operations.Flatten(operation.a), operations.Flatten(operation.b)], axis=1
+        a = operation.a
+        if len(a_shape) > 2:
+            a = operations.Flatten(operation.a)
+            a_shape = (a_shape[0], int(np.product(a_shape[1:])))
+            self._tensor_details[a] = TensorDetails(a_shape, a_dtype)
+        b = operation.b
+        if len(b_shape) > 2:
+            b = operations.Flatten(operation.b)
+            b_shape = (b_shape[0], int(np.product(b_shape[1:])))
+            self._tensor_details[b] = TensorDetails(b_shape, b_dtype)
+        new_concat_op = operations.Concat([a, b], axis=1)
+        self._tensor_details[new_concat_op] = TensorDetails(
+            (a_shape[0], a_shape[1] + b_shape[1]), a_dtype
         )
         new_add_op = operations.Gemm(
             new_concat_op, np.block([[I], [I]]), np.zeros(size, dtype=dtype)
         )
+        self._tensor_details[new_add_op] = self._tensor_details[operation]
         return self.visit(new_add_op)
-
-    def visit_Concat(self, operation: operations.Concat) -> operations.Operation:
-        assert operation.axis == 1
-        new_op_constructor: Callable = lambda x: x
-        x = [self.visit(op) for op in operation.x]
-        while len(set(x)) > 1:
-            if all(isinstance(op, operations.Input) for op in x):
-                assert all(len(op.shape) == 2 for op in x)
-                assert all(op.shape[0] == 1 for op in x)
-                assert all(op.dtype == x[0].dtype for op in x)
-                input_ops: Dict[operations.Input, int] = {}
-                blocks: List[List[np.ndarray]] = []
-                for op in x:
-                    n = op.shape[1]
-                    if op not in input_ops:
-                        input_ops[op] = len(input_ops)
-                        r = (
-                            [
-                                np.zeros((n, block.shape[1]), dtype=op.dtype)
-                                for block in blocks[0]
-                            ]
-                            if len(blocks)
-                            else []
-                        )
-                        r.append(np.eye(n, dtype=op.dtype))
-                        for block in blocks:
-                            block.append(
-                                np.zeros((block[0].shape[0], n), dtype=op.dtype)
-                            )
-                        blocks.append(r)
-                    else:
-                        for i, block in enumerate(blocks):
-                            if i == input_ops[op]:
-                                block.append(np.eye(n, dtype=op.dtype))
-                            else:
-                                block.append(
-                                    np.zeros((block[0].shape[0], n), dtype=op.dtype)
-                                )
-                b = np.block(blocks)
-                c = np.zeros(b.shape[1], dtype=b.dtype)
-                new_op_constructor = lambda x, op_constructor=new_op_constructor, b=b, c=c: op_constructor(
-                    operations.Gemm(x, b, c)
-                )
-                x = [
-                    operations.Input(
-                        (1, sum(op.shape[1] for op in input_ops)), x[0].dtype
-                    )
-                ]
-            elif any(
-                all(isinstance(op, act_fn) for op in x)
-                for act_fn in (
-                    operations.Elu,
-                    operations.Relu,
-                    operations.Sigmoid,
-                    operations.Tanh,
-                )
-            ):
-                op_type = type(x[0])
-                new_op_constructor = (
-                    lambda x, op_constructor=new_op_constructor: op_constructor(
-                        op_type(x)
-                    )
-                )
-                x = [op.x for op in x]
-            elif all(isinstance(op, operations.Gemm) for op in x):
-                b = diagonalize(*(op.b for op in x))
-                c = np.block([op.c for op in x])
-                new_op_constructor = lambda x, op_constructor=new_op_constructor, b=b, c=c: op_constructor(
-                    operations.Gemm(x, b, c)
-                )
-                x = [op.a for op in x]
-            elif any(isinstance(op, operations.Relu) for op in x):
-                inputs: List[operations.Operation] = []
-                weight_blocks = []
-                for op in x:
-                    if isinstance(op, operations.Input):
-                        n = op.shape[-1]
-                        dtype = op.dtype
-                    else:
-                        details = OperationGraph([op]).output_details[0]
-                        n = details.shape[-1]
-                        dtype = details.dtype
-                    I = np.eye(n, dtype=dtype)
-                    if isinstance(op, operations.Relu):
-                        inputs.append(op)
-                        weight_blocks.append(I)
-                    else:
-                        inputs.append(
-                            operations.Relu(
-                                operations.Gemm(
-                                    op, np.block([I, -I]), np.zeros(2 * n, dtype=dtype)
-                                )
-                            )
-                        )
-                        weight_blocks.append(np.block([[I], [-I]]))
-                b = diagonalize(*weight_blocks)
-                c = np.zeros(b.shape[1], dtype=b.dtype)
-                new_op_constructor = lambda x, op_constructor=new_op_constructor, b=b, c=c: op_constructor(
-                    operations.Gemm(x, b, c)
-                )
-                x = inputs
-            elif any(isinstance(op, operations.Input) for op in x):
-                x = [
-                    op
-                    if not isinstance(op, operations.Input)
-                    else operations.Gemm(
-                        op,
-                        np.eye(op.shape[1], dtype=op.dtype),
-                        np.zeros(op.shape[1], dtype=op.dtype),
-                    )
-                    for op in x
-                ]
-            else:
-                print("\n\nERROR!!!")
-                OperationGraph([operations.Concat(x, 1)]).pprint()
-                raise RuntimeError(f"{x}")
-        a = x[0]
-        if isinstance(a, operations.Input):
-            n = a.shape[-1]
-            dtype = a.dtype
-        else:
-            details = OperationGraph([a]).output_details[0]
-            n = details.shape[-1]
-            dtype = details.dtype
-        I = np.eye(n, dtype=dtype)
-        return new_op_constructor(
-            operations.Gemm(
-                a,
-                np.block([I for _ in x]),
-                np.zeros(n * len(x), dtype=dtype),
-            )
-        )
 
     def visit_Conv(self, operation: operations.Conv) -> operations.Gemm:
         x = operation.x
@@ -203,7 +88,7 @@ class MLPTransformer(OperationTransformer):
         p_top, p_left, p_bottom, p_right = operation.pads
         s_h, s_w = operation.strides
 
-        _, in_c, in_h, in_w = OperationGraph([operation.x]).output_shape[0]
+        _, in_c, in_h, in_w = self._tensor_details[operation.x].shape
         input_size = in_c * in_h * in_w
         out_c = w.shape[0]
         out_h = (in_h - k_h + p_top + p_bottom) // s_h + 1
@@ -229,7 +114,12 @@ class MLPTransformer(OperationTransformer):
                                     (ck, hi, wi), (in_c, in_h, in_w)
                                 )
                                 gemm_b[in_idx, out_idx] = w[co, ck, hk, wk]
-        return operations.Gemm(x, gemm_b, gemm_c)
+        new_op = operations.Gemm(x, gemm_b, gemm_c)
+        old_details = self._tensor_details[operation]
+        self._tensor_details[new_op] = TensorDetails(
+            (old_details.shape[0], output_size), old_details.dtype
+        )
+        return new_op
 
     def visit_Flatten(self, operation: operations.Flatten) -> operations.Operation:
         return self.visit(operation.x)
@@ -247,13 +137,259 @@ class MLPTransformer(OperationTransformer):
         assert isinstance(c, np.ndarray)
         assert operation.alpha == 1
         assert operation.beta == 1
-        return operations.Gemm(a, b, c)
+        new_op = operations.Gemm(a, b, c)
+        self._tensor_details[new_op] = self._tensor_details[operation]
+        return new_op
 
     def visit_Input(self, operation: operations.Input) -> operations.Input:
         assert abs(operation.shape[0]) == 1
-        return operations.Input(
+        new_op = operations.Input(
             (1, int(np.product(operation.shape[1:]))), operation.dtype
         )
+        self._inputs.append(new_op)
+        self._tensor_details[new_op] = TensorDetails(new_op.shape, new_op.dtype)
+        return new_op
+
+
+ActivationOperation = (
+    operations.Elu,
+    operations.LeakyRelu,
+    operations.Relu,
+    operations.Sigmoid,
+    operations.Tanh,
+)
+
+
+class LinearizingTransformer(OperationTransformer):
+    def __init__(self, tensor_details):
+        super().__init__(recursive=False)
+        self._tensor_details: Optional[Dict[Operation, TensorDetails]] = tensor_details
+
+    def generic_visit(self, operation: Operation) -> Operation:
+        result = super().generic_visit(operation)
+        if result is not operation:
+            self._tensor_details[result] = self._tensor_details[operation]
+        return result
+
+    def transform(self, op_graph: OperationGraph) -> OperationGraph:
+        new_op_graph = super().transform(op_graph)
+        new_op_graph._inputs = op_graph._inputs
+        new_op_graph._input_details = op_graph._input_details
+        new_op_graph._output_details = op_graph._output_details
+        new_op_graph._is_linear = True
+        return new_op_graph
+
+    def _extract_computation_paths(self, operation: operations.Concat):
+        activation: Optional[Type[Operation]] = None
+        num_inputs = len(operation.x)
+        computation_paths: List[List[Operation]] = [
+            [self.visit(op)] for op in operation.x
+        ]
+        op_to_path_index: List[Dict[Optional[Operation], int]] = [
+            {op: 0} for [op] in computation_paths
+        ]
+        uses: Dict[Optional[Operation], List[Operation]] = defaultdict(list)
+        for [op] in computation_paths:
+            uses[op].append(operation)
+        while len(max(uses.values(), default=0, key=len)) < num_inputs:
+            for path_id, path in enumerate(computation_paths):
+                op = path[-1]
+                if op is None:
+                    continue
+                if isinstance(op, ActivationOperation):
+                    if activation is None:
+                        activation = type(op)
+                        assert (
+                            activation == operations.Relu
+                        ), "only Relu MLPs are currently supported"
+                    assert type(op) == activation
+                assert len(op.inputs) <= 1
+                if len(op.inputs) == 0:
+                    input_op = None
+                else:
+                    input_op = op.inputs[0]
+                uses[input_op].append(op)
+                path.append(input_op)
+                assert input_op not in op_to_path_index[path_id]
+                op_to_path_index[path_id][input_op] = len(op_to_path_index[path_id])
+                if len(uses[input_op]) == num_inputs:
+                    break
+        if len([1 for k, v in uses.items() if len(v) > 1]) > 1:
+            import warnings
+
+            warnings.warn(
+                "MLPTransformer does not efficiently optimize multiple computation paths with shared sub-paths"
+            )
+        base_op = max(uses.keys(), default=0, key=lambda k: len(uses[k]))
+        computation_paths = [
+            path[: op_to_index[base_op] + 1]
+            for path, op_to_index in zip(computation_paths, op_to_path_index)
+        ]
+        return computation_paths
+
+    def _path_parameters(self, computation_paths):
+        first_layer_types = [
+            type(path[-2]) for path in computation_paths[1:] if len(path) > 1
+        ]
+        if any(t != first_layer_types[0] for t in first_layer_types):
+            raise NotImplementedError("TODO (A)!")
+        if (
+            len(first_layer_types) < len(computation_paths)
+            and first_layer_types[0] != operations.Gemm
+        ):
+            raise NotImplementedError("TODO (E)!")
+        longest_path_len = max(len(path) for path in computation_paths)
+        path_parameters = []
+        for path in computation_paths:
+            parameters = []
+            path_parameters.append(parameters)
+            for op in reversed(path[:-1]):
+                if isinstance(op, operations.Relu):
+                    parameters.append(("relu",))
+                elif isinstance(op, operations.Gemm):
+                    parameters.append(("gemm", op.b, op.c))
+                else:
+                    raise NotImplementedError("TODO (C)!")
+            if len(path) == longest_path_len:
+                continue
+            if (longest_path_len - len(parameters)) % 2 == 0:
+                if len(parameters) == 0 or parameters[-1] == ("relu",):
+                    details = self._tensor_details[path[0]]
+                    size = details.shape[1]
+                    dtype = details.dtype
+                    parameters.append(
+                        ("gemm", np.eye(size, dtype=dtype), np.zeros(size, dtype=dtype))
+                    )
+                elif parameters[-1][0] == "gemm":
+                    parameters.append(("relu",))
+                else:
+                    raise NotImplementedError("TODO (C)!")
+            while len(parameters) < longest_path_len - 1:
+                if ("relu",) in parameters:
+                    details = self._tensor_details[path[-1]]
+                    size = details.shape[1]
+                    dtype = details.dtype
+                    if parameters[0] == ("relu",):
+                        size *= 2
+                    index = 0
+                    for i, p in enumerate(parameters[:-1]):
+                        if p == ("relu",):
+                            continue
+                        if p[1].shape[1] < size:
+                            index = i + 1
+                            size = p[1].shape[1]
+                            dtype = p[1].dtype
+                    b = np.eye(size, dtype=dtype)
+                    c = np.zeros(size, dtype=dtype)
+                    while len(parameters) < longest_path_len - 1:
+                        parameters.insert(index + 1, ("relu",))
+                        parameters.insert(index + 1, ("gemm", b, c))
+                else:
+                    assert len(parameters) == 1
+                    details = self._tensor_details[path[-1]]
+                    size = details.shape[1]
+                    dtype = details.dtype
+                    index = 0
+                    if parameters[0][1].shape[1] < size:
+                        index = -1
+                        size = parameters[0][1].shape[1]
+                        dtype = parameters[0][1].dtype
+                    I = np.eye(size, dtype=dtype)
+                    b = np.block([I, -I])
+                    c = np.zeros(2 * size, dtype=dtype)
+                    _, _b, _c = parameters.pop()
+                    if index == 0:
+                        parameters.append(("gemm", b, c))
+                        parameters.append(("relu",))
+                    else:
+                        parameters.append(("gemm", _b @ b, _c @ b))
+                        parameters.append(("relu",))
+                    b = np.eye(2 * size, dtype=dtype)
+                    while len(parameters) < longest_path_len - 3:
+                        parameters.append(("gemm", b, c))
+                        parameters.append(("relu",))
+                    if index == 0:
+                        b = np.block([[I], [-I]]) @ _b
+                        parameters.append(("gemm", b, _c))
+                    else:
+                        b = np.block([[I], [-I]])
+                        c = np.zeros(size, dtype=dtype)
+                        parameters.append(("gemm", b, c))
+                break
+            if len(parameters) != longest_path_len - 1:
+                raise NotImplementedError("TODO (B)!")
+        return path_parameters
+
+    def visit_Concat(self, operation: operations.Concat) -> operations.Operation:
+        import itertools
+
+        assert operation.axis == 1
+        computation_paths = self._extract_computation_paths(operation)
+        path_parameters = self._path_parameters(computation_paths)
+        base_op = computation_paths[0][-1]
+        num_paths = len(computation_paths)
+        details = self._tensor_details[base_op]
+        size = details.shape[1]
+        dtype = details.dtype
+        I = np.eye(size, dtype=dtype)
+        base_op = operations.Gemm(
+            base_op, np.block([I] * num_paths), np.zeros(size * num_paths, dtype=dtype)
+        )
+        from ..transformers.simplifiers.squeeze_gemms import SqueezeGemms
+
+        base_op = SqueezeGemms().simplify(base_op)
+        self._tensor_details[base_op] = TensorDetails(
+            (details.shape[0], size * num_paths), dtype
+        )
+        for params in itertools.zip_longest(*path_parameters):
+            op_type = params[0][0]
+            if op_type == "relu":
+                new_op = operations.Relu(base_op)
+                self._tensor_details[new_op] = self._tensor_details[base_op]
+            elif op_type == "gemm":
+                b = diagonalize(*(p[1] for p in params))
+                c = np.block([p[2] for p in params])
+                new_op = operations.Gemm(base_op, b, c)
+                new_op = SqueezeGemms().simplify(new_op)
+                base_details = self._tensor_details[base_op]
+                shape = base_details.shape[0], b.shape[1]
+                dtype = base_details.dtype
+                self._tensor_details[new_op] = TensorDetails(shape, dtype)
+            base_op = new_op
+        return base_op
+
+
+class MLPTransformer(OperationTransformer):
+    def __init__(self):
+        super().__init__(recursive=False)
+        self._tensor_details: Optional[Dict[Operation, TensorDetails]] = None
+
+    def transform(self, op_graph: OperationGraph) -> OperationGraph:
+        simplified_op_graph = op_graph.simplify()
+        _ = simplified_op_graph.tensor_details
+        flattened_op_graph = FlatteningTransformer(
+            simplified_op_graph.tensor_details
+        ).transform(simplified_op_graph)
+        if len(flattened_op_graph.outputs) > 1:
+            op = op_graph.outputs[0]
+            shape = flattened_op_graph.tensor_details[op].shape
+            dtype = flattened_op_graph.tensor_details[op].dtype
+            for op in op_graph.outputs[1:]:
+                shape[1] += flattened_op_graph.tensor_details[op].shape[1]
+            output_op = operations.Concat(op_graph.outputs, axis=1)
+            op_graph = OperationGraph([output_op])
+            op_graph._inputs = flattened_op_graph._inputs
+            op_graph._input_details = flattened_op_graph._input_details
+            op_graph._output_details = [TensorDetails(shape, dtype)]
+            op_graph._is_linear = flattened_op_graph._is_linear
+            op_graph._tensor_details = flattened_op_graph._tensor_details
+            flattened_op_graph = op_graph
+        _ = flattened_op_graph.tensor_details
+        linearized_op_graph = LinearizingTransformer(
+            flattened_op_graph.tensor_details
+        ).transform(flattened_op_graph)
+        mlp_op_graph = linearized_op_graph.simplify()
+        return mlp_op_graph
 
 
 __all__ = ["MLPTransformer"]

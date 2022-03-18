@@ -7,8 +7,7 @@ from ..expressions import *
 
 class FirstOrderLogicTransformer(GenericExpressionTransformer):
     def __init__(self, form="dnf"):
-        super().__init__()
-        # `form` provides a hint on how to efficiently format the IfThenElse replacement expression
+        super().__init__(recursive=True)
         self.form = form
 
     def visit(self, expression: Expression) -> Expression:
@@ -16,10 +15,11 @@ class FirstOrderLogicTransformer(GenericExpressionTransformer):
         return expr
 
     def visit_Finally(self, expression: ltl.Finally) -> Expression:
-        return self.visit(ltl.Until(Constant(True), expression.expr))
+        result = self.visit(ltl.Until(Constant(True), expression.expr))
+        return result
 
     def visit_Globally(self, expression: ltl.Globally) -> Expression:
-        return self.visit(ltl.Release(Constant(False), expression.expr))
+        return Not(self.visit(ltl.Until(Constant(True), Not(expression.expr))))
 
     def visit_Next(self, expression: ltl.Next) -> Expression:
         variables = set(
@@ -28,23 +28,16 @@ class FirstOrderLogicTransformer(GenericExpressionTransformer):
         expr = expression.expr
         if len(variables) == 0:
             return expr
-        for v in variables:
-            try:
-                next_v = v.next()
-            except ltl.LTLUnwindingBoundReached:
-                return Constant(False)
+        try:
+            next_variables = [v.next() for v in variables]
+        except ltl.LTLMaxStepReached:
+            return Constant(False)
+        for v, next_v in zip(variables, next_variables):
             expr = SubstituteExpression(v, next_v).visit(expr)
         return self.visit(expr)
 
-    def visit_Not(self, expression):
-        form = self.form
-        self.form = "cnf" if form == "dnf" else "dnf"
-        result = super().generic_visit(expression)
-        self.form = form
-        return result
-
     def visit_Release(self, expression: ltl.Release) -> Expression:
-        return self.visit(Not(ltl.Until(Not(expression.expr1), Not(expression.expr2))))
+        return Not(self.visit(ltl.Until(Not(expression.expr1), Not(expression.expr2))))
 
     def visit_StrongRelease(self, expression: ltl.StrongRelease) -> Expression:
         return self.visit(
@@ -55,22 +48,25 @@ class FirstOrderLogicTransformer(GenericExpressionTransformer):
         return expression.freeze()
 
     def visit_Until(self, expression: ltl.Until) -> Expression:
-        return self.visit(
-            Or(
-                expression.expr2,
+        if expression.expr1 is Constant(True):
+            result = Or(
+                self.visit(expression.expr2),
+                self.visit(ltl.Next(ltl.Until(expression.expr1, expression.expr2))),
+            )
+        else:
+            result = Or(
+                self.visit(expression.expr2),
                 And(
-                    expression.expr1,
-                    ltl.Next(ltl.Until(expression.expr1, expression.expr2)),
+                    self.visit(expression.expr1),
+                    self.visit(ltl.Next(ltl.Until(expression.expr1, expression.expr2))),
                 ),
             )
-        )
+        return result
 
     def visit_WeakUntil(self, expression: ltl.WeakUntil) -> Expression:
-        return self.visit(
-            Or(
-                ltl.Until(expression.expr1, expression.expr2),
-                Not(ltl.Until(Constant(True), Not(expression.expr1))),
-            )
+        return Or(
+            self.visit(ltl.Until(expression.expr1, expression.expr2)),
+            Not(self.visit(ltl.Until(Constant(True), Not(expression.expr1)))),
         )
 
 

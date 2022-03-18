@@ -30,15 +30,5 @@ class DropPrefix(OperationTransformer):
             self._cache[operation] = result
         return self._cache[operation]
 
-    def generic_visit(self, operation: Operation) -> Operation:
-        kwargs = {}
-        for name, value in operation.__dict__.items():
-            if isinstance(value, Operation):
-                new_value = self.visit(value)
-                kwargs[name] = new_value
-            else:
-                kwargs[name] = deepcopy(value)
-        return operation.__class__(**kwargs)
-
 
 __all__ = ["DropPrefix"]
