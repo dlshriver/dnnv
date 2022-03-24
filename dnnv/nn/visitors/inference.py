@@ -80,6 +80,37 @@ class DetailsInference(OperationVisitor):
 
         self.tensor_details[operation] = TensorDetails(output_shape, output_dtype)
 
+    def visit_Div(self, operation: operations.Div):
+        a = operation.a
+        if isinstance(a, Operation):
+            self.visit(a)
+            a_details = self.tensor_details[a]
+            a = np.zeros(a_details.shape, dtype=a_details.dtype)
+        b = operation.b
+        if isinstance(b, Operation):
+            self.visit(b)
+            b_details = self.tensor_details[b]
+            b = np.zeros(b_details.shape, dtype=b_details.dtype)
+        output = a / b
+        self.tensor_details[operation] = TensorDetails(output.shape, output.dtype)
+
+    def visit_Elu(self, operation: operations.Elu):
+        self.visit(operation.x)
+        self.tensor_details[operation] = self.tensor_details[operation.x]
+
+    def visit_Flatten(self, operation: operations.Flatten):
+        self.visit(operation.x)
+        axis = operation.axis
+        input_details = self.tensor_details[operation.x]
+        input_shape = input_details.shape
+        output_shape = (
+            int(np.product(input_shape[:axis])),
+            int(np.product(input_shape[axis:])),
+        )
+        self.tensor_details[operation] = TensorDetails(
+            output_shape, input_details.dtype
+        )
+
     def visit_Gemm(self, operation: operations.Gemm):
         a = operation.a
         if isinstance(a, Operation):
@@ -103,23 +134,6 @@ class DetailsInference(OperationVisitor):
         output = a @ b + c
         self.tensor_details[operation] = TensorDetails(output.shape, output.dtype)
 
-    def visit_Elu(self, operation: operations.Elu):
-        self.visit(operation.x)
-        self.tensor_details[operation] = self.tensor_details[operation.x]
-
-    def visit_Flatten(self, operation: operations.Flatten):
-        self.visit(operation.x)
-        axis = operation.axis
-        input_details = self.tensor_details[operation.x]
-        input_shape = input_details.shape
-        output_shape = (
-            int(np.product(input_shape[:axis])),
-            int(np.product(input_shape[axis:])),
-        )
-        self.tensor_details[operation] = TensorDetails(
-            output_shape, input_details.dtype
-        )
-
     def visit_Input(self, operation: operations.Input):
         self.tensor_details[operation] = TensorDetails(
             tuple(d if d >= 0 else 1 for d in operation.shape), operation.dtype
@@ -129,6 +143,39 @@ class DetailsInference(OperationVisitor):
         self.visit(operation.x)
         self.tensor_details[operation] = self.tensor_details[operation.x]
 
+    def visit_MatMul(self, operation: operations.MatMul):
+        a = operation.a
+        if isinstance(a, Operation):
+            self.visit(a)
+            a_details = self.tensor_details[a]
+            a = np.zeros(a_details.shape, dtype=a_details.dtype)
+        b = operation.b
+        if isinstance(b, Operation):
+            self.visit(b)
+            b_details = self.tensor_details[b]
+            b = np.zeros(b_details.shape, dtype=b_details.dtype)
+        output = a @ b
+        self.tensor_details[operation] = TensorDetails(output.shape, output.dtype)
+
+    def visit_Mul(self, operation: operations.Mul):
+        a = operation.a
+        if isinstance(a, Operation):
+            self.visit(a)
+            a_details = self.tensor_details[a]
+            a = np.zeros(a_details.shape, dtype=a_details.dtype)
+        b = operation.b
+        if isinstance(b, Operation):
+            self.visit(b)
+            b_details = self.tensor_details[b]
+            b = np.zeros(b_details.shape, dtype=b_details.dtype)
+        output = a * b
+        self.tensor_details[operation] = TensorDetails(output.shape, output.dtype)
+
+    def visit_RandomUniform(self, operation: operations.RandomUniform):
+        self.tensor_details[operation] = TensorDetails(
+            tuple(d for d in operation.shape), operation.dtype
+        )
+
     def visit_Relu(self, operation: operations.Relu):
         self.visit(operation.x)
         self.tensor_details[operation] = self.tensor_details[operation.x]
@@ -136,6 +183,20 @@ class DetailsInference(OperationVisitor):
     def visit_Sigmoid(self, operation: operations.Sigmoid):
         self.visit(operation.x)
         self.tensor_details[operation] = self.tensor_details[operation.x]
+
+    def visit_Sub(self, operation: operations.Sub):
+        a = operation.a
+        if isinstance(a, Operation):
+            self.visit(a)
+            a_details = self.tensor_details[a]
+            a = np.zeros(a_details.shape, dtype=a_details.dtype)
+        b = operation.b
+        if isinstance(b, Operation):
+            self.visit(b)
+            b_details = self.tensor_details[b]
+            b = np.zeros(b_details.shape, dtype=b_details.dtype)
+        output = a - b
+        self.tensor_details[operation] = TensorDetails(output.shape, output.dtype)
 
     def visit_Tanh(self, operation: operations.Tanh):
         self.visit(operation.x)

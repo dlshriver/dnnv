@@ -44,13 +44,18 @@ class VerificationResult:
 
 
 class PropertyCheckResult:
-    def __init__(self, name: str):
+    def __init__(self, name: str, reason: Optional[str] = None):
         self.name = name
+        self.reason = reason
 
     def __str__(self):
+        if self.reason is not None:
+            return f"{self.name}({self.reason})"
         return self.name
 
     def __repr__(self):
+        if self.reason is not None:
+            return f"PropertyCheckResult({self.name!r}, reason={self.reason!r})"
         return f"PropertyCheckResult({self.name!r})"
 
     def __invert__(self):

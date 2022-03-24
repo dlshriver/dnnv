@@ -56,9 +56,14 @@ class Operation(metaclass=Op):
             key=lambda kv: kv[1] is not None and isinstance(kv[1], Operation),
         ):
             other_value = other.__dict__[name]
-            if value is not None and isinstance(value, Operation):
-                if type(value) != type(other_value) or value.name != other_value.name:
-                    return False
+            if type(value) != type(other_value):
+                return False
+            if (
+                value is not None
+                and isinstance(value, Operation)
+                and value.name != other_value.name
+            ):
+                return False
             if np.any(other_value != value):
                 return False
         return True

@@ -80,6 +80,7 @@ def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
     params = args.verifier_parameters.get(verifier_name, {})
     params["eager_exit"] = not args.no_eager_exit
     try:
+        logger.info("verifying property with %s", verifier.__name__.lower())
         verification_result = verifier.verify(phi, **params)
         result_str = str(verification_result.result)
     except errors.DNNVError as e:

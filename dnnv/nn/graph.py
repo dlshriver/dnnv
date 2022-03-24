@@ -17,6 +17,7 @@ class OperationGraph:
         self._input_details: Optional[Sequence[TensorDetails]] = None
         self._output_details: Optional[Sequence[TensorDetails]] = None
         self._is_linear: Optional[bool] = None
+        self._simplified: Optional[OperationGraph] = None
         self._tensor_details: Optional[Dict[Operation, TensorDetails]] = None
 
     @property
@@ -66,16 +67,7 @@ class OperationGraph:
     @property
     def output_details(self) -> Sequence[TensorDetails]:
         if self._output_details is None:
-            output = self(
-                *[
-                    np.ones([i if i >= 0 else 1 for i in d.shape], dtype=d.dtype)
-                    for d in self.input_details
-                ],
-                _squeeze=False,
-            )
-            self._output_details = tuple(
-                TensorDetails(o.shape, o.dtype) for o in output
-            )
+            self._output_details = tuple(self.tensor_details[o] for o in self.outputs)
         return self._output_details
 
     @property
@@ -200,9 +192,13 @@ class OperationGraph:
         return PrintVisitor().walk(self)
 
     def simplify(self) -> OperationGraph:
-        from .transformers import simplify
+        if self._simplified is None:
+            from .transformers import simplify
 
-        return simplify(self)
+            result = simplify(self)
+            self._simplified = result
+            result._simplified = result
+        return self._simplified
 
     def __call__(self, *x, _squeeze=True, **kwargs):
         assert len(kwargs) == 0

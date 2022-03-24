@@ -9,13 +9,13 @@ from .base import LTL, LTLMaxStepReached
 from ...base import Expression
 from ...terms import Constant, Network, Parameter, Symbol
 from .....nn import operations, OperationGraph, OperationVisitor
-from .....nn.transformers.mlp import MLPTransformer
+from .....nn.transformers.mlp import MLPTransformer, SqueezeGemms
 from .....nn.utils import TensorDetails
 
 IntExpression = Union[int, Expression]
 
 
-def _concat_opgraphs(*op_graphs: OperationGraph):
+def _concat_op_graphs(*op_graphs: OperationGraph):
     input_set = set()
     inputs = []
     outputs = []
@@ -100,6 +100,10 @@ class TemporalSymbol(LTL):
             control_period = control_period.value
         self.control_period = control_period
 
+        if isinstance(state_slack, Expression) and state_slack.is_concrete:
+            state_slack = state_slack.value
+        self.state_slack = state_slack
+
         self._cache: Dict[Any, Any] = {}
 
     def controller(self):
@@ -112,17 +116,29 @@ class TemporalSymbol(LTL):
                 )
             else:
                 op_graph = self.network.value
+            if len(op_graph.inputs) > 1:
+                current_state: OperationGraph = OperationGraph(
+                    [operations.Concat(op_graph.inputs, axis=1)]
+                )
+            else:
+                current_state = OperationGraph([op_graph.inputs[0]])
+            op_graph = _concat_op_graphs(current_state, op_graph)
             op_graph = MLPTransformer().transform(op_graph)
-            _ = op_graph.output_details
             self._cache["controller"] = op_graph
         return self._cache["controller"]
 
     def plant(self):
         if "plant" not in self._cache:
+            if self.control_period > 1:
+                # TODO
+                assert 0, "TODO"
             assert self.transition_fn.is_concrete
             op_graph: OperationGraph = self.transition_fn.value
+            input_details = op_graph.input_details
+            output_details = op_graph.output_details
+            assert len(input_details) == 1
+            assert len(output_details) == 1
             op_graph = MLPTransformer().transform(op_graph)
-            _ = op_graph.output_details
             self._cache["plant"] = op_graph
         return self._cache["plant"]
 
@@ -136,9 +152,12 @@ class TemporalSymbol(LTL):
         plant = self.plant()
 
         if self.control_step == 1 and self.plant_step == 0:
-            current_state: OperationGraph = OperationGraph(
-                [operations.Concat(controller.inputs, axis=1)]
-            )
+            if len(controller.inputs) > 1:
+                current_state: OperationGraph = OperationGraph(
+                    [operations.Concat(controller.inputs, axis=1)]
+                )
+            else:
+                current_state = OperationGraph([controller.inputs[0]])
             _ = current_state.output_details
             self._cache[
                 ("state", self.control_step - 1, self.control_period - 1)
@@ -155,15 +174,12 @@ class TemporalSymbol(LTL):
             current_state = current_state = self._cache[
                 ("state", self.control_step - 1, self.control_period - 1)
             ]
-            _ = current_state.inputs
-            _ = current_state.output_details
             control_graph = controller.compose(current_state)
             control_signal = control_graph
-        current_state_and_control_graph = _concat_opgraphs(
-            current_state, control_signal
-        )
+        current_state_and_control_graph = control_signal
         state_graph = plant.compose(current_state_and_control_graph)
-        current_state = MLPTransformer().transform(state_graph)
+        state_graph = SqueezeGemms().transform(state_graph)
+        current_state = MLPTransformer().transform(state_graph, _pre_simplified=True)
 
         self._cache[("control_signal", self.control_step)] = control_signal
         self._cache[("state", self.control_step, self.plant_step)] = current_state
@@ -201,6 +217,7 @@ class TemporalSymbol(LTL):
                 control_step=next_control_step,
                 plant_step=next_plant_step,
                 control_period=self.control_period,
+                state_slack=self.state_slack,
                 ctx=self.ctx,
             )
             next_symbol._cache = self._cache

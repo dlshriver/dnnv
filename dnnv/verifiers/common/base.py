@@ -97,10 +97,14 @@ class Verifier(ABC):
             if cex is not None:
                 self.logger.debug("SAT! Validating counter example.")
                 if not self.validate_counter_example(prop, cex):
-                    return VerificationResult(PropertyCheckResult("sat(unconfirmed)"))
+                    return VerificationResult(
+                        PropertyCheckResult("unknown", "unconfirmed sat")
+                    )
             else:
                 self.logger.warn("SAT result without counter example.")
-                return VerificationResult(PropertyCheckResult("sat(unconfirmed)"))
+                return VerificationResult(
+                    PropertyCheckResult("unknown", "unconfirmed sat")
+                )
         return VerificationResult(check_result, cex=cex, vtime=(end_t - start_t))
 
     def reduce_property(self) -> Iterator[Property]:
@@ -121,15 +125,17 @@ class Verifier(ABC):
         try:
             with tempfile.TemporaryDirectory() as tempdir:
                 tempfile.tempdir = tempdir
-                for subproperty in self.reduce_property():
+                for i, subproperty in enumerate(self.reduce_property()):
                     subproblem_result = self.check(subproperty)
-                    self.logger.info("Sub-problem result: %s", subproblem_result)
+                    self.logger.info("Sub-problem result %d: %s", i, subproblem_result)
                     result |= subproblem_result
                     if self.eager_exit and result.result == SAT:
                         return result
         except KeyboardInterrupt:
             if result.result != SAT:
-                result.result = PropertyCheckResult("Unknown(Received Signal: SIGINT)")
+                result.result = PropertyCheckResult(
+                    "unknown", "Received Signal: SIGINT"
+                )
             return result
         finally:
             tempfile.tempdir = orig_tempdir
