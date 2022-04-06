@@ -100,7 +100,11 @@ class TemporalSymbol(LTL):
             control_period = control_period.value
         self.control_period = control_period
 
-        if isinstance(state_slack, Expression) and state_slack.is_concrete:
+        if (
+            state_slack is not None
+            and isinstance(state_slack, Expression)
+            and state_slack.is_concrete
+        ):
             state_slack = state_slack.value
         self.state_slack = state_slack
 
@@ -179,10 +183,53 @@ class TemporalSymbol(LTL):
         current_state_and_control_graph = control_signal
         state_graph = plant.compose(current_state_and_control_graph)
         state_graph = SqueezeGemms().transform(state_graph)
+        if self.state_slack is not None and not np.allclose(
+            self.state_slack, 0, atol=1e-16
+        ):
+            state_details = state_graph.output_details[0]
+            state = state_graph.outputs[0]
+            state_shape = (1, int(np.product(state_details.shape[1:])))
+            dtype = state_details.dtype
+            slack_lb = self.state_slack[:, 0].astype(dtype)
+            slack_ub = self.state_slack[:, 1].astype(dtype)
+            slack_range = slack_ub - slack_lb
+            low = 0
+            high = 1
+            slack = operations.Gemm(
+                operations.RandomUniform(state_shape, dtype=dtype, low=low, high=high),
+                np.diag(slack_range / (high - low)),
+                slack_lb - low * slack_range / (high - low),
+            )
+            state_graph = OperationGraph([operations.Add(state, slack)])
         current_state = MLPTransformer().transform(state_graph, _pre_simplified=True)
 
         self._cache[("control_signal", self.control_step)] = control_signal
         self._cache[("state", self.control_step, self.plant_step)] = current_state
+
+        if self.state_slack is not None and not np.allclose(
+            self.state_slack, 0, atol=1e-16
+        ):
+            state_details = state_graph.output_details[0]
+            state_size = int(np.product(state_details.shape[1:]))
+            dtype = state_details.dtype
+            current_state = current_state.compose(
+                OperationGraph(
+                    [
+                        operations.Concat(
+                            [
+                                operations.Input((1, state_size), dtype),
+                                operations.RandomUniform(
+                                    (1, state_size * self.control_step),
+                                    dtype=dtype,
+                                    low=low,
+                                    high=high,
+                                ),
+                            ],
+                            axis=1,
+                        )
+                    ]
+                )
+            )
 
         network = Network(self._get_frozen_network_name())
         network.concretize(current_state)

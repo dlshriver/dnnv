@@ -155,6 +155,16 @@ class IOPolytopeReduction(Reduction):
                 [i for i in np.ndindex(*shape)]
             ).reshape(shape + (len(shape),))
             self.coefs[expression] = np.ones(shape)
+            for generator in expression.function.value.generators:
+                variable = Variable(generator.shape, generator.name)
+                self.input_constraint.add_variable(variable)
+                for index in np.ndindex(generator.shape):
+                    self.input_constraint.update_constraint(
+                        [variable], [index], [1], generator.high
+                    )
+                    self.input_constraint.update_constraint(
+                        [variable], [index], [-1], -generator.low
+                    )
         else:
             raise self.reduction_error(
                 "Unsupported property:"

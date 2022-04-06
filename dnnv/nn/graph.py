@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import itertools
-import numpy as np
 
 from typing import Dict, List, Optional, Sequence, Tuple
 
+from . import operations
 from .operations import Input, Operation
 from .utils import TensorDetails
 
@@ -19,6 +19,7 @@ class OperationGraph:
         self._is_linear: Optional[bool] = None
         self._simplified: Optional[OperationGraph] = None
         self._tensor_details: Optional[Dict[Operation, TensorDetails]] = None
+        self._generators: Optional[Sequence[operations.RandomUniform]] = None
 
     @property
     def tensor_details(self) -> Dict[Operation, TensorDetails]:
@@ -46,6 +47,23 @@ class OperationGraph:
             self._inputs = tuple(inputs)
 
         return self._inputs
+
+    @property
+    def generators(self) -> Sequence[operations.RandomUniform]:
+        if self._generators is None:
+            from .visitors import OperationVisitor
+
+            generators: List[operations.RandomUniform] = []
+
+            class GetGenerators(OperationVisitor):
+                def visit_RandomUniform(self, op: operations.RandomUniform):
+                    nonlocal generators
+                    generators.append(op)
+
+            GetGenerators().walk(self)
+            self._generators = tuple(generators)
+
+        return self._generators
 
     @property
     def input_details(self) -> Sequence[TensorDetails]:
@@ -121,7 +139,7 @@ class OperationGraph:
 
         class Composer(OperationTransformer):
             def __init__(self, input_op_graph: OperationGraph):
-                super().__init__()
+                super().__init__(recursive=False)
                 self.input_op_graph = input_op_graph
                 self.input_id = 0
                 self.visited: Dict[Operation, Operation] = {}
@@ -130,11 +148,6 @@ class OperationGraph:
                 new_op = self.input_op_graph.outputs[self.input_id]
                 self.input_id += 1
                 return new_op
-
-            def generic_visit(self, operation: Operation) -> Operation:
-                operation = super().generic_visit(operation)
-                operation.name = operation.name + ":!"
-                return operation
 
         new_op_graph = Composer(input_op_graph).transform(self)
         new_op_graph._inputs = input_op_graph._inputs

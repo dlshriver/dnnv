@@ -125,7 +125,7 @@ class Verifier(ABC):
         try:
             with tempfile.TemporaryDirectory() as tempdir:
                 tempfile.tempdir = tempdir
-                for i, subproperty in enumerate(self.reduce_property()):
+                for i, subproperty in enumerate(self.reduce_property(), start=1):
                     subproblem_result = self.check(subproperty)
                     self.logger.info("Sub-problem result %d: %s", i, subproblem_result)
                     result |= subproblem_result

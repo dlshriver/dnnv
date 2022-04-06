@@ -43,148 +43,165 @@ class MLPTransformer(OperationTransformer):
             operation.b, operations.Operation
         ):
             return super().visit(operation)
-        a_shape, a_dtype = self._tensor_details[operation.a]
-        b_shape, b_dtype = self._tensor_details[operation.b]
+        a = self.visit(operation.a)
+        b = self.visit(operation.b)
+        a_shape, a_dtype = self._tensor_details[a]
+        b_shape, b_dtype = self._tensor_details[b]
         assert a_shape == b_shape
+        assert a_dtype == b_dtype
         assert a_shape[0] == 1
-        dtype = np.result_type(a_dtype, b_dtype)
-        size = np.product(a_shape)
-        I = np.eye(size, dtype=dtype)
-        a = operation.a
-        if len(a_shape) > 2:
-            a = operations.Flatten(operation.a)
-            a_shape = (a_shape[0], int(np.product(a_shape[1:])))
-            self._tensor_details[a] = TensorDetails(a_shape, a_dtype)
-        b = operation.b
-        if len(b_shape) > 2:
-            b = operations.Flatten(operation.b)
-            b_shape = (b_shape[0], int(np.product(b_shape[1:])))
-            self._tensor_details[b] = TensorDetails(b_shape, b_dtype)
+        size = a_shape[1]
+        I = np.eye(size, dtype=a_dtype)
         new_concat_op = operations.Concat([a, b], axis=1)
-        self._tensor_details[new_concat_op] = TensorDetails(
-            (a_shape[0], a_shape[1] + b_shape[1]), a_dtype
-        )
+        self._tensor_details[new_concat_op] = TensorDetails((1, size * 2), a_dtype)
         new_concat_op = self.visit(new_concat_op)
 
         new_add_op = operations.Gemm(
-            new_concat_op, np.block([[I], [I]]), np.zeros(size, dtype=dtype)
+            new_concat_op, np.block([[I], [I]]), np.zeros(size, dtype=a_dtype)
         )
-        self._tensor_details[new_add_op] = self._tensor_details[operation]
+        self._tensor_details[new_add_op] = TensorDetails((1, size), a_dtype)
 
         new_add_op = SqueezeGemms().simplify(new_add_op)
-        self._tensor_details[new_add_op] = self._tensor_details[operation]
+        self._tensor_details[new_add_op] = TensorDetails((1, size), a_dtype)
         return new_add_op
 
     def visit_Concat(self, operation: operations.Concat) -> operations.Operation:
         assert operation.axis == 1
-        computation_paths = self._extract_computation_paths(operation)
-        if len(set(path[0] for path in computation_paths)) == 1:
-            base_op = computation_paths[0][0]
-            details = self._tensor_details[base_op]
-            size = details.shape[1]
-            dtype = details.dtype
-            I = np.eye(size, dtype=dtype)
-            z = np.zeros(size, dtype=dtype)
-            b = np.block([I for _ in computation_paths])
-            c = np.hstack([z for _ in computation_paths])
-            gemm_op = operations.Gemm(base_op, b, c)
-            new_op = SqueezeGemms().simplify(gemm_op)
-        elif all(isinstance(path[0], GeneratorOperation) for path in computation_paths):
-            new_op = operation
-        elif all(isinstance(path[0], operations.Relu) for path in computation_paths):
-            concat_op = operations.Concat(
-                [path[1] for path in computation_paths], axis=1
-            )
-            self._tensor_details[concat_op] = self._tensor_details[operation]
-            new_op = operations.Relu(self.visit(concat_op))
-        elif all(isinstance(path[0], operations.Gemm) for path in computation_paths):
-            b = block_diag(*(path[0].b for path in computation_paths))
-            c = np.hstack([path[0].c for path in computation_paths])
-            concat_op = operations.Concat(
-                [path[1] for path in computation_paths], axis=1
-            )
-            self._tensor_details[concat_op] = self._tensor_details[operation]
-            gemm_op = operations.Gemm(self.visit(concat_op), b, c)
-            new_op = SqueezeGemms().simplify(gemm_op)
-        elif any(isinstance(path[0], operations.Gemm) for path in computation_paths):
-            B = []
-            C = []
-            input_ops = []
-            for path in computation_paths:
-                op = path[0]
-                if isinstance(op, operations.Gemm):
-                    B.append(op.b)
-                    C.append(op.c)
-                    input_ops.append(path[1])
-                else:
-                    details = self._tensor_details[op]
-                    size = details.shape[1]
-                    dtype = details.dtype
-                    B.append(np.eye(size, dtype=dtype))
-                    C.append(np.zeros(size, dtype=dtype))
-                    input_ops.append(op)
-            b = block_diag(*B)
-            c = np.hstack(C)
-            concat_op = operations.Concat(input_ops, axis=1)
-            self._tensor_details[concat_op] = self._tensor_details[operation]
-            gemm_op = operations.Gemm(self.visit(concat_op), b, c)
-            new_op = SqueezeGemms().simplify(gemm_op)
-        elif any(isinstance(path[0], operations.Relu) for path in computation_paths):
-            input_ops = []
-            for path in computation_paths:
-                op = path[0]
-                if isinstance(op, operations.Relu):
-                    details = self._tensor_details[op]
-                    size = details.shape[1]
-                    dtype = details.dtype
-                    b = np.eye(size, dtype=dtype)
-                    c = np.zeros(size, dtype=dtype)
-                    gemm_op = operations.Gemm(op, b, c)
-                    gemm_op = SqueezeGemms().simplify(gemm_op)
-                    self._tensor_details[gemm_op] = self._tensor_details[op]
-                    input_ops.append(gemm_op)
-                elif isinstance(op, operations.RandomUniform):
-                    details = self._tensor_details[op]
-                    size = details.shape[1]
-                    dtype = details.dtype
-                    lb = op.low
-                    ub = op.high
-                    b = np.eye(size, dtype=dtype) * (ub - lb)
-                    c = np.full(size, lb, dtype=dtype)
-                    relu_op = operations.Relu(op)
-                    gemm_op = operations.Gemm(relu_op, b, c)
-                    gemm_op = SqueezeGemms().simplify(gemm_op)
-                    self._tensor_details[relu_op] = self._tensor_details[op]
-                    self._tensor_details[gemm_op] = self._tensor_details[op]
-                    input_ops.append(gemm_op)
-                else:
-                    details = self._tensor_details[op]
-                    size = details.shape[1]
-                    dtype = details.dtype
-                    I = np.eye(size, dtype=dtype)
-                    z = np.zeros(size, dtype=dtype)
-                    z2 = np.zeros(size * 2, dtype=dtype)
-                    gemm_op_1 = operations.Gemm(op, np.block([I, -I]), z2)
-                    gemm_op_1 = SqueezeGemms().simplify(gemm_op_1)
-                    relu_op = operations.Relu(gemm_op_1)
-                    gemm_op_2 = operations.Gemm(
-                        relu_op,
-                        np.block([[I], [-I]]),
-                        z,
+        computation_paths: List[
+            List[Optional[Operation]]
+        ] = self._extract_computation_paths(operation)
+        output_op_stack = []
+        while any(len(path) and path[0] is not None for path in computation_paths):
+            input_ops = [path.pop(0) for path in computation_paths]
+            if len(set(input_ops)) == 1:
+                base_op = input_ops[0]
+                details = self._tensor_details[base_op]
+                size = details.shape[1]
+                dtype = details.dtype
+                I = np.eye(size, dtype=dtype)
+                z = np.zeros(size, dtype=dtype)
+                b = np.block([I for _ in input_ops])
+                c = np.hstack([z for _ in input_ops])
+                gemm_op = operations.Gemm(base_op, b, c)
+                new_op = SqueezeGemms().simplify(gemm_op)
+                self._tensor_details[new_op] = TensorDetails((1, b.shape[1]), b.dtype)
+            elif all(isinstance(op, GeneratorOperation) for op in input_ops):
+                size = 0
+                dtype = None
+                for op in input_ops:
+                    self._inputs.pop(op)
+                    size += int(np.product(op.shape[1:]))
+                    assert dtype is None or op.dtype == dtype
+                    dtype = op.dtype
+                new_op = operations.Input((1, size), dtype)
+                self._inputs[new_op] = len(self._inputs)
+                self._tensor_details[new_op] = TensorDetails((1, size), dtype)
+            elif all(
+                isinstance(op, (operations.RandomUniform, operations.Relu))
+                for op in input_ops
+            ):
+                for i, op in enumerate(input_ops):
+                    if isinstance(op, operations.RandomUniform):
+                        computation_paths[i].insert(0, op)
+
+                def build_relu(input_op):
+                    new_op = operations.Relu(input_op)
+                    self._tensor_details[new_op] = self._tensor_details[input_op]
+                    return new_op
+
+                output_op_stack.append(build_relu)
+            elif all(isinstance(op, operations.Gemm) for op in input_ops):
+                b = block_diag(*(op.b for op in input_ops))
+                c = np.hstack([op.c for op in input_ops])
+
+                def build_gemm(input_op, b=b, c=c):
+                    gemm_op = operations.Gemm(input_op, b, c)
+                    new_op = SqueezeGemms().simplify(gemm_op)
+                    self._tensor_details[new_op] = TensorDetails(
+                        (1, b.shape[1]), b.dtype
                     )
-                    gemm_op_2 = SqueezeGemms().simplify(gemm_op_2)
-                    self._tensor_details[gemm_op_1] = TensorDetails(
-                        (details.shape[0], size * 2), dtype
+                    return new_op
+
+                output_op_stack.append(build_gemm)
+            elif any(isinstance(op, operations.Gemm) for op in input_ops):
+                B = []
+                C = []
+                for i, op in enumerate(input_ops):
+                    if isinstance(op, operations.Gemm):
+                        B.append(op.b)
+                        C.append(op.c)
+                    else:
+                        details = self._tensor_details[op]
+                        size = details.shape[1]
+                        dtype = details.dtype
+                        B.append(np.eye(size, dtype=dtype))
+                        C.append(np.zeros(size, dtype=dtype))
+                        computation_paths[i].insert(0, op)
+                b = block_diag(*B)
+                c = np.hstack(C)
+
+                def build_gemm(input_op, b=b, c=c):
+                    gemm_op = operations.Gemm(input_op, b, c)
+                    new_op = SqueezeGemms().simplify(gemm_op)
+                    self._tensor_details[new_op] = TensorDetails(
+                        (1, b.shape[1]), b.dtype
                     )
-                    self._tensor_details[relu_op] = self._tensor_details[gemm_op_1]
-                    self._tensor_details[gemm_op_2] = self._tensor_details[op]
-                    input_ops.append(gemm_op_2)
-            concat_op = operations.Concat(input_ops, axis=1)
-            self._tensor_details[concat_op] = self._tensor_details[operation]
-            new_op = self.visit(concat_op)
-        else:
-            assert 0, f"TODO B: {[path[0] for path in computation_paths]}"
-        self._tensor_details[new_op] = self._tensor_details[operation]
+                    return new_op
+
+                output_op_stack.append(build_gemm)
+            elif any(isinstance(op, operations.Relu) for op in input_ops):
+                for i, op in enumerate(input_ops):
+                    if isinstance(op, operations.Relu):
+                        details = self._tensor_details[op]
+                        size = details.shape[1]
+                        dtype = details.dtype
+                        b = np.eye(size, dtype=dtype)
+                        c = np.zeros(size, dtype=dtype)
+                        gemm_op = operations.Gemm(op, b, c)
+                        self._tensor_details[gemm_op] = self._tensor_details[op]
+                        computation_paths[i].insert(0, op)
+                        computation_paths[i].insert(0, gemm_op)
+                    elif isinstance(op, operations.RandomUniform):
+                        details = self._tensor_details[op]
+                        size = details.shape[1]
+                        dtype = details.dtype
+                        b = np.eye(size, dtype=dtype)
+                        c = np.zeros(size, dtype=dtype)
+                        relu_op = operations.Relu(op)
+                        gemm_op = operations.Gemm(relu_op, b, c)
+                        self._tensor_details[relu_op] = self._tensor_details[op]
+                        self._tensor_details[gemm_op] = self._tensor_details[op]
+                        computation_paths[i].insert(0, op)
+                        computation_paths[i].insert(0, relu_op)
+                        computation_paths[i].insert(0, gemm_op)
+                    else:
+                        details = self._tensor_details[op]
+                        size = details.shape[1]
+                        dtype = details.dtype
+                        I = np.eye(size, dtype=dtype)
+                        z = np.zeros(size, dtype=dtype)
+                        z2 = np.zeros(size * 2, dtype=dtype)
+                        gemm_op_1 = operations.Gemm(op, np.block([I, -I]), z2)
+                        gemm_op_1 = SqueezeGemms().simplify(gemm_op_1)
+                        relu_op = operations.Relu(gemm_op_1)
+                        gemm_op_2 = operations.Gemm(
+                            relu_op,
+                            np.block([[I], [-I]]),
+                            z,
+                        )
+                        self._tensor_details[gemm_op_1] = TensorDetails(
+                            (details.shape[0], size * 2), dtype
+                        )
+                        self._tensor_details[relu_op] = self._tensor_details[gemm_op_1]
+                        self._tensor_details[gemm_op_2] = self._tensor_details[op]
+                        computation_paths[i].insert(0, op)
+                        computation_paths[i].insert(0, gemm_op_1)
+                        computation_paths[i].insert(0, relu_op)
+                        computation_paths[i].insert(0, gemm_op_2)
+            else:
+                assert 0, f"TODO: {[path[0] for path in computation_paths]}"
+        while len(output_op_stack):
+            new_op = output_op_stack.pop()(new_op)
         return new_op
 
     def visit_Conv(self, operation: operations.Conv) -> operations.Gemm:
@@ -202,7 +219,7 @@ class MLPTransformer(OperationTransformer):
         p_top, p_left, p_bottom, p_right = operation.pads
         s_h, s_w = operation.strides
 
-        _, in_c, in_h, in_w = self._tensor_details[operation.x].shape
+        (in_b, in_c, in_h, in_w), dtype = self._tensor_details[operation.x]
         input_size = in_c * in_h * in_w
         out_c = w.shape[0]
         out_h = (in_h - k_h + p_top + p_bottom) // s_h + 1
@@ -230,10 +247,7 @@ class MLPTransformer(OperationTransformer):
                                 gemm_b[in_idx, out_idx] = w[co, ck, hk, wk]
         new_op = operations.Gemm(x, gemm_b, gemm_c)
         new_op = SqueezeGemms().simplify(new_op)
-        old_details = self._tensor_details[operation]
-        self._tensor_details[new_op] = TensorDetails(
-            (old_details.shape[0], output_size), old_details.dtype
-        )
+        self._tensor_details[new_op] = TensorDetails((in_b, output_size), dtype)
         return new_op
 
     def visit_Flatten(self, operation: operations.Flatten) -> operations.Operation:
@@ -273,33 +287,39 @@ class MLPTransformer(OperationTransformer):
     ) -> operations.RandomUniform:
         assert len(self._inputs) > 0
         assert abs(operation.shape[0]) == 1
+        if operation in self._inputs:
+            return operation
         low = operation.low
         high = operation.high
+        if low >= 0 and len(operation.shape) == 1:
+            return operation
+        size = int(np.product(operation.shape[1:]))
         if low >= 0:
-            new_op = operations.RandomUniform(
-                (1, int(np.product(operation.shape[1:]))),
+            rand_op = operations.RandomUniform(
+                (1, size),
                 dtype=operation.dtype,
+                seed=operation.seed,
                 low=low,
                 high=high,
             )
-            self._tensor_details[new_op] = TensorDetails(new_op.shape, new_op.dtype)
-        else:
-            size = int(np.product(operation.shape[1:]))
-            rand_op = operations.RandomUniform((1, size), dtype=operation.dtype)
-            w = np.diagonal(np.full(size, high - low))
-            b = np.full(size, low)
-            new_op = operations.Gemm(rand_op, w, b)
+            self._inputs[rand_op] = len(self._inputs)
             self._tensor_details[rand_op] = TensorDetails(rand_op.shape, rand_op.dtype)
-            self._tensor_details[new_op] = TensorDetails(rand_op.shape, rand_op.dtype)
+            return rand_op
+        rand_op = operations.RandomUniform(
+            (1, size), dtype=operation.dtype, seed=operation.seed, low=0, high=1
+        )
+        self._inputs[rand_op] = len(self._inputs)
+        self._tensor_details[rand_op] = TensorDetails(rand_op.shape, rand_op.dtype)
+        w = np.diag(np.full(size, high - low, dtype=rand_op.dtype))
+        b = np.full(size, low, dtype=rand_op.dtype)
+        new_op = operations.Gemm(rand_op, w, b)
+        self._tensor_details[new_op] = TensorDetails(rand_op.shape, rand_op.dtype)
         return new_op
 
     def transform(
         self, op_graph: OperationGraph, *, _pre_simplified=False
     ) -> OperationGraph:
         assert len(op_graph.outputs) == 1
-        import time
-
-        start_t = time.time()
         self._inputs = {}
         simplified_op_graph = op_graph
         if not _pre_simplified:
@@ -320,7 +340,7 @@ class MLPTransformer(OperationTransformer):
 
     def _extract_computation_paths(
         self, operation: operations.Concat
-    ) -> Sequence[Sequence[Operation]]:
+    ) -> List[List[Optional[Operation]]]:
         activation: Optional[Type[Operation]] = None
         num_inputs = len(operation.x)
         computation_paths: List[List[Operation]] = [
