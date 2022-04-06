@@ -18,11 +18,6 @@ class Marabou(Verifier):
     }
 
     def build_inputs(self, prop):
-        if prop.input_constraint.num_variables > 1:
-            raise self.translator_error(
-                "Unsupported network: More than 1 input variable"
-            )
-
         with tempfile.NamedTemporaryFile(
             mode="w+", suffix=".onnx", delete=False
         ) as onnx_model_file:
@@ -35,7 +30,10 @@ class Marabou(Verifier):
         with tempfile.NamedTemporaryFile(
             mode="w+", suffix=".npy", delete=False
         ) as constraint_file:
-            np.save(constraint_file.name, ((lb, ub), (A_in, b_in), (A_out, b_out)))
+            np.save(
+                constraint_file.name,
+                np.asarray(((lb, ub), (A_in, b_in), (A_out, b_out)), dtype=object),
+            )
 
         with tempfile.NamedTemporaryFile(
             mode="w+", suffix=".npy", delete=False
@@ -51,11 +49,11 @@ class Marabou(Verifier):
         return args
 
     def parse_results(self, prop, results):
-        result, cinput = np.load(self._tmp_output_file.name, allow_pickle=True)
-        if result == False:
+        result_str, cinput = np.load(self._tmp_output_file.name, allow_pickle=True)
+        if result_str == "unsat":
             return UNSAT, None
-        elif result == True:
+        elif result_str == "sat":
             input_shape, input_dtype = prop.op_graph.input_details[0]
             cex = cinput.reshape(input_shape).astype(input_dtype)
             return SAT, cex
-        raise self.translator_error(f"Unknown verification result: {result}")
+        raise self.translator_error(f"Unknown verification result: {result_str}")

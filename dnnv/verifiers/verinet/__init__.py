@@ -19,11 +19,6 @@ class VeriNet(Verifier):
     }
 
     def build_inputs(self, prop):
-        if prop.input_constraint.num_variables > 1:
-            raise self.translator_error(
-                "Unsupported network: More than 1 input variable"
-            )
-
         with tempfile.NamedTemporaryFile(
             mode="w+", suffix=".onnx", delete=False
         ) as onnx_model_file:

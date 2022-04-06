@@ -60,10 +60,6 @@ class Convert(Verifier):
         exit(0)
 
     def build_inputs(self, prop):
-        if prop.input_constraint.num_variables > 1:
-            raise self.translator_error(
-                "Unsupported network: More than 1 input variable"
-            )
         paths = []
         if self.parameters.get("to") == "nnet":
             layers = as_layers(

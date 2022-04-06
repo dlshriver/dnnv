@@ -53,21 +53,20 @@ def main(args):
 
     options = MarabouCore.Options()
     options._numWorkers = args.num_workers
-    result = network.solve(options=options)
-
-    is_unsafe = bool(result[0])
-    print("UNSAFE" if is_unsafe else "SAFE")
+    result_str, vals, stats = network.solve(options=options)
+    print(result_str)
+    is_unsafe = result_str == "sat"
 
     if args.output is not None:
         cex = None
         if is_unsafe:
             cex = np.zeros_like(inputVars, dtype=np.float32)
             for flat_index, multi_index in enumerate(np.ndindex(cex.shape)):
-                cex[multi_index] = result[0][flat_index]
+                cex[multi_index] = vals[flat_index]
             print(cex)
         np.save(
             args.output,
-            (is_unsafe, cex),
+            (result_str, cex),
         )
 
 
@@ -78,7 +77,7 @@ if __name__ == "__main__":
 
 class MarabouInstaller(Installer):
     def run(self, env: Environment, dependency: Dependency):
-        commit_hash = "c179c5db1af2cb66bc45c4ed7fbb7a1897e67233"
+        commit_hash = "69dc5eb71b5f4e7a813f20a4e1a01b8387102258"
 
         cache_dir = env.cache_dir / f"marabou-{commit_hash}"
         cache_dir.mkdir(exist_ok=True, parents=True)

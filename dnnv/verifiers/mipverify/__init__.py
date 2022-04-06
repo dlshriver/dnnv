@@ -15,10 +15,6 @@ class MIPVerify(Verifier):
     verifier_error = MIPVerifyError
 
     def build_inputs(self, prop):
-        if prop.input_constraint.num_variables > 1:
-            raise self.translator_error(
-                "Unsupported network: More than 1 input variable"
-            )
         lbs = prop.input_constraint.lower_bounds[0]
         ubs = prop.input_constraint.upper_bounds[0]
         if (lbs >= 0).all() and (ubs <= 1).all():

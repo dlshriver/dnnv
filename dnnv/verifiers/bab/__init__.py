@@ -21,10 +21,6 @@ class BaB(Verifier):
     }
 
     def build_inputs(self, prop):
-        if prop.input_constraint.num_variables > 1:
-            raise self.translator_error(
-                "Unsupported network: More than 1 input variable"
-            )
         layers = as_layers(
             prop.suffixed_op_graph().simplify(),
             translator_error=self.translator_error,
