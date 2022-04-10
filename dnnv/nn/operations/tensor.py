@@ -221,6 +221,22 @@ class Unsqueeze(Operation):
         return cls(*inputs, axes=axes, name=onnx_node.name)
 
 
+class Split(Operation):
+    def __init__(self, x, axis, split, *, name: Optional[str] = None):
+        super().__init__(name=name)
+        self.x = x
+        self.axis = axis
+        self.split = split
+
+    @classmethod
+    def from_onnx(cls, onnx_node, *inputs):
+        attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
+        axis = attributes.get("axis")
+        split = attributes.get("split")
+        split = tuple(split)
+        return cls(*inputs, axis=axis, split=split, name=onnx_node.name)
+
+
 __all__ = [
     "Cast",
     "Concat",
@@ -235,4 +251,5 @@ __all__ = [
     "Tile",
     "Transpose",
     "Unsqueeze",
+    "Split",
 ]
