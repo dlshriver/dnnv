@@ -490,16 +490,16 @@ class OnnxConverter(OperationVisitor):
         idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
         opname = f"{op_type}_{idx}"
 
-        if operation.index != 0:
-            raise NotImplementedError(
-                "Support for operations with multiple ouputs is not yet implemented."
-            )
+        # if operation.index != 0:
+        #     raise NotImplementedError(
+        #         "Support for operations with multiple ouputs is not yet implemented."
+        #     )
 
         op = self._to_onnx_proto(operation.operation, f"{opname}.operation")
 
         node = onnx.helper.make_node(
             "Identity",
-            inputs=[op.name],
+            inputs=[op.output[operation.index]],
             outputs=[opname],
             name=opname,
         )
@@ -594,6 +594,28 @@ class OnnxConverter(OperationVisitor):
             outputs=[opname],
             name=opname,
             perm=list(operation.permutation),
+        )
+
+        return node
+
+    def visit_Split(self, operation: operations.Split) -> onnx.NodeProto:
+        op_type = str(operation)
+        # TODO: split attribute is optional. Edits to nn/parser/onnx.py required.
+        assert operation.split is not None
+        idx = self.op_counts["Split"] = self.op_counts["Split"] + 1
+        opname = f"Split_{idx}"
+        outputs = []
+        for i in range(len(operation.split)):
+            outputs.append(f"output_{i}")
+        outputs = np.array(outputs)
+        x = self._to_onnx_proto(operation.x, f"{opname}.x")
+        split = self._to_onnx_proto(operation.split, f"{opname}.split")
+        node = onnx.helper.make_node(
+            op_type,
+            inputs=[x.name, split.name],
+            outputs=outputs,
+            name=opname,
+            axis=operation.axis,
         )
 
         return node
