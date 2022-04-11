@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import tempfile
 
 from dnnv.nn.graph import OperationGraph
@@ -17,6 +18,13 @@ def as_vnnlib(
     *,
     extended_vnnlib=False,
 ) -> Iterable[str]:
+    logger = logging.getLogger(__name__)
+    logger.warning(
+        "The use of unravel_index in this converter may not work correctly for multi-input networks."
+    )
+    # TODO : fix multi-input networks
+    if prop.input_constraint.num_variables > 1:
+        raise translator_error("Multi-input networks are not currently supported.")
     for i in range(prop.input_constraint.size()):
         if extended_vnnlib:
             _, index = prop.input_constraint.unravel_index(i)

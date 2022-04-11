@@ -293,10 +293,15 @@ class HalfspacePolytope(Constraint):
         self._update_bounds(flat_indices, coefficients, b, is_open=is_open)
 
     def validate(self, *x: np.ndarray, threshold: float = 1e-6) -> bool:
-        x_flat_ = []
+        _x_flat = []
         for x_ in x:
-            x_flat_.append(x_.flatten())
-        x_flat = np.concatenate(x_flat_)
+            _x_flat.append(x_.flatten())
+        if len(_x_flat) == 0:
+            return False
+        x_flat = np.concatenate(_x_flat)
+        print(x_flat.shape, x_flat.size, self.size(), self.variables)
+        if x_flat.size != self.size():
+            return False
         for hs in self.halfspaces:
             t = sum(c * x_flat[i] for c, i in zip(hs.coefficients, hs.indices))
             b = hs.b

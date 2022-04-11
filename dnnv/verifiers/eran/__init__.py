@@ -18,7 +18,7 @@ class ERAN(Verifier):
         IOPolytopeReduction,
         HyperRectangle,
         HalfspacePolytope,
-        require_linear_network=False,
+        # require_linear_network=False,
     )
     translator_error = ERANTranslatorError
     verifier_error = ERANError

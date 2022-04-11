@@ -16,7 +16,7 @@ class Planet(Verifier):
         IOPolytopeReduction,
         HalfspacePolytope,
         HalfspacePolytope,
-        require_linear_network=False,
+        # require_linear_network=False,
     )
     translator_error = PlanetTranslatorError
     verifier_error = PlanetError
