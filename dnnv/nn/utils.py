@@ -1,6 +1,5 @@
 import numpy as np
 import onnx
-import tensorflow as tf
 
 from collections import namedtuple
 from onnx import numpy_helper
@@ -11,24 +10,6 @@ TensorDetails = namedtuple("TensorDetails", ["shape", "dtype"])
 ONNX_TO_NUMPY_DTYPE = onnx.mapping.TENSOR_TYPE_TO_NP_TYPE
 
 NUMPY_TO_ONNX_DTYPE = {v: k for k, v in ONNX_TO_NUMPY_DTYPE.items()}
-
-ONNX_TO_TENSORFLOW_DTYPE = {
-    onnx.TensorProto.DOUBLE: tf.float64,
-    onnx.TensorProto.FLOAT16: tf.float16,
-    onnx.TensorProto.FLOAT: tf.float32,
-    onnx.TensorProto.INT8: tf.int8,
-    onnx.TensorProto.INT16: tf.int16,
-    onnx.TensorProto.INT32: tf.int32,
-    onnx.TensorProto.INT64: tf.int64,
-    onnx.TensorProto.UINT8: tf.uint8,
-    onnx.TensorProto.UINT16: tf.uint16,
-    onnx.TensorProto.UINT32: tf.uint32,
-    onnx.TensorProto.UINT64: tf.uint64,
-    onnx.TensorProto.BOOL: tf.bool,
-    onnx.TensorProto.COMPLEX64: tf.complex64,
-    onnx.TensorProto.COMPLEX128: tf.complex128,
-    onnx.TensorProto.STRING: tf.string,
-}
 
 
 def as_numpy(node):
