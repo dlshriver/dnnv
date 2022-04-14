@@ -299,7 +299,6 @@ class HalfspacePolytope(Constraint):
         if len(_x_flat) == 0:
             return False
         x_flat = np.concatenate(_x_flat)
-        print(x_flat.shape, x_flat.size, self.size(), self.variables)
         if x_flat.size != self.size():
             return False
         for hs in self.halfspaces:

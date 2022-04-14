@@ -45,10 +45,16 @@ def as_reluplex_nnet(
     yield ",".join([str(size) for size in layer_sizes]) + ","
     yield "0,"
     yield ",".join(
-        ["%.12f" % m for m in input_interval.lower_bounds[0].flatten()]
+        [
+            "%.12f" % m
+            for m in np.concatenate([b.flatten() for b in input_interval.lower_bounds])
+        ]
     ) + ","
     yield ",".join(
-        ["%.12f" % m for m in input_interval.upper_bounds[0].flatten()]
+        [
+            "%.12f" % m
+            for m in np.concatenate([b.flatten() for b in input_interval.upper_bounds])
+        ]
     ) + ","
     yield ",".join(["0.0" for _ in range(input_size + 1)]) + ","  # input mean
     yield ",".join(["1.0" for _ in range(input_size + 1)]) + ","  # input range

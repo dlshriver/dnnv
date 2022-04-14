@@ -316,6 +316,12 @@ class MLPTransformer(OperationTransformer):
         self._tensor_details[new_op] = TensorDetails(rand_op.shape, rand_op.dtype)
         return new_op
 
+    def visit_Relu(self, operation):
+        result = super().generic_visit(operation)
+        if result is not operation:
+            self._tensor_details[result] = self._tensor_details[operation.x]
+        return result
+
     def transform(
         self, op_graph: OperationGraph, *, _pre_simplified=False
     ) -> OperationGraph:

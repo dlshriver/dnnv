@@ -62,12 +62,13 @@ class TemporalSymbol(LTL):
         plant_step: Optional[IntExpression] = None,
         control_period: IntExpression = 1,
         state_slack: Optional[Any] = None,
-        state_bounds: Optional[Any] = None,
         **kwargs,
     ):
-        """TODO
+        """An expression representing a temporal symbol.
 
-        TODO
+        At each step, this expression represents the current value of `symbol`,
+        whose value is obtained by repeated applications of `state_map_fn`,
+        `network`, and `transition_fn`.
         """
         super().__init__(**kwargs)
         self.symbol = symbol
@@ -155,6 +156,7 @@ class TemporalSymbol(LTL):
         controller = self.controller()
         plant = self.plant()
 
+        _ = self.previous().freeze()
         if self.control_step == 1 and self.plant_step == 0:
             if len(controller.inputs) > 1:
                 current_state: OperationGraph = OperationGraph(
@@ -175,13 +177,12 @@ class TemporalSymbol(LTL):
                 ("state", self.control_step, self.plant_step - 1)
             ]
         else:
-            current_state = current_state = self._cache[
+            current_state = self._cache[
                 ("state", self.control_step - 1, self.control_period - 1)
             ]
             control_graph = controller.compose(current_state)
             control_signal = control_graph
-        current_state_and_control_graph = control_signal
-        state_graph = plant.compose(current_state_and_control_graph)
+        state_graph = plant.compose(control_signal)
         state_graph = SqueezeGemms().transform(state_graph)
         if self.state_slack is not None and not np.allclose(
             self.state_slack, 0, atol=1e-16
@@ -270,6 +271,38 @@ class TemporalSymbol(LTL):
             next_symbol._cache = self._cache
             return next_symbol
         raise LTLMaxStepReached()
+
+    def previous(self):
+        if isinstance(self.control_period, Expression):
+            assert self.control_period.is_concrete
+            self.control_period = self.control_period.value
+        control_step = self.control_step or 0
+        plant_step = self.plant_step
+        if plant_step is None:
+            plant_step = self.control_period - 1
+        self._simplify_network_expressions()
+        if control_step * self.control_period + plant_step > 0:
+            prev_plant_step = (plant_step - 1) % self.control_period
+            prev_control_step = control_step
+            if plant_step == 0:
+                prev_control_step = control_step - 1
+            prev_symbol = TemporalSymbol(
+                self.symbol,
+                self.network,
+                self.transition_fn,
+                self.state_map_fn,
+                max_step=self.max_step,
+                control_step=prev_control_step,
+                plant_step=prev_plant_step,
+                control_period=self.control_period,
+                state_slack=self.state_slack,
+                ctx=self.ctx,
+            )
+            prev_symbol._cache = self._cache
+            return prev_symbol
+        raise RuntimeError(
+            "Cannot get previous step of initial conditions."
+        )  # TODO : use a custom exception type
 
     def _simplify_network_expressions(self):
         if self.network.is_concrete and not isinstance(self.network, Network):

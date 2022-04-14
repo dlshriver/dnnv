@@ -49,17 +49,31 @@ class OnnxConverter(OperationConverter):
             opset=opset,
         )
 
-        output_names = []
+        output_names = {}
         for op in op_graph.outputs:
             output_op = self.visit(op)
-            output_names.append(output_op.name)
+            output_names[output_op.name] = op
+
+        # TODO : need a more complete shape inference than is provided by onnx
+        # try:
+        #     outputs = []
+        #     for op in op_graph.outputs:
+        #         shape, dtype = op_graph.tensor_details[op]
+        #         outputs.append(
+        #             onnx.helper.make_tensor_value_info(
+        #                 output_op.name, NUMPY_TO_ONNX_DTYPE[dtype], shape
+        #             )
+        #         )
+        # except:
+        #     outputs = []
+        outputs = []
 
         nodes = [n for n in self.visited.values() if isinstance(n, onnx.NodeProto)]
         graph_def = onnx.helper.make_graph(
             nodes,
             name,
             self.inputs,
-            [],
+            outputs,
             initializer=self.initializer,
         )
         model_def = onnx.helper.make_model(
@@ -68,14 +82,26 @@ class OnnxConverter(OperationConverter):
             ir_version=ir_version,
             opset_imports=[onnx.helper.make_opsetid("", opset)],
         )
-        model_def = onnx.shape_inference.infer_shapes(model_def, data_prop=True)
-        value_info_map = {
-            value_info.name: value_info for value_info in model_def.graph.value_info
-        }
-        for value_info in model_def.graph.input:
-            value_info_map[value_info.name] = value_info
-        output_value_info = [value_info_map[name] for name in output_names]
-        model_def.graph.output.extend(output_value_info)
+        if len(outputs) == 0:
+            model_def = onnx.shape_inference.infer_shapes(model_def, data_prop=True)
+            value_info_map = {
+                value_info.name: value_info for value_info in model_def.graph.value_info
+            }
+            for value_info in model_def.graph.input:
+                value_info_map[value_info.name] = value_info
+            output_value_info = [value_info_map[name] for name in output_names]
+            # output_value_info = []
+            # for name in output_names:
+            #     if hasattr(value_info_map[name].type, "shape"):
+            #         output_value_info.append(value_info_map[name])
+            #     else:
+            #         shape, dtype = op_graph.tensor_details[output_names[name]]
+            #         output_value_info.append(
+            #             onnx.helper.make_tensor_value_info(
+            #                 name, NUMPY_TO_ONNX_DTYPE[dtype], shape
+            #             )
+            #         )
+            model_def.graph.output.extend(output_value_info)
         onnx.checker.check_model(model_def, full_check=True)
         return model_def
 

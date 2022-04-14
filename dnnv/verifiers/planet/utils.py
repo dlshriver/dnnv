@@ -64,7 +64,10 @@ def as_rlv(
         input_shape = tuple(output_shape)
         layer_id += 1
     for hs in input_constraint.halfspaces:
-        indice_strs = [f"0:{index}" for index in hs.indices]
+        indice_strs = [
+            ":".join(str(i) for i in np.unravel_index(index, input_layer.shape))
+            for index in hs.indices
+        ]
         A_str = " ".join(
             [f"{c:.12f} input:{i}" for c, i in zip(hs.coefficients, indice_strs)]
         )
