@@ -231,9 +231,9 @@ class RandomTests(unittest.TestCase):
 
     def test_random_residual_0(self):
         os.environ["OUTPUT_LAYER"] = "-1"
-        verifiers = {
-            "eran": ERAN,
-            "planet": Planet,
+        excluded_configs = {
+            ("marabou", 0.5),  # too slow
+            ("marabou", 1.0),  # too slow
         }
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
@@ -241,6 +241,8 @@ class RandomTests(unittest.TestCase):
                 os.environ["SEED"] = str(i)
                 results = []
                 for name, verifier in VERIFIERS.items():
+                    if (name, epsilon) in excluded_configs:
+                        continue
                     if not verifier.is_installed():
                         continue
                     self.reset_property_context()
@@ -257,14 +259,14 @@ class RandomTests(unittest.TestCase):
             "reluplex",
             "verinet",
         }
+        excluded_configs = {}
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
             for i in range(RUNS_PER_PROP):
                 os.environ["SEED"] = str(i)
                 results = []
                 for name, verifier in VERIFIERS.items():
-                    if name == "marabou" and (epsilon == 0.5 or epsilon == 1.0):
-                        # numerical inconsistencies # TODO : address these
+                    if (name, epsilon) in excluded_configs:
                         continue
                     if name in excluded_verifiers:
                         continue
