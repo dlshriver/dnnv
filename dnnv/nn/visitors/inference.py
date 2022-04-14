@@ -24,6 +24,16 @@ class DetailsInference(OperationVisitor):
             )
         return super().generic_visit(operation)
 
+    def get_details(self, obj):
+        if isinstance(obj, Operation):
+            self.visit(obj)
+            return self.tensor_details[obj]
+        elif isinstance(obj, np.ndarray):
+            return TensorDetails(obj.shape, obj.dtype)
+        elif isinstance(obj, np.number):
+            return TensorDetails((), np.dtype(type(obj)))
+        raise TypeError(f"Unknown tensor type: {type(obj)}")
+
     def visit_Add(self, operation: operations.Add):
         a = operation.a
         if isinstance(a, Operation):
@@ -38,29 +48,28 @@ class DetailsInference(OperationVisitor):
         output = a + b
         self.tensor_details[operation] = TensorDetails(output.shape, output.dtype)
 
+    def visit_BatchNormalization(self, operation: operations.BatchNormalization):
+        self.tensor_details[operation] = self.get_details(operation.x)
+
     def visit_Concat(self, operation: operations.Concat):
-        self.visit(operation.x[0])
         axis = operation.axis
-        details = self.tensor_details[operation.x[0]]
-        shape = list(details.shape)
-        dtype = details.dtype
-        for x in operation.x[1:]:
-            self.visit(x)
-            details = self.tensor_details[x]
-            shape[axis] += details.shape[axis]
-        self.tensor_details[operation] = TensorDetails(tuple(shape), dtype)
+        output_shape = None
+        output_dtype = None
+        for x in operation.x:
+            shape, dtype = self.get_details(x)
+            if output_shape is None:
+                output_shape = list(shape)
+                output_dtype = dtype
+            else:
+                output_shape[axis] += shape[axis]
+        self.tensor_details[operation] = TensorDetails(
+            tuple(output_shape), output_dtype
+        )
 
     def visit_Conv(self, operation: operations.Conv):
-        x = operation.x
-        if isinstance(x, Operation):
-            self.visit(x)
-            x_details = self.tensor_details[operation.x]
-            batch, in_c, in_h, in_w = x_details.shape
-            output_dtype = x_details.dtype
-        else:
-            assert isinstance(x, np.ndarray)
-            batch, in_c, in_h, in_w = x.shape
-            output_dtype = x.dtype
+        x_details = self.get_details(operation.x)
+        batch, in_c, in_h, in_w = x_details.shape
+        output_dtype = x_details.dtype
         w = operation.w
         assert isinstance(w, np.ndarray)
         b = operation.b
@@ -95,13 +104,11 @@ class DetailsInference(OperationVisitor):
         self.tensor_details[operation] = TensorDetails(output.shape, output.dtype)
 
     def visit_Elu(self, operation: operations.Elu):
-        self.visit(operation.x)
-        self.tensor_details[operation] = self.tensor_details[operation.x]
+        self.tensor_details[operation] = self.get_details(operation.x)
 
     def visit_Flatten(self, operation: operations.Flatten):
-        self.visit(operation.x)
         axis = operation.axis
-        input_details = self.tensor_details[operation.x]
+        input_details = self.get_details(operation.x)
         input_shape = input_details.shape
         output_shape = (
             int(np.product(input_shape[:axis])),
@@ -109,6 +116,19 @@ class DetailsInference(OperationVisitor):
         )
         self.tensor_details[operation] = TensorDetails(
             output_shape, input_details.dtype
+        )
+
+    def visit_Gather(self, operation: operations.Gather):
+        assert isinstance(operation.indices, np.ndarray)
+        if operation.indices.size == 1:
+            indices = ()
+        else:
+            indices = tuple(operation.indices)
+        axis = operation.axis
+        input_details = self.get_details(operation.x)
+        self.tensor_details[operation] = TensorDetails(
+            input_details.shape[:axis] + indices + input_details.shape[axis + 1 :],
+            input_details.dtype,
         )
 
     def visit_Gemm(self, operation: operations.Gemm):
@@ -140,8 +160,7 @@ class DetailsInference(OperationVisitor):
         )
 
     def visit_LeakyRelu(self, operation: operations.LeakyRelu):
-        self.visit(operation.x)
-        self.tensor_details[operation] = self.tensor_details[operation.x]
+        self.tensor_details[operation] = self.get_details(operation.x)
 
     def visit_MatMul(self, operation: operations.MatMul):
         a = operation.a
@@ -177,12 +196,45 @@ class DetailsInference(OperationVisitor):
         )
 
     def visit_Relu(self, operation: operations.Relu):
+        self.tensor_details[operation] = self.get_details(operation.x)
+
+    def visit_Reshape(self, operation: operations.Reshape):
         self.visit(operation.x)
-        self.tensor_details[operation] = self.tensor_details[operation.x]
+        input_details = self.tensor_details[operation.x]
+        if not isinstance(operation.shape, Operation):
+            new_shape = np.empty(input_details.shape).reshape(operation.shape).shape
+            self.tensor_details[operation] = TensorDetails(
+                new_shape, input_details.dtype
+            )
+            return
+        self.visit(operation.shape)
+        if (
+            self.tensor_details[operation.shape].shape == (2,)
+            and isinstance(operation.shape, operations.Concat)
+            and isinstance(operation.shape.x[1], np.ndarray)
+            and operation.shape.x[1].size == 1
+            and operation.shape.x[1].item() == -1
+            and isinstance(operation.shape.x[0], operations.Unsqueeze)
+            and np.all(operation.shape.x[0].axes == 0)
+        ):
+            new_shape = np.empty(input_details.shape).reshape(1, -1).shape
+            self.tensor_details[operation] = TensorDetails(
+                new_shape, input_details.dtype
+            )
+            return
+        raise NotImplementedError()
+
+    def visit_Shape(self, operation: operations.Shape):
+        input_details = self.get_details(operation.x)
+        self.tensor_details[operation] = TensorDetails(
+            np.shape(input_details.shape), np.dtype(np.int64)
+        )
 
     def visit_Sigmoid(self, operation: operations.Sigmoid):
-        self.visit(operation.x)
-        self.tensor_details[operation] = self.tensor_details[operation.x]
+        self.tensor_details[operation] = self.get_details(operation.x)
+
+    def visit_Softmax(self, operation: operations.Softmax):
+        self.tensor_details[operation] = self.get_details(operation.x)
 
     def visit_Sub(self, operation: operations.Sub):
         a = operation.a
@@ -199,8 +251,26 @@ class DetailsInference(OperationVisitor):
         self.tensor_details[operation] = TensorDetails(output.shape, output.dtype)
 
     def visit_Tanh(self, operation: operations.Tanh):
-        self.visit(operation.x)
-        self.tensor_details[operation] = self.tensor_details[operation.x]
+        self.tensor_details[operation] = self.get_details(operation.x)
+
+    def visit_Transpose(self, operation: operations.Transpose):
+        input_details = self.get_details(operation.x)
+        new_shape = tuple(np.array(input_details.shape)[operation.permutation])
+        self.tensor_details[operation] = TensorDetails(new_shape, input_details.dtype)
+
+    def visit_Unsqueeze(self, operation: operations.Unsqueeze):
+        assert not isinstance(operation.axes, operations.Operation)
+        axes = tuple(operation.axes)
+        input_details = self.get_details(operation.x)
+        new_shape = [0 for _ in range(len(axes) + len(input_details.shape))]
+        for a in axes:
+            new_shape[a] = 1
+        for d in input_details.shape:
+            new_shape[new_shape.index(0)] = d
+        self.tensor_details[operation] = TensorDetails(
+            tuple(new_shape),
+            input_details.dtype,
+        )
 
 
 __all__ = ["DetailsInference"]
