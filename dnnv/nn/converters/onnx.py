@@ -19,6 +19,7 @@ class OnnxConverter(OperationConverter):
         self,
         *,
         add_missing_optional_inputs=False,
+        no_negative_input_dimensions=False,
         name="onnx_model",
         ir_version=7,
         opset=13,
@@ -29,6 +30,7 @@ class OnnxConverter(OperationConverter):
         self.visited: Dict[Operation, onnx.NodeProto] = self._cache
         self.op_counts: Dict[str, int] = defaultdict(int)
         self.add_missing_optional_inputs = add_missing_optional_inputs
+        self.no_negative_input_dimensions = no_negative_input_dimensions
         self.ir_version = ir_version
         self.opset = opset
 
@@ -41,9 +43,11 @@ class OnnxConverter(OperationConverter):
         name="onnx_model",
         ir_version=7,
         opset=13,
+        no_negative_input_dimensions=False,
     ) -> onnx.ModelProto:
         self = cls(
             add_missing_optional_inputs=add_missing_optional_inputs,
+            no_negative_input_dimensions=no_negative_input_dimensions,
             name=name,
             ir_version=ir_version,
             opset=opset,
@@ -461,7 +465,9 @@ class OnnxConverter(OperationConverter):
         idx = self.op_counts["Input"] = self.op_counts["Input"] + 1
         opname = f"Input_{idx}"
 
-        shape = [d if d >= 0 else 1 for d in np.asarray(operation.shape).tolist()]
+        shape = np.asarray(operation.shape).tolist()
+        if self.no_negative_input_dimensions:
+            shape = [d if d >= 0 else 1 for d in shape]
         dtype = NUMPY_TO_ONNX_DTYPE[np.dtype(operation.dtype)]
 
         node = onnx.helper.make_tensor_value_info(opname, dtype, shape)

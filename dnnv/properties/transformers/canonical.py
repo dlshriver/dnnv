@@ -1,9 +1,8 @@
 from __future__ import annotations
-
 import numpy as np
 
 from collections import defaultdict
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Union
 
 from .dnf import DnfTransformer
 from ..expressions import *
@@ -22,7 +21,9 @@ def _extract_constants(expr: Add) -> Tuple[Add, Constant]:
 
 class CanonicalTransformer(DnfTransformer):
     def _extract_coefficients(self, expression: Add) -> Dict[Expression, Expression]:
-        coefficients: Dict[Expression, Constant] = defaultdict(lambda: Constant(0))
+        coefficients: Dict[Expression, Union[Add, Constant]] = defaultdict(
+            lambda: Constant(0)
+        )
         for expr in expression.expressions:
             expr = self.visit(expr)
             if isinstance(expr, Add):

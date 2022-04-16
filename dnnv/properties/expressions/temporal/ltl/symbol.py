@@ -332,7 +332,7 @@ class TemporalSymbol(LTL):
         if self.max_step is not None:
             max_step = f", max_step={self.max_step!r}"
         control_period = ""
-        if self.control_period > 1:
+        if isinstance(self.control_period, Expression) or self.control_period > 1:
             control_period = f", control_period={self.control_period!r}"
         return f"TemporalSymbol({self.symbol!r}, {self.network!r}, {self.transition_fn!r}{state_map_fn}{max_step}{control_step}{plant_step}{control_period})"
 

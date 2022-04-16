@@ -43,7 +43,9 @@ class Nnenum(Verifier):
             mode="w+", suffix=".onnx", delete=False
         ) as onnx_model_file:
             op_graph = prop.op_graph.simplify()
-            op_graph.export_onnx(onnx_model_file.name)
+            op_graph.export_onnx(
+                onnx_model_file.name, no_negative_input_dimensions=True
+            )
 
         lb, ub = prop.input_constraint.as_bounds()
         A_in, b_in = prop.input_constraint.as_matrix_inequality()

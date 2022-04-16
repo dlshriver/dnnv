@@ -92,23 +92,10 @@ class OperationGraph:
     def output_shape(self) -> Sequence[Tuple[int, ...]]:
         return tuple(details.shape for details in self.output_details)
 
-    def as_onnx(
-        self,
-        *,
-        add_missing_optional_inputs=False,
-        name="onnx_model",
-        ir_version=7,
-        opset=13,
-    ):
+    def as_onnx(self, **kwargs):
         from .converters.onnx import OnnxConverter
 
-        return OnnxConverter.convert(
-            self,
-            add_missing_optional_inputs=add_missing_optional_inputs,
-            name=name,
-            ir_version=ir_version,
-            opset=opset,
-        )
+        return OnnxConverter.convert(self, **kwargs)
 
     def as_tf(self):
         from .converters.tensorflow import convert as tf_convert
@@ -162,13 +149,10 @@ class OperationGraph:
         copier = Copier()
         return copier.transform(self)
 
-    def export_onnx(self, filename, *, add_missing_optional_inputs=False):
+    def export_onnx(self, filename, **kwargs):
         import onnx
 
-        onnx.save(
-            self.as_onnx(add_missing_optional_inputs=add_missing_optional_inputs),
-            filename,
-        )
+        onnx.save(self.as_onnx(**kwargs), filename)
 
     def is_linear(self):
         if self._is_linear is None:
@@ -217,7 +201,7 @@ class OperationGraph:
         assert len(kwargs) == 0
         import onnxruntime.backend
 
-        onnx_model = self.as_onnx()
+        onnx_model = self.as_onnx(**kwargs)
         y = onnxruntime.backend.run(onnx_model, list(x))
         if _squeeze and len(y) == 1:
             return y[0]

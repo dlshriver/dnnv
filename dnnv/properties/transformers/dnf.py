@@ -13,7 +13,11 @@ from ..visitors.inference import DetailsInference
 
 class DnfTransformer(GenericExpressionTransformer):
     def __init__(self):
-        super().__init__()
+        super().__init__(
+            # TODO: much faster if recursive, can we fix that?
+            # I'd prefer non-recursive visitors whenever possible
+            recursive=True
+        )
         self._infer_expression_details = lambda: None
 
     def _lazy_inference(self):

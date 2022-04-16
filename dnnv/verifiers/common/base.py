@@ -50,12 +50,19 @@ class Verifier(ABC):
     )
     parameters: Dict[str, Parameter] = {}
 
-    def __init__(self, dnn_property: Expression, eager_exit: bool = True, **kwargs):
+    def __init__(
+        self,
+        dnn_property: Expression,
+        eager_exit: bool = True,
+        reraise_keyboardinterrupt=False,
+        **kwargs,
+    ):
         self.logger = logging.getLogger(
             f"{type(self).__module__}.{type(self).__qualname__}"
         )
         self.property = dnn_property
         self.eager_exit = eager_exit
+        self.reraise_keyboardinterrupt = reraise_keyboardinterrupt
         for key, value in kwargs.items():
             if key not in self.__class__.parameters:
                 raise self.verifier_error(f"Unknown parameter: {key}")
@@ -132,6 +139,8 @@ class Verifier(ABC):
                     if self.eager_exit and result.result == SAT:
                         return result
         except KeyboardInterrupt:
+            if self.reraise_keyboardinterrupt:
+                raise
             if result.result != SAT:
                 result.result = PropertyCheckResult(
                     "unknown", "Received Signal: SIGINT"

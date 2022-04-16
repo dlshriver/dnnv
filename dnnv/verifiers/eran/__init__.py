@@ -45,7 +45,11 @@ class ERAN(Verifier):
             mode="w+", suffix=".onnx", delete=False
         ) as onnx_model_file:
             op_graph = prop.suffixed_op_graph().simplify()
-            op_graph.export_onnx(onnx_model_file.name, add_missing_optional_inputs=True)
+            op_graph.export_onnx(
+                onnx_model_file.name,
+                add_missing_optional_inputs=True,
+                no_negative_input_dimensions=True,
+            )
 
         input_interval = prop.input_constraint
         spec_lb = input_interval.lower_bounds[0]
