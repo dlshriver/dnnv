@@ -75,23 +75,17 @@ class LibraryDependency(Dependency):
         if not self.allow_from_system:
             return None
         proc = sp.run(
-            shlex.split(f"ldconfig -p | grep /{self.name}.so$"),
+            shlex.split("ldconfig -p"),
             stdout=sp.PIPE,
             stderr=sp.STDOUT,
             encoding="utf8",
             env=envvars,
         )
-        if proc.returncode == 0:
-            return Path(proc.stdout.split("=>")[-1].strip())
-        proc = sp.run(
-            shlex.split(f"ldconfig -p | grep /{self.name}.a$"),
-            stdout=sp.PIPE,
-            stderr=sp.STDOUT,
-            encoding="utf8",
-            env=envvars,
-        )
-        if proc.returncode == 0:
-            return Path(proc.stdout.split("=>")[-1].strip())
+        if proc.returncode != 0:
+            return None
+        for line in proc.stdout.split("\n"):
+            if line.endswith(f"/{self.name}.so") or line.endswith(f"/{self.name}.a"):
+                return Path(line.split("=>")[-1].strip())
         return None
 
 
