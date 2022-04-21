@@ -99,7 +99,7 @@ if __name__ == "__main__":
 
 class ELINAInstaller(Installer):
     def run(self, env: Environment, dependency: Dependency):
-        commit_hash = "7e0e6fef43c9676c869199782f4beadd542449f6"
+        commit_hash = "e70903a0a73c6e5b980ceef1afcfbe7eb4d59721"
         name = "elina"
 
         cache_dir = env.cache_dir / f"{name}-{commit_hash}"
@@ -135,20 +135,11 @@ class ELINAInstaller(Installer):
             "git clone https://github.com/eth-sri/ELINA.git",
             "cd ELINA",
             f"git checkout {commit_hash}",
-            # "git revert -n b347e3c",  # undoing commits that force reliance on local files
-            # "git revert -n 16d2a6d --strategy=recursive -Xours",  # undoing commits that force reliance on local files
-            # "git revert -n bda9f58",  # undoing commits that force reliance on local files
             f'CFLAGS="{include_paths} {library_paths}" ./configure -prefix {cache_dir}/ELINA -gmp-prefix {gmp_path} -mpfr-prefix {mpfr_path} -cdd-prefix {cdd_prefix} -use-deeppoly -use-gurobi -use-fconv',
-            # f"sed -i 's#CDD_PREFIX = .*$#CDD_PREFIX = {cdd_path}/include -L{cdd_path}/lib#' Makefile.config",
             "make",
             "make install",
             f"cd {installation_path}",
             "rm -rf ELINA",
-            # "mkdir ELINA",
-            # "cd ELINA",
-            # f"cp -r {cache_dir}/ELINA/lib .",
-            # f"cp -r {cache_dir}/ELINA/python_interface .",
-            # f"cp -r {cdd_path}/lib .",
             f"cp -r {cache_dir}/ELINA .",
             f"cp -r {cdd_prefix.parent.parent}/lib ELINA/",
             f"cp -r {libmpfr_path.parent} ELINA/",

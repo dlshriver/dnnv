@@ -51,9 +51,7 @@ class ERAN(Verifier):
                 no_negative_input_dimensions=True,
             )
 
-        input_interval = prop.input_constraint
-        spec_lb = input_interval.lower_bounds[0]
-        spec_ub = input_interval.upper_bounds[0]
+        spec_lb, spec_ub = prop.input_constraint.as_bounds()
         with tempfile.NamedTemporaryFile(
             mode="w+", suffix=".npy", delete=False
         ) as input_constraint_file:
