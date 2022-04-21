@@ -4,6 +4,8 @@ import numpy as np
 
 from typing import Union
 
+from dnnv.nn.graph import OperationGraph
+
 from ..expressions import (
     ArithmeticExpression,
     AssociativeExpression,
@@ -98,6 +100,8 @@ class PropagateConstants(GenericExpressionTransformer):
             result = expression.value
             if isinstance(result, Expression):
                 return result.propagate_constants()
+            if isinstance(result, OperationGraph):
+                return Network(str(expression)).concretize(result)
             return Constant(result)
         return Call(function, args, kwargs)
 
