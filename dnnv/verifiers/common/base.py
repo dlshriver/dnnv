@@ -57,7 +57,7 @@ class Verifier(ABC):
         for key, value in kwargs.items():
             if key not in self.__class__.parameters:
                 raise self.verifier_error(f"Unknown parameter: {key}")
-        self.parameters = {
+        self.parameter_values: Dict[str, Any] = {
             name: param.as_type(kwargs.get(name, param.default))
             for name, param in self.__class__.parameters.items()
         }

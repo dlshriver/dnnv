@@ -3,7 +3,7 @@ class ParserError(Exception):
         if lineno is not None:
             prefix = f"line {lineno}"
             if col_offset is not None:
-                prefix = f"{prefix}, col {col_offset}"
+                prefix = f"{prefix}, column {col_offset}"
             msg = f"{prefix}: {msg}"
         super().__init__(msg, *args)
 

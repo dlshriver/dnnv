@@ -1,4 +1,3 @@
-from dnnv.nn.operations.base import OutputSelect
 import numpy as np
 import onnx
 

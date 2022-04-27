@@ -29,7 +29,7 @@ if True:
 Forall(x, x > c)
 """
     with pytest.raises(
-        DNNPParserError, match="line 3, col 0: Unsupported structure in property:"
+        DNNPParserError, match="line 3, column 0: Unsupported structure in property:"
     ):
         _ = parse_str(spec_str)
 

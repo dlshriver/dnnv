@@ -60,7 +60,9 @@ class ERAN(Verifier):
             input_constraint_file.name,
             "-o",
             self._tmp_output_file.name,
-        ) + tuple(f"--{k}={v}" for k, v in self.parameters.items() if v is not None)
+        ) + tuple(
+            f"--{k}={v}" for k, v in self.parameter_values.items() if v is not None
+        )
         return args
 
     def parse_results(self, prop, results):

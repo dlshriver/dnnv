@@ -16,7 +16,7 @@ class CallableExpression(Expression):
 class Call(CallableExpression, ArithmeticExpression, LogicalExpression):
     def __init__(
         self,
-        function: Expression,
+        function: CallableExpression,
         args: Tuple[Expression, ...],
         kwargs: Mapping[str, Expression],
         *,

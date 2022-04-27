@@ -88,8 +88,8 @@ def _main() -> int:
     params.pop("debug")
     params.pop("verbose")
     params.pop("quiet")
-    return exit(args.command(**params))
+    return args.command(**params)
 
 
 if __name__ == "__main__":
-    exit(_main())
+    _main()

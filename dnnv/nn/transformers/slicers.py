@@ -3,7 +3,7 @@ from __future__ import annotations
 import numpy as np
 
 from copy import deepcopy
-from typing import Optional, Sequence, Union
+from typing import Any, Collection, Dict, List, Optional, Sequence, Tuple, Union
 
 from ..graph import OperationGraph
 from ..operations import Input, Operation
@@ -32,11 +32,10 @@ class DropPrefix(OperationTransformer):
         return self._cache[operation]
 
     def generic_visit(self, operation: Operation) -> Operation:
-        kwargs = {}
+        kwargs: Dict[str, Any] = {}
         for name, value in operation.__dict__.items():
             if isinstance(value, Operation):
-                new_value = self.visit(value)
-                kwargs[name] = new_value
+                kwargs[name] = self.visit(value)
             else:
                 kwargs[name] = deepcopy(value)
         return operation.__class__(**kwargs)
@@ -51,8 +50,10 @@ class Slicer(OperationTransformer):
 
         self.index = 0
         self.length = 0
-        self._index_cache = {}
-        self.current_pass = None
+        self._index_cache: Dict[
+            Operation, Tuple[Union[float, int], Union[float, int], Operation]
+        ] = {}
+        self.current_pass: Optional[str] = None
 
     def visit(self, operation: Operation) -> Union[Operation, Sequence[Operation]]:
         is_first = False
@@ -100,12 +101,16 @@ class Slicer(OperationTransformer):
             self.index -= 1
             self.length = max(self.length, -self.index)
             if operation not in self._index_cache:
-                self._index_cache[operation] = [float("inf"), float("-inf"), operation]
-            pos_index, neg_index, _ = self._index_cache[operation]
-            self._index_cache[operation][1] = max(neg_index, self.index)
+                self._index_cache[operation] = float("inf"), float("-inf"), operation
+            pos_index, neg_index, op = self._index_cache[operation]
+            self._index_cache[operation] = (pos_index, max(neg_index, self.index), op)
             result = super().generic_visit(operation)
-            pos_index, neg_index, _ = self._index_cache[operation]
-            self._index_cache[operation][0] = min(pos_index, self.length + self.index)
+            pos_index, neg_index, op = self._index_cache[operation]
+            self._index_cache[operation] = (
+                min(pos_index, self.length + self.index),
+                neg_index,
+                op,
+            )
             self.index += 1
             return result
         elif self.current_pass == "selection":
@@ -115,11 +120,10 @@ class Slicer(OperationTransformer):
             ):
                 y = OperationGraph([operation]).output_details
                 return Input(y[0].shape, y[0].dtype)
-            kwargs = {}
+            kwargs: Dict[str, Any] = {}
             for name, value in operation.__dict__.items():
                 if isinstance(value, Operation):
-                    new_value = self.visit(value)
-                    kwargs[name] = new_value
+                    kwargs[name] = self.visit(value)
                 elif isinstance(value, (tuple, list, set)):
                     new_value = []
                     for value_ in value:
