@@ -1,15 +1,22 @@
 import sys
 
-__all__ = []
+from .errors import *
 
 if sys.platform == "linux":
     from .linux import *
-
-    __all__ += linux.__all__
 else:
     print(f"dnnv_manage is not yet supported on {sys.platform} platforms")
     exit(1)
 
-from .errors import *
-
-__all__ += errors.__all__
+__all__ = [
+    # platform module
+    "install",
+    "uninstall",
+    "list_verifiers",
+    "import_verifier_module",
+    "verifier_choices",
+    # errors
+    "DNNVManagerError",
+    "InstallError",
+    "UninstallError",
+]

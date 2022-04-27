@@ -14,7 +14,7 @@ class BundlePadding(Simplifier):
         pads = operation.pads
         if input_op.mode != "constant" or input_op.value != 0.0:
             return operation
-        if not np.all(p == 0 for p in input_op.pads[:4]):
+        if not all(p == 0 for p in input_op.pads[:4]):
             return operation
         operation = copy(operation)
         pad_top, pad_left = input_op.pads[2:4]
@@ -30,7 +30,7 @@ class BundlePadding(Simplifier):
         pads = operation.pads
         if input_op.mode != "constant" or input_op.value != 0.0:
             return operation
-        if not np.all(p == 0 for p in input_op.pads[:4]):
+        if not all(p == 0 for p in input_op.pads[:4]):
             return operation
         operation = copy(operation)
         pad_top, pad_left = input_op.pads[2:4]

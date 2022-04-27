@@ -12,8 +12,8 @@ onnxruntime~=1.8; extra == "test"
 torch~=1.5; extra == "test"
 torchvision~=0.6; extra == "test"
 # Requirements for development
-black~=21.7b0; extra == "dev"
-mypy~=0.910; extra == "dev"
+black~=22.3; extra == "dev"
+mypy~=0.942; extra == "dev"
 # Requirements for building the docs
 sphinx; extra == "docs"
 furo; extra == "docs"

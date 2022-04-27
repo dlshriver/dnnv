@@ -32,7 +32,7 @@ class Expression:
 
     def __init__(self, ctx: Optional[Context] = None):
         self.ctx: Context = ctx or get_context()
-        self._hash_cache_base = None
+        self._hash_cache_base: Optional[int] = None
 
     def __bool__(self):
         if self.is_concrete:
@@ -44,7 +44,7 @@ class Expression:
             exprs_hash = 1
             for expr in self.iter(max_depth=1, include_self=False):
                 exprs_hash *= hash(expr)
-            self._hash_cache_base =  hash(self.__class__) * exprs_hash
+            self._hash_cache_base = hash(self.__class__) * exprs_hash
         return self._hash_cache_base
 
     def __getattr__(self, name) -> Union[Attribute, Constant]:
@@ -164,7 +164,9 @@ class Expression:
         with self.ctx:
             return CanonicalTransformer().visit(self)
 
-    def concretize(self: ExpressionType, *args, **kwargs) -> ExpressionType:
+    def concretize(
+        self: ExpressionType, *args, **kwargs
+    ) -> Union[ExpressionType, Symbol]:
         from .terms import Symbol
 
         nargs = len(args)

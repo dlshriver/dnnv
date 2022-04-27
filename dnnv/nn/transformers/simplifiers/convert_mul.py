@@ -8,9 +8,7 @@ from ...graph import OperationGraph
 
 
 class ConvertMul(Simplifier):
-    def visit_Mul(
-        self, operation: operations.Mul
-    ) -> Union[operations.Mul, operations.Gemm]:
+    def visit_Mul(self, operation: operations.Mul) -> operations.Operation:
         a = operation.a
         b = operation.b
         if isinstance(a, operations.Operation) and isinstance(b, operations.Operation):

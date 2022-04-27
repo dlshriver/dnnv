@@ -119,10 +119,13 @@ class VeriNet(Verifier):
             "-o",
             self._tmp_output_file.name,
         )
-        if "max_proc" in self.parameters and self.parameters["max_proc"] is not None:
-            value = self.parameters["max_proc"]
+        if (
+            "max_proc" in self.parameter_values
+            and self.parameter_values["max_proc"] is not None
+        ):
+            value = self.parameter_values["max_proc"]
             args += (f"--max_procs={value}",)
-        if "no_split" in self.parameters and self.parameters["no_split"]:
+        if "no_split" in self.parameter_values and self.parameter_values["no_split"]:
             args += ("--no_split",)
         return args
 

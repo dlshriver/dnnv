@@ -1,7 +1,5 @@
 import numpy as np
 
-from typing import Union
-
 from .base import Simplifier
 from ... import operations
 from ...graph import OperationGraph
