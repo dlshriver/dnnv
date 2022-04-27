@@ -112,8 +112,8 @@ def _main():
         ]
     )
     # TODO : only modify path if not in VIRTUAL_ENV
-    return exit(main(*cli.parse_args()))
+    return main(*cli.parse_args())
 
 
 if __name__ == "__main__":
-    exit(_main())
+    _main()
