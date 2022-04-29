@@ -158,7 +158,7 @@ class Abs(FunctionSubstitutor):
             if np.all(np.asarray(b_shape) == 1):
                 b_gt_0: LogicalExpression = b >= 0
             else:
-                b_gt_0 = And(*(b[b_idx] >= 0 for b_idx in np.ndindex(b_shape)))
+                b_gt_0 = And(*(b[b_idx] >= 0 for b_idx in np.ndindex(*b_shape)))
             if form == "cnf":
                 return And(
                     b_gt_0,
@@ -212,7 +212,7 @@ class Abs(FunctionSubstitutor):
         if np.all(np.asarray(a_shape) == 1):
             a_gt_0: LogicalExpression = a >= 0
         else:
-            a_gt_0 = And(*(a[a_idx] >= 0 for a_idx in np.ndindex(a_shape)))
+            a_gt_0 = And(*(a[a_idx] >= 0 for a_idx in np.ndindex(*a_shape)))
         if form == "cnf":
             return And(
                 a_gt_0,

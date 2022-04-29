@@ -3,6 +3,8 @@ from __future__ import annotations
 import inspect
 import numpy as np
 
+from numpy._globals import _NoValue
+
 from .base import FunctionSubstitutor
 from .utils import get_parameters
 from ....expressions import (
@@ -46,7 +48,7 @@ class NumpySum(FunctionSubstitutor):
         )
         x = parameters["a"]
         initial = parameters["initial"]
-        if initial is np._globals._NoValue:
+        if initial is _NoValue:
             initial = None
 
         assert isinstance(x, Expression)

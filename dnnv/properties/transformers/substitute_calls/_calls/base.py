@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import abstractmethod
 from typing import Callable, Collection, Optional
 
-from ....expressions import Expression
+from ....expressions import CallableExpression, Expression
 
 
 class FunctionSubstitutor:
@@ -18,7 +18,7 @@ class FunctionSubstitutor:
 
     @abstractmethod
     def __call__(
-        self, f: Expression, *args: Expression, **kwargs: Expression
+        self, f: CallableExpression, *args: Expression, **kwargs: Expression
     ) -> Expression:
         pass
 
