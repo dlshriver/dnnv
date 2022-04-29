@@ -2,8 +2,6 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from dnnv.properties.expressions.terms.constant import Constant
-
 from .errors import ParserError
 from .. import expressions
 from ..visitors import ExpressionVisitor

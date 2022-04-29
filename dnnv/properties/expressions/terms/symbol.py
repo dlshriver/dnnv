@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Optional, Union
+from typing import Optional, Union
 
 from ..context import Context
 from .base import Term
@@ -8,8 +8,6 @@ from .constant import Constant
 
 
 class Symbol(Term):
-    _ssa_indices = {}
-
     def __init__(self, identifier: Union[Constant, str], ctx: Optional[Context] = None):
         super().__init__(ctx=ctx)
         if isinstance(identifier, Constant):

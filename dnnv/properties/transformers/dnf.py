@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Set, Tuple
+from typing import Optional, Set, Tuple, Union
 
 from .base import GenericExpressionTransformer
 from .lift_ifthenelse import LiftIfThenElse
@@ -28,7 +28,7 @@ class DnfTransformer(GenericExpressionTransformer):
         expression = super().visit(expression)
         return expression
 
-    def visit_And(self, expression: And) -> Or:
+    def visit_And(self, expression: And) -> Union[Constant, Or]:
         disjunction: Optional[Or] = None
         expressions: Set[Expression] = set()
         for expr in expression.expressions:
@@ -65,20 +65,25 @@ class DnfTransformer(GenericExpressionTransformer):
                 disjuncts = new_disjuncts
         return Or(*[And(*disjunct) for disjunct in disjuncts])
 
-    def visit_Exists(self, expression: Exists):
+    def visit_Exists(self, expression: Exists) -> Union[Constant, Or, Symbol]:
         # TODO : should this do other things ?
         expr = self.visit(expression.expression)
+        assert isinstance(expr, (Constant, Or, Symbol))
         return expr
 
-    def visit_Forall(self, expression: Forall):
+    def visit_Forall(self, expression: Forall) -> Union[Constant, Or, Symbol]:
         # TODO : should this do other things ?
         expr = self.visit(expression.expression)
+        assert isinstance(expr, (Constant, Or, Symbol))
         return expr
 
-    def visit_Implies(self, expression: Implies) -> Or:
-        return self.visit(Or(~expression.expr1, expression.expr2))
+    def visit_Implies(self, expression: Implies) -> Union[Constant, Or]:
+        assert isinstance(expression.expr1, LogicalExpression)
+        expr = self.visit(Or(~expression.expr1, expression.expr2))
+        assert isinstance(expr, (Constant, Or))
+        return expr
 
-    def visit_Not(self, expression: Not) -> Or:
+    def visit_Not(self, expression: Not) -> Union[Constant, Or]:
         expr = expression.expr
         if isinstance(
             expr,
@@ -106,7 +111,7 @@ class DnfTransformer(GenericExpressionTransformer):
                     expr.ctx.shapes[expr.expr1], expr.ctx.shapes[expr.expr2]
                 )
                 if np.all(np.asarray(output_shape) == 1):
-                    return self.visit(
+                    expr = self.visit(
                         Or(
                             opposite_comparison[type(expr)](
                                 expr.expr1, expr.expr2, ctx=expr.ctx
@@ -114,6 +119,8 @@ class DnfTransformer(GenericExpressionTransformer):
                             ctx=expr.ctx,
                         )
                     )
+                    assert isinstance(expr, (Constant, Or))
+                    return expr
                 expr1 = expr.expr1
                 if expr.ctx.shapes[expr1] != output_shape:
                     expr1 = Constant(np.broadcast_to, ctx=expr.ctx)(
@@ -124,27 +131,32 @@ class DnfTransformer(GenericExpressionTransformer):
                     expr2 = Constant(np.broadcast_to, ctx=expr.ctx)(
                         expr2, Constant(output_shape, ctx=expr.ctx)
                     )
-                return self.visit(
+                expr = self.visit(
                     Or(
                         *(
                             opposite_comparison[type(expr)](
                                 expr1[idx], expr2[idx], ctx=expr.ctx
                             )
-                            for idx in np.ndindex(output_shape)
+                            for idx in np.ndindex(*output_shape)
                         ),
                         ctx=expr.ctx,
                     )
                 )
+                assert isinstance(expr, (Constant, Or))
+                return expr
         elif isinstance(expression.expr, Symbol):
             return Or(And(Not(expression.expr)))
 
+        assert isinstance(expression.expr, LogicalExpression)
         result = ~expression.expr
         if isinstance(result, Not):
             # TODO : should this be an error?
             return result
-        return self.visit(result)
+        expr = self.visit(result)
+        assert isinstance(expr, (Constant, Or))
+        return expr
 
-    def visit_Or(self, expression: Or) -> Or:
+    def visit_Or(self, expression: Or) -> Union[Constant, Or]:
         expressions: Set[Expression] = set()
         for expr in expression.expressions:
             expr = self.visit(expr)

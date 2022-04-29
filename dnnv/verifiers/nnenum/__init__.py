@@ -70,10 +70,10 @@ class Nnenum(Verifier):
             self._tmp_output_file.name,
         )
         if (
-            "num_processes" in self.parameters
-            and self.parameters["num_processes"] is not None
+            "num_processes" in self.parameter_values
+            and self.parameter_values["num_processes"] is not None
         ):
-            value = self.parameters["num_processes"]
+            value = self.parameter_values["num_processes"]
             args += (f"--num_processes={value}",)
         return args
 

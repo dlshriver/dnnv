@@ -5,7 +5,9 @@ from ... import operations
 
 
 class MoveActivationsBackward(Simplifier):
-    ShapingOperation = operations.Reshape | operations.Transpose | operations.Flatten
+    ShapingOperation: operations.patterns.Or = (
+        operations.Reshape | operations.Transpose | operations.Flatten
+    )
 
     def move_back(self, operation: Union[operations.Relu, operations.Sigmoid]):
         if next(self.ShapingOperation.match([operation.x]), None) is None:

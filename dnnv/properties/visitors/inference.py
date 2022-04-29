@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from typing import Any, Dict, List, Optional, Sequence
+from typing import Dict, List, Optional, Sequence
 
 from .base import ExpressionVisitor
 from .. import expressions, Expression, Constant, Context, get_context
@@ -169,18 +169,33 @@ class DetailsInference(ExpressionVisitor):
     def visit_Add(self, expression: expressions.Add):
         dtype = None
         shape = None
-        shape_assertions = []
+        shape_assertions: List[expressions.LogicalExpression] = []
         for expr in expression:
             self.visit(expr)
             if shape is None:
-                dtype = self.types[expr]
                 shape = self.shapes[expr]
+            elif shape.is_concrete and self.shapes[expr].is_concrete:
+                shape_ = shape.value
+                expr_shape = self.shapes[expr].value
+                if not _broadcastable(shape_, expr_shape):
+                    raise DNNVShapeError(
+                        f"Incompatible shapes in Add: {shape_} and {expr_shape}"
+                    )
+                shape_assertions.append(Constant(_broadcastable(shape_, expr_shape)))
+                shape = Constant(np.broadcast_shapes(shape_, expr_shape))
             else:
-                dtype = Constant(np.result_type)(dtype, self.types[expr])
                 shape_assertions.append(
                     Constant(_broadcastable)(shape, self.shapes[expr])
                 )
                 shape = Constant(np.broadcast_shapes)(shape, self.shapes[expr])
+            if dtype is None:
+                dtype = self.types[expr]
+            elif dtype.is_concrete and self.types[expr].is_concrete:
+                dtype_ = dtype.value
+                expr_dtype = self.types[expr].value
+                dtype = Constant(np.result_type(dtype_, expr_dtype))
+            else:
+                dtype = Constant(np.result_type)(dtype, self.types[expr])
 
         if not _check_assertions(shape_assertions):
             raise DNNVShapeError(f"Incompatible shapes in Add")
@@ -191,12 +206,21 @@ class DetailsInference(ExpressionVisitor):
 
     def visit_And(self, expression: expressions.And):
         shape = None
-        shape_assertions = []
-        type_assertions = []
+        shape_assertions: List[expressions.LogicalExpression] = []
+        type_assertions: List[expressions.LogicalExpression] = []
         for expr in expression:
             self.visit(expr)
             if shape is None:
                 shape = self.shapes[expr]
+            elif shape.is_concrete and self.shapes[expr].is_concrete:
+                shape_ = shape.value
+                expr_shape = self.shapes[expr].value
+                if not _broadcastable(shape_, expr_shape):
+                    raise DNNVShapeError(
+                        f"Incompatible shapes in And: {shape_} and {expr_shape}"
+                    )
+                shape_assertions.append(Constant(_broadcastable(shape_, expr_shape)))
+                shape = Constant(np.broadcast_shapes(shape_, expr_shape))
             else:
                 shape_assertions.append(
                     Constant(_broadcastable)(shape, self.shapes[expr])
@@ -229,8 +253,8 @@ class DetailsInference(ExpressionVisitor):
         for kwarg_value in expression.kwargs.values():
             self.visit(kwarg_value)
 
-        shape = None
-        dtype = None
+        shape: Optional[Expression] = None
+        dtype: Optional[Expression] = None
         shape_assertions = []
         type_assertions = []
         if (
@@ -437,8 +461,8 @@ class DetailsInference(ExpressionVisitor):
     def visit_Image(self, expression: expressions.Image):
         if expression.is_concrete:
             value = expression.value
-            shape = Constant(np.shape(value))
-            dtype = Constant(_get_type(value))
+            shape: Expression = Constant(np.shape(value))
+            dtype: Expression = Constant(_get_type(value))
         else:
             shape = Constant(np.shape)(expression)
             dtype = Constant(_get_type)(expression)
@@ -509,18 +533,33 @@ class DetailsInference(ExpressionVisitor):
     def visit_Multiply(self, expression: expressions.Multiply):
         dtype = None
         shape = None
-        shape_assertions = []
+        shape_assertions: List[expressions.LogicalExpression] = []
         for expr in expression:
             self.visit(expr)
             if shape is None:
-                dtype = self.types[expr]
                 shape = self.shapes[expr]
+            elif shape.is_concrete and self.shapes[expr].is_concrete:
+                shape_ = shape.value
+                expr_shape = self.shapes[expr].value
+                if not _broadcastable(shape_, expr_shape):
+                    raise DNNVShapeError(
+                        f"Incompatible shapes in Multiply: {shape_} and {expr_shape}"
+                    )
+                shape_assertions.append(Constant(_broadcastable(shape_, expr_shape)))
+                shape = Constant(np.broadcast_shapes(shape_, expr_shape))
             else:
-                dtype = Constant(np.result_type)(dtype, self.types[expr])
                 shape_assertions.append(
                     Constant(_broadcastable)(shape, self.shapes[expr])
                 )
                 shape = Constant(np.broadcast_shapes)(shape, self.shapes[expr])
+            if dtype is None:
+                dtype = self.types[expr]
+            elif dtype.is_concrete and self.types[expr].is_concrete:
+                dtype_ = dtype.value
+                expr_dtype = self.types[expr].value
+                dtype = Constant(np.result_type(dtype_, expr_dtype))
+            else:
+                dtype = Constant(np.result_type)(dtype, self.types[expr])
 
         if not _check_assertions(shape_assertions):
             raise DNNVShapeError(f"Incompatible shapes in Multiply")
@@ -572,12 +611,21 @@ class DetailsInference(ExpressionVisitor):
 
     def visit_Or(self, expression: expressions.Or):
         shape = None
-        shape_assertions = []
-        type_assertions = []
+        shape_assertions: List[expressions.LogicalExpression] = []
+        type_assertions: List[expressions.LogicalExpression] = []
         for expr in expression:
             self.visit(expr)
             if shape is None:
                 shape = self.shapes[expr]
+            elif shape.is_concrete and self.shapes[expr].is_concrete:
+                shape_ = shape.value
+                expr_shape = self.shapes[expr].value
+                if not _broadcastable(shape_, expr_shape):
+                    raise DNNVShapeError(
+                        f"Incompatible shapes in Or: {shape_} and {expr_shape}"
+                    )
+                shape_assertions.append(Constant(_broadcastable(shape_, expr_shape)))
+                shape = Constant(np.broadcast_shapes(shape_, expr_shape))
             else:
                 shape_assertions.append(
                     Constant(_broadcastable)(shape, self.shapes[expr])
@@ -597,7 +645,7 @@ class DetailsInference(ExpressionVisitor):
     def visit_Parameter(self, expression: expressions.Parameter):
         dtype = Constant(expression.type)
         if expression.is_concrete:
-            shape = Constant(np.shape(expression.value))
+            shape: Expression = Constant(np.shape(expression.value))
         else:
             shape = Constant(np.shape)(expression)
         self.set_details(expression, shape=shape, dtype=dtype)
@@ -617,8 +665,8 @@ class DetailsInference(ExpressionVisitor):
             and isinstance(self.types[expression.expr1].value, type)
             and issubclass(self.types[expression.expr1].value, OperationGraph)
         ):
-            shape = Constant(())
-            dtype = Constant(OperationGraph)
+            shape: Expression = Constant(())
+            dtype: Expression = Constant(OperationGraph)
         else:
             shape = Constant(np.shape)(
                 Constant(np.empty)(self.shapes[expression.expr1])[expression.expr2]

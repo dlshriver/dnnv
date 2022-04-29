@@ -46,9 +46,9 @@ class BaB(Verifier):
             "-o",
             self._tmp_output_file.name,
             "--reluify_maxpools",
-            str(self.parameters["reluify_maxpools"]),
+            str(self.parameter_values["reluify_maxpools"]),
             "--smart_branching",
-            str(self.parameters["smart_branching"]),
+            str(self.parameter_values["smart_branching"]),
         )
 
     def parse_results(self, prop, results):

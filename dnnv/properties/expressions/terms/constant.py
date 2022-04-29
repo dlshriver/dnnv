@@ -17,6 +17,7 @@ class Constant(Term):
         if isinstance(value, np.ndarray):
             value.setflags(write=False)
 
+    @staticmethod
     def build_identifier(value, **kwargs):
         if isinstance(value, Constant):
             value = value._value

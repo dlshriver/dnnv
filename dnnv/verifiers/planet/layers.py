@@ -1,7 +1,6 @@
-import logging
 import numpy as np
 
-from typing import Generator, List, Optional, Tuple, Type, Union
+from typing import Generator, List, Optional, Sequence, Tuple, Type, Union
 
 from dnnv.nn.layers import Layer, Convolutional
 from dnnv.nn.operations import (
@@ -23,7 +22,7 @@ def conv_as_rlv(
     layer: Convolutional,
     layer_id: str,
     prev_layer: Tuple[str, ...],
-    input_shape: Tuple[int, int, int, int],
+    input_shape: Sequence[int],
     curr_layer: List[str],
     output_shape: List[int],
 ) -> Generator[str, None, None]:

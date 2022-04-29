@@ -58,7 +58,7 @@ class Constraint(ABC):
             self.variables[variable] = self.size()
         return self
 
-    def unravel_index(self, index: int) -> Tuple[Variable, Tuple[int, ...]]:
+    def unravel_index(self, index: int) -> Tuple[Variable, Tuple[np.intp, ...]]:
         c_size = self.size()
         for variable, size in sorted(self.variables.items(), key=lambda kv: -kv[1]):
             if size <= index < c_size:
@@ -68,7 +68,7 @@ class Constraint(ABC):
         )
 
     @abstractmethod
-    def as_bounds(self) -> bool:
+    def as_bounds(self) -> Tuple[np.ndarray, np.ndarray]:
         pass
 
     @abstractmethod
@@ -199,7 +199,7 @@ class HalfspacePolytope(Constraint):
 
     def _update_bounds(
         self,
-        indices: Sequence[Tuple[int, ...]],
+        indices: Sequence[int],
         coefficients: Sequence[float],
         b: float,
         is_open=False,
@@ -270,7 +270,7 @@ class HalfspacePolytope(Constraint):
         is_open=False,
     ) -> None:
         flat_indices = [
-            self.variables[var] + np.ravel_multi_index(idx, var.shape)
+            self.variables[var] + int(np.ravel_multi_index(idx, var.shape))
             for var, idx in zip(variables, indices)
         ]
         halfspace = Halfspace(flat_indices, coefficients, b, is_open)
@@ -301,9 +301,10 @@ class HalfspacePolytope(Constraint):
                 return False
             x_flat_.append(x_.flatten())
         x_flat = np.concatenate(x_flat_)
+        cast = np.cast[x_flat.dtype]
         for hs in self.halfspaces:
-            t = sum(c * x_flat[i] for c, i in zip(hs.coefficients, hs.indices))
-            b = hs.b
+            t = sum(cast(c) * x_flat[i] for c, i in zip(hs.coefficients, hs.indices))
+            b = cast(hs.b)
             if hs.is_open:
                 b = np.nextafter(b, b - 1)
             if (t - b) > threshold:
@@ -332,7 +333,7 @@ class HyperRectangle(HalfspacePolytope):
         return True
 
     @property
-    def lower_bounds(self) -> np.ndarray:
+    def lower_bounds(self) -> Sequence[np.ndarray]:
         lbs = []
         for variable, start_index in self.variables.items():
             size = variable.size()
@@ -344,7 +345,7 @@ class HyperRectangle(HalfspacePolytope):
         return lbs
 
     @property
-    def upper_bounds(self) -> np.ndarray:
+    def upper_bounds(self) -> Sequence[np.ndarray]:
         ubs = []
         for variable, start_index in self.variables.items():
             size = variable.size()
