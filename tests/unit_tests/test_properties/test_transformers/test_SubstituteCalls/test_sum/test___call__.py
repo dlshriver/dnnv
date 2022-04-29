@@ -1,4 +1,6 @@
 import numpy as np
+import pytest
+import sys
 
 from dnnv.properties.expressions import *
 from dnnv.properties.transformers import SubstituteCalls
@@ -73,7 +75,11 @@ def test_builtin_sum_constant():
     assert new_expr is Constant(6)
 
 
-def test_builtin_sum_constant_with_start():
+@pytest.mark.skipif(
+    sys.version_info <= (3, 8),
+    reason="The start parameter became a keyword argument in python3.8.",
+)
+def test_builtin_sum_constant_with_keyword_start():
     a = [1, 2, 3]
     expr = Constant(sum)(Constant(a), start=Constant(2.0))
     new_expr = SubstituteCalls().visit(expr)
@@ -85,6 +91,9 @@ def test_builtin_sum_constant_with_start():
     assert new_expr is not expr
     assert new_expr is Constant(5.1)
 
+
+def test_builtin_sum_constant_with_arg_start():
+    a = [1, 2, 3]
     expr = Constant(sum)(Constant(a), Constant(2.0))
     new_expr = SubstituteCalls().visit(expr)
     assert new_expr is not expr
