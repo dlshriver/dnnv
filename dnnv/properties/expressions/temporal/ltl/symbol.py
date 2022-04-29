@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-import itertools
 import numpy as np
 
-from typing import Any, Dict, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 from .base import LTL, LTLMaxStepReached
 from ...base import Expression
-from ...terms import Constant, Network, Parameter, Symbol
-from .....nn import operations, OperationGraph, OperationVisitor
+from ...terms import Network, Symbol
+from .....nn import operations, OperationGraph
 from .....nn.transformers.mlp import MLPTransformer, SqueezeGemms
 from .....nn.utils import TensorDetails
 
@@ -18,9 +17,9 @@ IntExpression = Union[int, Expression]
 def _concat_op_graphs(*op_graphs: OperationGraph):
     input_set = set()
     inputs = []
-    outputs = []
+    outputs: List[operations.Operation] = []
     input_details = []
-    output_details = []
+    output_details: List[TensorDetails] = []
     for graph in op_graphs:
         for input_op, details in zip(graph.inputs, graph.input_details):
             if input_op not in input_set:
