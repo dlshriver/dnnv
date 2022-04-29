@@ -29,15 +29,21 @@ def get_arg(expr: Call):
 
 
 class Abs(FunctionSubstitutor):
-    __matches__ = {abs, np.abs}
+    __matches__ = {abs, np.abs, np.absolute, np.fabs}
 
     def __call__(self, f, *args, **kwargs) -> Union[Constant, IfThenElse]:
+        assert len(args) == 1
+        assert len(kwargs) == 0
         (x,) = args
         assert isinstance(x, ArithmeticExpression)
         if x.is_concrete:
             return Constant(abs(x.value))
-        if x.ctx.shapes.get(x) != ():
-            raise DNNVError(f"Unsupported shape for expression {x} in abs({x})")
+        x_shape = x.ctx.shapes.get(x)
+        if x_shape != ():
+            # TODO : support this
+            raise DNNVError(
+                f"Unsupported shape for expression {x} in abs({x}): {x_shape}"
+            )
         return IfThenElse(x >= 0, x, -x)
 
     @staticmethod
