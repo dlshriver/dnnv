@@ -63,8 +63,12 @@ def test_Call_compose():
     transformer = PropagateConstants()
 
     expr = Call(Network("N").compose, (Network("P"),), {})
-    op_graph_0 = OperationGraph([operations.Mul(operations.Input((), np.dtype(np.float32)), 2.0)])
-    op_graph_1 = OperationGraph([operations.Add(operations.Input((), np.dtype(np.float32)), 2.0)])
+    op_graph_0 = OperationGraph(
+        [operations.Mul(operations.Input((), np.dtype(np.float32)), 2.0)]
+    )
+    op_graph_1 = OperationGraph(
+        [operations.Add(operations.Input((), np.dtype(np.float32)), 2.0)]
+    )
     Network("N").concretize(op_graph_0)
     Network("P").concretize(op_graph_1)
     new_expr = transformer.visit(expr)
@@ -72,4 +76,3 @@ def test_Call_compose():
     assert isinstance(new_expr, Network)
     assert new_expr.is_concrete
     assert isinstance(new_expr.value, OperationGraph)
-    

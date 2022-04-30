@@ -15,8 +15,8 @@ class Cast(Operation):
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):
         attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
-        axis = attributes.get("to")
-        return cls(inputs, axis=axis, name=onnx_node.name)
+        to = attributes.get("to")
+        return cls(inputs, to=to, name=onnx_node.name)
 
 
 class Concat(Operation):

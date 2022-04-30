@@ -21,9 +21,6 @@ class SplitAnalysis(Analysis):
 
 
 class ConstantsAnalysis(Analysis):
-    def __init__(self, dnn: OperationGraph):
-        super().__init__(dnn)
-
     def visit(self, operation: Operation):
         super().visit(operation)
         if operation in self.results:

@@ -44,7 +44,8 @@ VERIFIER_KWARGS = {
 
 
 @unittest.skipIf(
-    sum(v.is_installed() for v in VERIFIERS.values()) < 2, "Not enough verifiers installed"
+    sum(v.is_installed() for v in VERIFIERS.values()) < 2,
+    "Not enough verifiers installed",
 )
 class MNISTTests(unittest.TestCase):
     def setUp(self):

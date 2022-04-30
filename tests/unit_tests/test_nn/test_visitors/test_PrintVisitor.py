@@ -117,7 +117,7 @@ def test_Conv(capsys):
     captured = capsys.readouterr()
     expected_output = """\
 Input_0                         : Input((1, 3, 4, 4), dtype=float32)
-Conv_0                          : Conv(Input_0, kernel_shape=[2, 2], strides=[1, 1], pads=[0, 0, 0, 0])
+Conv_0                          : Conv(Input_0, out_channels=3, kernel_shape=[2, 2], strides=[1, 1], pads=[0, 0, 0, 0], group=1, dilations=[1, 1])
 """
     assert captured.out == expected_output
 
@@ -133,7 +133,7 @@ def test_ConvTranspose(capsys):
     captured = capsys.readouterr()
     expected_output = """\
 Input_0                         : Input((1, 3, 4, 4), dtype=float32)
-ConvTranspose_0                 : ConvTranspose(Input_0, kernel_shape=[2, 2], strides=[1, 1], pads=[0, 0, 0, 0], output_padding=[0, 0])
+ConvTranspose_0                 : ConvTranspose(Input_0, out_channels=3, kernel_shape=[2, 2], strides=[1, 1], pads=[0, 0, 0, 0], output_padding=[0, 0], group=1, dilations=[1, 1])
 """
     assert captured.out == expected_output
 
