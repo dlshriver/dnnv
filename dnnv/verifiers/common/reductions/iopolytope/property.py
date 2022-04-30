@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-import numpy as np
-
 from typing import List, Optional, Tuple, Union
 
-from .base import HalfspacePolytope, HyperRectangle
-from ..base import Property
+import numpy as np
+
 from .....nn import OperationGraph, OperationTransformer, operations
 from .....properties import Network
+from ..base import Property
+from .base import HalfspacePolytope, HyperRectangle
 
 
 class IOPolytopeProperty(Property):
@@ -65,10 +65,16 @@ class IOPolytopeProperty(Property):
         if np.any(np.isnan(cex)):
             return False, "NaN values in input."
         if not self.input_constraint.validate(cex, threshold=threshold):
-            return False, "Invalid counter example found: input outside bounds."
+            return (
+                False,
+                "Invalid counter example found: input outside bounds.",
+            )
         output = self.op_graph(cex)
         if not self.output_constraint.validate(output, threshold=threshold):
-            return False, "Invalid counter example found: output outside bounds."
+            return (
+                False,
+                "Invalid counter example found: output outside bounds.",
+            )
         return True, None
 
     def prefixed_and_suffixed_op_graph(
@@ -78,7 +84,9 @@ class IOPolytopeProperty(Property):
         Tuple[OperationGraph, Tuple[np.ndarray, np.ndarray]],
         Tuple[OperationGraph, Tuple[OperationGraph, ...]],
         Tuple[
-            OperationGraph, Tuple[np.ndarray, np.ndarray], Tuple[OperationGraph, ...]
+            OperationGraph,
+            Tuple[np.ndarray, np.ndarray],
+            Tuple[OperationGraph, ...],
         ],
     ]:
         if not isinstance(self.input_constraint, HyperRectangle):

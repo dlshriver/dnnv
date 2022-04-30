@@ -1,9 +1,9 @@
-import numpy as np
-
 from copy import copy
 
-from .base import Simplifier
+import numpy as np
+
 from ... import operations
+from .base import Simplifier
 
 
 class SqueezeConvs(Simplifier):

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import tempfile
+from typing import Iterable, Optional, Type, Union
 
 from dnnv.nn.graph import OperationGraph
 from dnnv.verifiers.common import (
@@ -8,7 +9,6 @@ from dnnv.verifiers.common import (
     IOPolytopeProperty,
     VerifierTranslatorError,
 )
-from typing import Iterable, Optional, Type, Union
 
 
 def as_vnnlib(
@@ -102,7 +102,9 @@ def to_vnnlib_property_file(
         mode="w+", dir=dirname, suffix=".vnnlib", delete=False
     ) as vnnlib_file:
         for line in as_vnnlib(
-            prop, translator_error=translator_error, extended_vnnlib=extended_vnnlib
+            prop,
+            translator_error=translator_error,
+            extended_vnnlib=extended_vnnlib,
         ):
             vnnlib_file.write(f"{line}\n")
         return vnnlib_file.name

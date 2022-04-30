@@ -1,8 +1,8 @@
-import numpy as np
-import onnx
-
 from collections import defaultdict
 from typing import Any, Dict, List, Union
+
+import numpy as np
+import onnx
 
 from .. import operations
 from ..graph import OperationGraph

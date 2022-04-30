@@ -1,19 +1,16 @@
 """
 """
 import argparse
-import numpy as np
 import os
 import time
-
 from pathlib import Path
 from typing import List, Optional
 
-from . import cli
-from . import errors
+import numpy as np
+
+from . import cli, errors
 from . import logging_utils as logging
-from . import nn
-from . import properties
-from . import utils
+from . import nn, properties, utils
 
 
 def main(args: argparse.Namespace, extra_args: Optional[List[str]] = None):
@@ -101,7 +98,8 @@ def _main():
                 (
                     Path(
                         os.path.join(
-                            os.getenv("XDG_DATA_HOME", "~/.local/share"), "dnnv"
+                            os.getenv("XDG_DATA_HOME", "~/.local/share"),
+                            "dnnv",
                         )
                     )
                     / "bin"

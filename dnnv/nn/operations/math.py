@@ -1,7 +1,7 @@
 from typing import Optional
 
-from .base import Operation
 from ..utils import as_numpy
+from .base import Operation
 
 
 class Add(Operation):

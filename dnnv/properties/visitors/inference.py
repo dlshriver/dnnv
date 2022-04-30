@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-import numpy as np
-
 from typing import Dict, List, Optional, Sequence
 
-from .base import ExpressionVisitor
-from .. import expressions, Expression, Constant, Context, get_context
+import numpy as np
+
 from ...errors import DNNVError
 from ...nn import OperationGraph
+from .. import Constant, Context, Expression, expressions, get_context
+from .base import ExpressionVisitor
 
 
 class DNNVInferenceError(DNNVError):
@@ -428,10 +428,12 @@ class DetailsInference(ExpressionVisitor):
             self.types[expression.condition] == Constant(bool),
             expressions.Or(
                 Constant(np.can_cast)(
-                    self.types[expression.t_expr], self.types[expression.f_expr]
+                    self.types[expression.t_expr],
+                    self.types[expression.f_expr],
                 ),
                 Constant(np.can_cast)(
-                    self.types[expression.f_expr], self.types[expression.t_expr]
+                    self.types[expression.f_expr],
+                    self.types[expression.t_expr],
                 ),
             ),
         ]
@@ -491,7 +493,9 @@ class DetailsInference(ExpressionVisitor):
         self.assertions.extend(type_assertions)
 
         self.set_details(
-            expression, shape=self.shapes[expression.expr1], dtype=Constant(bool)
+            expression,
+            shape=self.shapes[expression.expr1],
+            dtype=Constant(bool),
         )
 
     def visit_LessThan(self, expression: expressions.LessThan):
@@ -701,4 +705,9 @@ class DetailsInference(ExpressionVisitor):
         self.set_details(expression)
 
 
-__all__ = ["DetailsInference", "DNNVInferenceError", "DNNVShapeError", "DNNVTypeError"]
+__all__ = [
+    "DetailsInference",
+    "DNNVInferenceError",
+    "DNNVShapeError",
+    "DNNVTypeError",
+]

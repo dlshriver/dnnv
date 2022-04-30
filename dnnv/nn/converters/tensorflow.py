@@ -135,7 +135,10 @@ class TensorflowConverter(OperationVisitor):
             strides = operation.strides
             num_pads = len(operation.pads)
             pads = tuple(
-                zip(operation.pads[: num_pads // 2], operation.pads[num_pads // 2 :])
+                zip(
+                    operation.pads[: num_pads // 2],
+                    operation.pads[num_pads // 2 :],
+                )
             )
 
             x_ndim = int(tf.rank(x))
@@ -237,7 +240,10 @@ class TensorflowConverter(OperationVisitor):
             assert np.all(operation.group == 1)
             num_pads = len(operation.pads)
             pads = tuple(
-                zip(operation.pads[: num_pads // 2], operation.pads[num_pads // 2 :])
+                zip(
+                    operation.pads[: num_pads // 2],
+                    operation.pads[num_pads // 2 :],
+                )
             )
 
             x_ndim = int(tf.rank(x))
@@ -301,7 +307,10 @@ class TensorflowConverter(OperationVisitor):
 
             num_pads = len(operation.pads)
             pads = tuple(
-                zip(operation.pads[: num_pads // 2], operation.pads[num_pads // 2 :])
+                zip(
+                    operation.pads[: num_pads // 2],
+                    operation.pads[num_pads // 2 :],
+                )
             )
             if any(p != 0 for p in operation.pads):
                 raise NotImplementedError(
@@ -481,7 +490,11 @@ class TensorflowConverter(OperationVisitor):
 
             x = tf.transpose(x, (0, 2, 3, 1))
             result = tf.nn.pool(
-                x, x.shape[1:3], pooling_type="AVG", strides=(1, 1), padding="VALID"
+                x,
+                x.shape[1:3],
+                pooling_type="AVG",
+                strides=(1, 1),
+                padding="VALID",
             )
             result = tf.transpose(result, (0, 3, 1, 2))
             return result
@@ -591,7 +604,10 @@ class TensorflowConverter(OperationVisitor):
             strides = operation.strides
             num_pads = len(operation.pads)
             pads = tuple(
-                zip(operation.pads[: num_pads // 2], operation.pads[num_pads // 2 :])
+                zip(
+                    operation.pads[: num_pads // 2],
+                    operation.pads[num_pads // 2 :],
+                )
             )
 
             x_ndim = int(tf.rank(x))
@@ -654,7 +670,10 @@ class TensorflowConverter(OperationVisitor):
                 raise ValueError(f"{mode} padding is not currently supported")
             num_pads = len(operation.pads)
             pads = tuple(
-                zip(operation.pads[: num_pads // 2], operation.pads[num_pads // 2 :])
+                zip(
+                    operation.pads[: num_pads // 2],
+                    operation.pads[num_pads // 2 :],
+                )
             )
             result = tf.pad(x, pads, mode=mode, constant_values=operation.value)
             return result

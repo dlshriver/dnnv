@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import numpy as np
 import typing
-
 from functools import reduce
 from typing import Any, Callable, Iterator, List, Optional, Set, TypeVar, Union
+
+import numpy as np
 
 from .context import *
 
@@ -281,7 +281,9 @@ class AssociativeExpression(Expression):
         if len(self.expressions) > 0:
             return reduce(self.OPERATOR, (expr.value for expr in self.expressions))
         return reduce(
-            self.OPERATOR, (expr.value for expr in self.expressions), self.BASE_VALUE
+            self.OPERATOR,
+            (expr.value for expr in self.expressions),
+            self.BASE_VALUE,
         )
 
     def __repr__(self):
@@ -303,7 +305,11 @@ class AssociativeExpression(Expression):
 
 class BinaryExpression(Expression):
     def __init__(
-        self, expr1: Expression, expr2: Expression, *, ctx: Optional[Context] = None
+        self,
+        expr1: Expression,
+        expr2: Expression,
+        *,
+        ctx: Optional[Context] = None,
     ):
         super().__init__(ctx=ctx)
         self.expr1 = expr1

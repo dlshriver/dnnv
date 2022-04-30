@@ -1,10 +1,8 @@
-import numpy as np
-
 from typing import Set
 
-from .base import Analysis
 from .. import Operation, operations
 from ..graph import OperationGraph
+from .base import Analysis
 
 
 class SplitAnalysis(Analysis):

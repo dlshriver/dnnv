@@ -1,8 +1,8 @@
 import logging
-import onnx
-
 from pathlib import Path
 from typing import Set
+
+import onnx
 
 from .. import OperationGraph
 from ..operations import Operation

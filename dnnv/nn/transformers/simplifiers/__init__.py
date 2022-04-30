@@ -1,28 +1,24 @@
-import numpy as np
+from typing import Optional
 
-from copy import copy
-from typing import Any, Dict, List, Optional, Set, Type, Union
-
+from ....utils import get_subclasses
 from ... import operations
-from ...analyzers import Analysis, SplitAnalysis
 from ...graph import OperationGraph
 from ...operations import Operation
-from ....utils import get_subclasses
-
-from .base import ComposeSimplifiers, Simplifier
-from .bundle_padding import BundlePadding
-from .bundle_transpose import BundleTranspose
+from .base import *
+from .bundle_padding import *
+from .bundle_transpose import *
 from .convert_add import *
-from .convert_batch_norm import ConvertBatchNorm
+from .convert_batch_norm import *
 from .convert_div_to_mul import *
 from .convert_matmul_to_gemm import *
 from .convert_mul import *
-from .convert_reshape_to_flatten import ConvertReshapeToFlatten
+from .convert_reshape_to_flatten import *
 from .convert_sub_to_add import *
-from .drop_identities import DropIdentity, DropUnnecessaryConcat, DropUnnecessaryFlatten
-from .move_activations_back import MoveActivationsBackward
-from .squeeze_convs import SqueezeConvs
-from .squeeze_gemms import SqueezeGemms
+from .drop_identities import *
+from .move_activations_back import *
+from .squeeze_convs import *
+from .squeeze_gemms import *
+
 
 # @dlshriver: what was the use case here?
 class MatMulVectorArgsReorder(Simplifier):
@@ -35,29 +31,6 @@ class MatMulVectorArgsReorder(Simplifier):
         ):
             return operations.MatMul(operation.b, operation.a.T)
         return operation
-
-
-# @dlshriver: redundant with squeezegemms and matmuladdtogemm?
-# class SqueezeMatMulAdds(Simplifier):
-#     def visit_Add(self, operation: operations.Add):
-#         if (
-#             isinstance(operation.a, operations.MatMul)
-#             and isinstance(operation.a.a, operations.Add)
-#             and isinstance(operation.a.a.a, operations.MatMul)
-#         ):
-#             first_mm = operation.a.a.a
-#             second_mm = operation.a
-#             first_add = operation.a.a
-#             second_add = operation
-
-#             a = first_mm.a
-#             b_0 = first_mm.b
-#             b_1 = second_mm.b
-#             b = np.matmul(b_0, b_1)
-#             c = np.matmul(first_add.b, b_1) + second_add.b
-#             return operations.Add(operations.MatMul(a, b), c)
-#         # TODO : can also reduce in other cases, e.g., (MatMul >> MatMul >> Add)
-#         return operation
 
 
 def simplify(

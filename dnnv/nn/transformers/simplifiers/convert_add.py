@@ -1,8 +1,8 @@
 import numpy as np
 
-from .base import Simplifier
 from ... import operations
 from ...graph import OperationGraph
+from .base import Simplifier
 
 
 class ConvertAdd(Simplifier):

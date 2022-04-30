@@ -1,6 +1,7 @@
 import numpy as np
-from dnnv.nn.graph import OperationGraph
+
 from dnnv.nn import operations
+from dnnv.nn.graph import OperationGraph
 from dnnv.properties.expressions import *
 from dnnv.properties.transformers import PropagateConstants
 

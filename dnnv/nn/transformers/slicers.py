@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import numpy as np
-
 from copy import deepcopy
-from typing import Any, Collection, Dict, List, Optional, Sequence, Tuple, Union
+from typing import Any, Dict, Optional, Sequence, Tuple, Union
+
+import numpy as np
 
 from ..graph import OperationGraph
 from ..operations import Input, Operation
-
 from .base import OperationTransformer
 
 
@@ -101,9 +100,17 @@ class Slicer(OperationTransformer):
             self.index -= 1
             self.length = max(self.length, -self.index)
             if operation not in self._index_cache:
-                self._index_cache[operation] = float("inf"), float("-inf"), operation
+                self._index_cache[operation] = (
+                    float("inf"),
+                    float("-inf"),
+                    operation,
+                )
             pos_index, neg_index, op = self._index_cache[operation]
-            self._index_cache[operation] = (pos_index, max(neg_index, self.index), op)
+            self._index_cache[operation] = (
+                pos_index,
+                max(neg_index, self.index),
+                op,
+            )
             result = super().generic_visit(operation)
             pos_index, neg_index, op = self._index_cache[operation]
             self._index_cache[operation] = (

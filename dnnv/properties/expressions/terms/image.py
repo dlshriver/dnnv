@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import numpy as np
-import skimage.io as sio
-
 from pathlib import Path
 from typing import Optional, Union
+
+import numpy as np
+import skimage.io as sio
 
 from ..base import Expression
 from ..context import Context
@@ -14,7 +14,10 @@ from .constant import Constant
 
 class Image(Term):
     def __init__(
-        self, path: Union[Expression, Path, str], *, ctx: Optional[Context] = None
+        self,
+        path: Union[Expression, Path, str],
+        *,
+        ctx: Optional[Context] = None,
     ):
         super().__init__(ctx=ctx)
         self.path = path

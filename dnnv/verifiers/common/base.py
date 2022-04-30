@@ -1,7 +1,6 @@
 import logging
 import os
 import tempfile
-
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from functools import partial
@@ -10,15 +9,15 @@ from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Type, 
 from dnnv.properties import Expression, LogicalExpression
 
 from .errors import VerifierError, VerifierTranslatorError
-from .executors import VerifierExecutor, CommandLineExecutor
+from .executors import CommandLineExecutor, VerifierExecutor
 from .reductions import (
-    Property,
-    Reduction,
-    IOPolytopeReduction,
     HalfspacePolytope,
     HyperRectangle,
+    IOPolytopeReduction,
+    Property,
+    Reduction,
 )
-from .results import SAT, UNSAT, UNKNOWN, PropertyCheckResult
+from .results import SAT, UNKNOWN, UNSAT, PropertyCheckResult
 
 
 class Parameter:
@@ -31,7 +30,15 @@ class Parameter:
     ):
         self.type: Callable[[Any], Any] = dtype
         if dtype == bool:
-            self.type = lambda x: x not in ["False", "false", "0", "F", "f", False, 0]
+            self.type = lambda x: x not in [
+                "False",
+                "false",
+                "0",
+                "F",
+                "f",
+                False,
+                0,
+            ]
         self.default = self.type(default) if default is not None else None
         self.choices = choices
         self.help = help

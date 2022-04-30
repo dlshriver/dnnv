@@ -1,15 +1,15 @@
 """
 """
-import numpy as np
-
 from abc import abstractmethod
 from typing import List, Optional, Type, Union
 
+import numpy as np
+
+from ...utils import get_subclasses
 from .. import OperationGraph
 from ..operations import *
-from ..visitors import OperationCounter
 from ..transformers import DropPrefix
-from ...utils import get_subclasses
+from ..visitors import OperationCounter
 
 
 class _Layer(type):
@@ -226,7 +226,10 @@ class FullyConnected(Layer):
                 "Expected type Transpose, but got %s" % op.__class__.__name__
             )
         return cls(
-            weights, bias, activation=activation, w_permutation=weights_permutation
+            weights,
+            bias,
+            activation=activation,
+            w_permutation=weights_permutation,
         )
 
 
@@ -234,7 +237,13 @@ class Convolutional(Layer):
     OP_PATTERN = Conv >> (Activation | None)
 
     def __init__(
-        self, weights, bias, activation=None, kernel_shape=None, strides=1, pads=0
+        self,
+        weights,
+        bias,
+        activation=None,
+        kernel_shape=None,
+        strides=1,
+        pads=0,
     ):
         self.weights = weights
         self.bias = bias

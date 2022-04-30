@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import numpy as np
-
 from typing import Any, Optional
+
+import numpy as np
 
 from ..context import Context
 from .base import Term
@@ -84,7 +84,11 @@ class Constant(Term):
         if isinstance(value, np.ndarray):
             return "".join(
                 np.array2string(
-                    value, max_line_width=np.inf, precision=3, threshold=5, edgeitems=2
+                    value,
+                    max_line_width=np.inf,
+                    precision=3,
+                    threshold=5,
+                    edgeitems=2,
                 ).split("\n")
             ).replace("  ", " ")
         if isinstance(value, slice):

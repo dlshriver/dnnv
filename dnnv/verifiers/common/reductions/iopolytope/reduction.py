@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import copy
 import logging
-import numpy as np
-
 from typing import Dict, Iterator, List, Tuple, Type, Union
 
+import numpy as np
+
+from .....properties import *
+from ..base import Property, Reduction, ReductionError
 from .base import Constraint, HalfspacePolytope, HyperRectangle, Variable
 from .errors import IOPolytopeReductionError
 from .property import IOPolytopeProperty
-from ..base import Property, Reduction, ReductionError
-from .....properties import *
 
 
 class IOPolytopeReduction(Reduction):

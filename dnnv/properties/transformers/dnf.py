@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from typing import Optional, Set, Tuple, Union
 
+from ..expressions import *
+from ..visitors.inference import DetailsInference
 from .base import GenericExpressionTransformer
 from .lift_ifthenelse import LiftIfThenElse
 from .remove_ifthenelse import RemoveIfThenElse
 from .substitute_calls import SubstituteCalls
-from ..expressions import *
-from ..visitors.inference import DetailsInference
 
 
 class DnfTransformer(GenericExpressionTransformer):

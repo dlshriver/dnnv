@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import numpy as np
-
 from typing import List, Type
+
+import numpy as np
 
 from . import operations
 from .operations import Operation

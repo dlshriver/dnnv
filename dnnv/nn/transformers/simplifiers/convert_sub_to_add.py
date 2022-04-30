@@ -1,7 +1,7 @@
 from typing import Union
 
-from .base import Simplifier
 from ... import operations
+from .base import Simplifier
 
 
 class ConvertSubToAdd(Simplifier):

@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from dnnv.nn.graph import OperationGraph
-from dnnv.nn.layers import Layer, Convolutional
+from dnnv.nn.layers import Convolutional, Layer
 from dnnv.nn.operations import *
 
 

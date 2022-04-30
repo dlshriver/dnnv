@@ -1,9 +1,9 @@
 from pathlib import Path
 from typing import List, Optional
 
+from ..expressions import Expression
 from .dnnp import parse as parse_dnnp
 from .vnnlib import parse as parse_vnnlib
-from ..expressions import Expression
 
 
 def parse(
