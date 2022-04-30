@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import subprocess as sp
 
+from ...errors import InstallError, UninstallError
 from ..environment import (
-    Environment,
     Dependency,
+    Environment,
     HeaderDependency,
-    LibraryDependency,
-    ProgramDependency,
     Installer,
+    LibraryDependency,
     LpsolveInstaller,
     OpenBLASInstaller,
+    ProgramDependency,
 )
-from ...errors import InstallError, UninstallError
 
 
 class NeurifyInstaller(Installer):
@@ -28,6 +28,13 @@ class NeurifyInstaller(Installer):
         library_paths = " ".join(f"-L{p}" for p in env.ld_library_paths)
         include_paths = " ".join(f"-I{p}" for p in env.include_paths)
 
+        static_ld_flags = "-Wl,-Bstatic -lopenblas -llpsolve55"
+        dynamic_ld_flags = "-Wl,-Bdynamic -lpthread -lm -ldl"
+        ld_flags = (
+            f'LDFLAGS="-no-pie {library_paths} {static_ld_flags} {dynamic_ld_flags}"'
+        )
+        include_flags = f'INCLUDE_FLAGS="{include_paths}"'
+
         commands = [
             "set -ex",
             f"cd {cache_dir}",
@@ -36,13 +43,13 @@ class NeurifyInstaller(Installer):
             "cd Neurify",
             f"git checkout {commit_hash}",
             "cd generic",
-            f'make LDFLAGS="-no-pie {library_paths} -Wl,-Bstatic -lopenblas -llpsolve55 -Wl,-Bdynamic -lpthread -lm -ldl" LPFLAGS="" INCLUDE_FLAGS="{include_paths}"',
+            f'make {ld_flags} LPFLAGS="" {include_flags}',
             f"cp src/neurify {installation_path}",
         ]
         install_script = "; ".join(commands)
         proc = sp.run(install_script, shell=True, env=env.vars())
         if proc.returncode != 0:
-            raise InstallError(f"Installation of neurify failed")
+            raise InstallError("Installation of neurify failed")
 
 
 def install(env: Environment):
