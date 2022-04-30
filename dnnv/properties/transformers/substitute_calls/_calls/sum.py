@@ -29,7 +29,7 @@ class BuiltinSum(FunctionSubstitutor):
 
         assert isinstance(x, Expression)
         if x.is_concrete:
-            return Constant(sum(x.value, start=start.value))
+            return Constant(sum(x.value, start.value))
         x_shape = x.ctx.shapes.get(x)
         if x_shape is None:
             return NotImplemented

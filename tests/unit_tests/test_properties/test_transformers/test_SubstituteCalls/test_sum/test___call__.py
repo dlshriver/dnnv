@@ -114,6 +114,15 @@ def test_builtin_sum_array():
     assert new_expr is not expr
     assert new_expr.is_equivalent(Add(Constant(0), x[(0,)], x[(1,)], x[(2,)], x[(3,)]))
 
+
+@pytest.mark.skipif(
+    sys.version_info <= (3, 8),
+    reason="The start parameter became a keyword argument in python3.8.",
+)
+def test_builtin_sum_array_with_keyword_start():
+    x = Symbol("x")
+    x.ctx.shapes[x] = (4,)
+    x.ctx.types[x] = np.float32
     expr = Constant(sum)(x, start=Constant(2.0))
     new_expr = SubstituteCalls().visit(expr)
     assert new_expr is not expr
