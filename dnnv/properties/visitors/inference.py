@@ -117,7 +117,9 @@ class DetailsInference(ExpressionVisitor):
                     ), f"{ctx.types[k]} != {self.types[k]}"
                 else:
                     if self.shapes[k].is_concrete:
-                        ctx.shapes[k] = self.shapes[k].value
+                        shape = self.shapes[k].value
+                        assert isinstance(shape, tuple)
+                        ctx.shapes[k] = shape
                     if self.types[k].is_concrete:
                         ctx.types[k] = self.types[k].value
 

@@ -30,15 +30,21 @@ def get_arg(expr: Call):
 
 
 class Abs(FunctionSubstitutor):
-    __matches__ = {abs, np.abs}
+    __matches__ = {abs, np.abs, np.absolute, np.fabs}
 
     def __call__(self, f, *args, **kwargs) -> Union[Constant, IfThenElse]:
+        assert len(args) == 1
+        assert len(kwargs) == 0
         (x,) = args
         assert isinstance(x, ArithmeticExpression)
         if x.is_concrete:
             return Constant(abs(x.value))
-        if x.ctx.shapes.get(x) != ():
-            raise DNNVError(f"Unsupported shape for expression {x} in abs({x})")
+        x_shape = x.ctx.shapes.get(x)
+        if x_shape != ():
+            # TODO : support this
+            raise DNNVError(
+                f"Unsupported shape for expression {x} in abs({x}): {x_shape}"
+            )
         return IfThenElse(x >= 0, x, -x)
 
     @staticmethod
@@ -152,7 +158,7 @@ class Abs(FunctionSubstitutor):
             if np.all(np.asarray(b_shape) == 1):
                 b_gt_0: LogicalExpression = b >= 0
             else:
-                b_gt_0 = And(*(b[b_idx] >= 0 for b_idx in np.ndindex(b_shape)))
+                b_gt_0 = And(*(b[b_idx] >= 0 for b_idx in np.ndindex(*b_shape)))
             if form == "cnf":
                 return And(
                     b_gt_0,
@@ -206,7 +212,7 @@ class Abs(FunctionSubstitutor):
         if np.all(np.asarray(a_shape) == 1):
             a_gt_0: LogicalExpression = a >= 0
         else:
-            a_gt_0 = And(*(a[a_idx] >= 0 for a_idx in np.ndindex(a_shape)))
+            a_gt_0 = And(*(a[a_idx] >= 0 for a_idx in np.ndindex(*a_shape)))
         if form == "cnf":
             return And(
                 a_gt_0,
