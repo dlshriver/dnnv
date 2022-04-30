@@ -15,6 +15,7 @@ dependencies = [
     "lark~=1.0",
     "numpy>=1.20,<1.22",
     "onnx>=1.8,<1.11",
+    "onnxruntime~=1.8",
     "psutil~=5.6",
     "scikit-image>=0.18,<0.19",
     "scipy~=1.7",
@@ -34,24 +35,18 @@ all = [
     # test
     "coverage~=5.5",
     "pytest~=6.2",
-    "onnxruntime~=1.8",
     "torch~=1.5",
     "torchvision~=0.6",
     # dev
     "black~=22.3",
+    "isort~=5.10",
     "mypy~=0.942",
     # docs
     "sphinx",
     "furo",
 ]
-test = [
-    "coverage~=5.5",
-    "pytest~=6.2",
-    "onnxruntime~=1.8",
-    "torch~=1.5",
-    "torchvision~=0.6",
-]
-dev = ["black~=22.3", "mypy~=0.942"]
+test = ["coverage~=5.5", "pytest~=6.2", "torch~=1.5", "torchvision~=0.6"]
+dev = ["black~=22.3", "isort~=5.10", "mypy~=0.942"]
 docs = ["sphinx", "furo"]
 
 [project.urls]
@@ -64,7 +59,6 @@ dnnv_manage = "dnnv._manage.__main__:_main"
 
 [tool.coverage.run]
 branch = true
-# command_line = "-m pytest tests/unit_tests tests/system_tests --ff --verbose --import-mode=importlib"
 command_line = "-m pytest"
 parallel = true
 source = ["dnnv"]
@@ -74,6 +68,10 @@ omit = [
     "dnnv/logging_utils/*",
     "dnnv/_manage/*",
 ]
+
+[tool.isort]
+profile = "black"
+src_paths = ["dnnv", "test"]
 
 [tool.pytest.ini_options]
 minversion = "6.0"
