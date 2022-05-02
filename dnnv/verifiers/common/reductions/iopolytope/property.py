@@ -91,7 +91,8 @@ class IOPolytopeProperty(Property):
     ]:
         if not isinstance(self.input_constraint, HyperRectangle):
             raise ValueError(
-                f"{type(self.input_constraint).__name__} input constraints are not yet supported"
+                f"{type(self.input_constraint).__name__} input constraints"
+                " are not yet supported"
             )
 
         suffixed_op_graph = self.suffixed_op_graph()

@@ -151,8 +151,8 @@ class HalfspacePolytope(Constraint):
         # linprog breaks if bounds are too big or too small
         bounds = list(
             zip(
-                (l if l > -1e6 else None for l in lb),
-                (u if u < 1e6 else None for u in ub),
+                (b if b > -1e6 else None for b in lb),
+                (b if b < 1e6 else None for b in ub),
             )
         )
         try:
@@ -169,9 +169,9 @@ class HalfspacePolytope(Constraint):
             raise e
         if result.status == 4:
             return None
-        elif result.status == 2:  # infeasible
+        if result.status == 2:  # infeasible
             return False
-        elif result.status == 0:  # feasible
+        if result.status == 0:  # feasible
             return True
         return None  # unknown
 
@@ -222,8 +222,8 @@ class HalfspacePolytope(Constraint):
                 obj = np.zeros(n)
                 bounds = list(
                     zip(
-                        (l if np.isfinite(l) else None for l in self._lower_bound),
-                        (u if np.isfinite(u) else None for u in self._upper_bound),
+                        (b if np.isfinite(b) else None for b in self._lower_bound),
+                        (b if np.isfinite(b) else None for b in self._upper_bound),
                     )
                 )
                 try:
@@ -238,9 +238,9 @@ class HalfspacePolytope(Constraint):
                     if result.status == 0:
                         self._lower_bound[i] = max(result.x[i], self._lower_bound[i])
                 except ValueError as e:
-                    if (
-                        e.args[0]
-                        != "The algorithm terminated successfully and determined that the problem is infeasible."
+                    if e.args[0] != (
+                        "The algorithm terminated successfully and determined"
+                        " that the problem is infeasible."
                     ):
                         raise e
                 try:
@@ -255,9 +255,9 @@ class HalfspacePolytope(Constraint):
                     if result.status == 0:
                         self._upper_bound[i] = min(result.x[i], self._upper_bound[i])
                 except ValueError as e:
-                    if (
-                        e.args[0]
-                        != "The algorithm terminated successfully and determined that the problem is infeasible."
+                    if e.args[0] != (
+                        "The algorithm terminated successfully and determined"
+                        " that the problem is infeasible."
                     ):
                         raise e
 

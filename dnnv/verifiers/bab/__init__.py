@@ -53,11 +53,11 @@ class BaB(Verifier):
         )
 
     def parse_results(self, prop, results):
-        stdout, stderr = results
+        stdout, _ = results
         result_str = stdout[-1]
         if result_str == "safe":
             return UNSAT, None
-        elif result_str == "unsafe":
+        if result_str == "unsafe":
             shape, dtype = prop.op_graph.input_details[0]
             cex = (
                 np.load(self._tmp_output_file.name, allow_pickle=True)
@@ -65,6 +65,6 @@ class BaB(Verifier):
                 .reshape(shape)
             )
             return SAT, cex
-        elif result_str == "unknown":
+        if result_str == "unknown":
             return UNKNOWN, None
         raise self.translator_error(f"Unknown verification result: {result_str}")
