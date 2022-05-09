@@ -1,7 +1,7 @@
-import numpy as np
 import tempfile
-
 from typing import Iterable, List, Optional, Tuple, Type
+
+import numpy as np
 
 from dnnv.nn.layers import Convolutional, FullyConnected, InputLayer, Layer
 from dnnv.verifiers.common import HalfspacePolytope, VerifierTranslatorError

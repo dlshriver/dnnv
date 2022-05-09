@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import numpy as np
 import operator
 import typing
-
 from typing import Optional, Type, TypeVar
 
-from .base import Expression, AssociativeExpression, BinaryExpression, UnaryExpression
+import numpy as np
+
+from .base import AssociativeExpression, BinaryExpression, Expression, UnaryExpression
 from .context import Context
 
 if typing.TYPE_CHECKING:  # pragma: no cover

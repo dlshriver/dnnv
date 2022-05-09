@@ -3,15 +3,14 @@ from __future__ import annotations
 import shlex
 import subprocess as sp
 import typing
-
 from pathlib import Path
 from typing import Dict, Optional, Sequence
 
 from ....errors import InstallError
 
 if typing.TYPE_CHECKING:
-    from .installers import Installer
     from ..base import Environment
+    from .installers import Installer
 
 
 class Dependency:

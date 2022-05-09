@@ -1,10 +1,10 @@
-import numpy as np
-
 from typing import Union
 
-from .base import Simplifier
+import numpy as np
+
 from ... import operations
 from ...graph import OperationGraph
+from .base import Simplifier
 
 
 class ConvertMatMulToGemm(Simplifier):

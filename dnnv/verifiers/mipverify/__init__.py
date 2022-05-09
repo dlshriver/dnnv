@@ -4,7 +4,7 @@ import numpy as np
 from dnnv.nn import operations
 from dnnv.nn.graph import OperationGraph
 from dnnv.verifiers.common.base import Verifier
-from dnnv.verifiers.common.results import SAT, UNSAT, UNKNOWN
+from dnnv.verifiers.common.results import SAT, UNKNOWN, UNSAT
 
 from .errors import MIPVerifyError, MIPVerifyTranslatorError
 from .utils import to_mipverify_inputs

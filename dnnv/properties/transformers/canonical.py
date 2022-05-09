@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+from collections import defaultdict
+from typing import Dict, List, Tuple, Union, cast
+
 import numpy as np
 
-from collections import defaultdict
-from typing import cast, Dict, List, Tuple, Union
-
-from .dnf import DnfTransformer
 from ..expressions import *
+from .dnf import DnfTransformer
 
 
 def _extract_constants(expr: Add) -> Tuple[Add, Constant]:
@@ -78,7 +78,10 @@ class CanonicalTransformer(DnfTransformer):
             cast(
                 Add,
                 self.visit(
-                    Add(Multiply(Constant(-1), expression.expr1), expression.expr2)
+                    Add(
+                        Multiply(Constant(-1), expression.expr1),
+                        expression.expr2,
+                    )
                 ),
             )
         )
@@ -94,7 +97,10 @@ class CanonicalTransformer(DnfTransformer):
             cast(
                 Add,
                 self.visit(
-                    Add(Multiply(Constant(-1), expression.expr1), expression.expr2)
+                    Add(
+                        Multiply(Constant(-1), expression.expr1),
+                        expression.expr2,
+                    )
                 ),
             )
         )
@@ -108,7 +114,10 @@ class CanonicalTransformer(DnfTransformer):
             cast(
                 Add,
                 self.visit(
-                    Add(expression.expr1, Multiply(Constant(-1), expression.expr2))
+                    Add(
+                        expression.expr1,
+                        Multiply(Constant(-1), expression.expr2),
+                    )
                 ),
             )
         )
@@ -122,7 +131,10 @@ class CanonicalTransformer(DnfTransformer):
             cast(
                 Add,
                 self.visit(
-                    Add(expression.expr1, Multiply(Constant(-1), expression.expr2))
+                    Add(
+                        expression.expr1,
+                        Multiply(Constant(-1), expression.expr2),
+                    )
                 ),
             )
         )

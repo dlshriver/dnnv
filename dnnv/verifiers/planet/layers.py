@@ -1,18 +1,18 @@
-import numpy as np
-
 from typing import Generator, List, Optional, Sequence, Tuple, Type, Union
 
-from dnnv.nn.layers import Layer, Convolutional
+import numpy as np
+
+from dnnv.nn.layers import Convolutional, Layer
 from dnnv.nn.operations import (
     Add,
     BatchNormalization,
     Conv,
     Input,
     MaxPool,
-    Relu,
-    Sigmoid,
     Operation,
     OperationPattern,
+    Relu,
+    Sigmoid,
 )
 
 from .errors import PlanetTranslatorError
@@ -137,7 +137,7 @@ def build_conv_layer(op):
 
 
 class _PlanetLayerBase(Layer):
-    OP_PATTERN: Optional[Union[Type[Operation], OperationPattern]] = None
+    __pattern__: Optional[Union[Type[Operation], OperationPattern]] = None
 
     def as_rlv(
         self,
@@ -153,7 +153,7 @@ class _PlanetLayerBase(Layer):
 
 
 class MaxPoolLayer(_PlanetLayerBase):
-    OP_PATTERN = MaxPool
+    __pattern__ = MaxPool
 
     def __init__(self, kernel_shape, strides=1, pads=0):
         self.kernel_shape = kernel_shape
@@ -212,7 +212,7 @@ class MaxPoolLayer(_PlanetLayerBase):
 
 
 class Residual(_PlanetLayerBase):
-    OP_PATTERN = (
+    __pattern__ = (
         Conv & ((BatchNormalization | Conv) >> Relu >> Conv >> Relu >> Conv)
     ) | (
         ((BatchNormalization | Conv) >> Relu >> Conv >> Relu >> Conv) & Conv

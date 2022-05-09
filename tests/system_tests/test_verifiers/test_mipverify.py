@@ -1,8 +1,8 @@
 import unittest
 
-from dnnv.verifiers.mipverify import MIPVerify
-
 from system_tests.test_verifiers.utils import VerifierTests
+
+from dnnv.verifiers.mipverify import MIPVerify
 
 
 @unittest.skipIf(not MIPVerify.is_installed(), "MIPVerify is not installed")

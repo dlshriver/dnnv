@@ -7,7 +7,10 @@ from .logic import LogicalExpression
 
 
 class Subscript(
-    ArithmeticExpression, CallableExpression, LogicalExpression, BinaryExpression
+    ArithmeticExpression,
+    CallableExpression,
+    LogicalExpression,
+    BinaryExpression,
 ):
     def OPERATOR(self, expr, index):
         return expr[index]

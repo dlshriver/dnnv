@@ -7,7 +7,10 @@ from .logic import LogicalExpression
 
 
 class IfThenElse(
-    ArithmeticExpression, CallableExpression, LogicalExpression, TernaryExpression
+    ArithmeticExpression,
+    CallableExpression,
+    LogicalExpression,
+    TernaryExpression,
 ):
     def OPERATOR(self, cond, t_expr, f_expr):
         if cond:

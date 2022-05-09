@@ -1,8 +1,9 @@
-import numpy as np
 import tempfile
 
+import numpy as np
+
 from dnnv.verifiers.common.base import Parameter, Verifier
-from dnnv.verifiers.common.results import SAT, UNSAT, UNKNOWN
+from dnnv.verifiers.common.results import SAT, UNKNOWN, UNSAT
 
 from .errors import ERANError, ERANTranslatorError
 
@@ -24,7 +25,9 @@ class ERAN(Verifier):
             float, default=1.0, help="Time limit for the MILP solver."
         ),
         "use_default_heuristic": Parameter(
-            bool, default=True, help="Whether or not to use the ERAN area heuristic."
+            bool,
+            default=True,
+            help="Whether or not to use the ERAN area heuristic.",
         ),
     }
 

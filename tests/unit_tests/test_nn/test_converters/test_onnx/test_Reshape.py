@@ -5,6 +5,7 @@ import pytest
 from dnnv.nn.converters.onnx import *
 from dnnv.nn.operations import *
 
+
 # TODO : allowzero requires newer onnx opset
 @pytest.mark.xfail
 def test_Reshape():

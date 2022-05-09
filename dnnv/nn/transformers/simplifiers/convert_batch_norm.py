@@ -1,10 +1,10 @@
-import numpy as np
-
 from copy import copy
 
-from .base import Simplifier
+import numpy as np
+
 from ... import operations
 from ...analyzers import SplitAnalysis
+from .base import Simplifier
 
 
 class ConvertBatchNorm(Simplifier):

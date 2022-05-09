@@ -1,7 +1,7 @@
 from typing import List, Optional, Type
 
 from dnnv.nn import OperationGraph
-from dnnv.nn.layers import Layer, InputLayer, FullyConnected, Convolutional
+from dnnv.nn.layers import Convolutional, FullyConnected, InputLayer, Layer
 
 from .errors import VerifierTranslatorError
 

@@ -3,19 +3,19 @@ from __future__ import annotations
 import subprocess as sp
 import sys
 
+from ...errors import InstallError, UninstallError
 from ..environment import (
-    Environment,
     Dependency,
-    HeaderDependency,
-    LibraryDependency,
-    ProgramDependency,
-    Installer,
+    Environment,
     GNUInstaller,
     GurobiInstaller,
+    HeaderDependency,
+    Installer,
+    LibraryDependency,
+    ProgramDependency,
 )
-from ...errors import InstallError, UninstallError
 
-wrapped_python_template = """#!/bin/bash
+WRAPPED_PYTHON_TEMPLATE = """#!/bin/bash
 
 export GUROBI_HOME={gurobi_home}
 export PATH={gurobi_home}/bin:$PATH
@@ -24,7 +24,7 @@ export PYTHONPATH={elina_home}/python_interface:$PYTHONPATH
 {python_venv}/bin/python $@
 """
 
-runner_template = """#!{python_venv}/bin/wrappedpython
+RUNNER_TEMPLATE = """#!{python_venv}/bin/wrappedpython
 import argparse
 import numpy as np
 
@@ -127,6 +127,8 @@ class ELINAInstaller(Installer):
         assert cdd_h_path is not None
         cdd_prefix = cdd_h_path.parent
 
+        cflags = f'CFLAGS="{include_paths} {library_paths}"'
+
         envvars = env.vars()
         commands = [
             "set -ex",
@@ -135,20 +137,20 @@ class ELINAInstaller(Installer):
             "git clone https://github.com/eth-sri/ELINA.git",
             "cd ELINA",
             f"git checkout {commit_hash}",
-            # "git revert -n b347e3c",  # undoing commits that force reliance on local files
-            # "git revert -n 16d2a6d --strategy=recursive -Xours",  # undoing commits that force reliance on local files
-            # "git revert -n bda9f58",  # undoing commits that force reliance on local files
-            f'CFLAGS="{include_paths} {library_paths}" ./configure -prefix {cache_dir}/ELINA -gmp-prefix {gmp_path} -mpfr-prefix {mpfr_path} -cdd-prefix {cdd_prefix} -use-deeppoly -use-gurobi -use-fconv',
-            # f"sed -i 's#CDD_PREFIX = .*$#CDD_PREFIX = {cdd_path}/include -L{cdd_path}/lib#' Makefile.config",
+            (
+                f"{cflags} ./configure"
+                f" -prefix {cache_dir}/ELINA"
+                f" -gmp-prefix {gmp_path}"
+                f" -mpfr-prefix {mpfr_path}"
+                f" -cdd-prefix {cdd_prefix}"
+                " -use-deeppoly"
+                " -use-gurobi"
+                " -use-fconv"
+            ),
             "make",
             "make install",
             f"cd {installation_path}",
             "rm -rf ELINA",
-            # "mkdir ELINA",
-            # "cd ELINA",
-            # f"cp -r {cache_dir}/ELINA/lib .",
-            # f"cp -r {cache_dir}/ELINA/python_interface .",
-            # f"cp -r {cdd_path}/lib .",
             f"cp -r {cache_dir}/ELINA .",
             f"cp -r {cdd_prefix.parent.parent}/lib ELINA/",
             f"cp -r {libmpfr_path.parent} ELINA/",
@@ -183,6 +185,8 @@ class ERANInstaller(Installer):
         elina_path = libzonoml_path.parent.parent
 
         python_major_version, python_minor_version = sys.version_info[:2]
+        python_version = f"python{python_major_version}.{python_minor_version}"
+        site_packages_dir = f"{verifier_venv_path}/lib/{python_version}/site-packages/"
 
         envvars = env.vars()
         commands = [
@@ -192,7 +196,17 @@ class ERANInstaller(Installer):
             f"python -m venv {name}",
             f". {name}/bin/activate",
             "pip install --upgrade pip",
-            'pip install "numpy>=1.19,<1.22" "tensorflow>=2.4,<2.8" "onnx>=1.8,<1.11" "onnxruntime>=1.7,<1.11" "torch>=1.8,<1.11" "torchvision>=0.9,<0.12" "mpmath>=1.2,<1.3" "pillow>=8.1"',
+            (
+                "pip install"
+                ' "numpy>=1.19,<1.22"'
+                ' "tensorflow>=2.4,<2.8"'
+                ' "onnx>=1.8,<1.11"'
+                ' "onnxruntime>=1.7,<1.11"'
+                ' "torch>=1.8,<1.11"'
+                ' "torchvision>=0.9,<0.12"'
+                ' "mpmath>=1.2,<1.3"'
+                ' "pillow>=8.1"'
+            ),
             f"cd {gurobi_path}",
             "python setup.py install",
             f"cd {cache_dir}",
@@ -200,7 +214,7 @@ class ERANInstaller(Installer):
             "git clone https://github.com/eth-sri/eran.git",
             "cd eran",
             f"git checkout {commit_hash}",
-            f"cp -r tf_verify/* {verifier_venv_path}/lib/python{python_major_version}.{python_minor_version}/site-packages/",
+            f"cp -r tf_verify/* {site_packages_dir}",
         ]
         install_script = "; ".join(commands)
         proc = sp.run(install_script, shell=True, env=envvars)
@@ -209,7 +223,7 @@ class ERANInstaller(Installer):
 
         with open(verifier_venv_path / "bin" / "wrappedpython", "w+") as f:
             f.write(
-                wrapped_python_template.format(
+                WRAPPED_PYTHON_TEMPLATE.format(
                     python_venv=verifier_venv_path,
                     gurobi_home=envvars.get("GUROBI_HOME", "."),
                     elina_home=elina_path,
@@ -217,7 +231,7 @@ class ERANInstaller(Installer):
             )
         (verifier_venv_path / "bin" / "wrappedpython").chmod(0o700)
         with open(installation_path / name, "w+") as f:
-            f.write(runner_template.format(python_venv=verifier_venv_path))
+            f.write(RUNNER_TEMPLATE.format(python_venv=verifier_venv_path))
         (installation_path / name).chmod(0o700)
 
 
@@ -229,7 +243,9 @@ def install(env: Environment):
         "gmp", "6.1.2", "https://gmplib.org/download/gmp/gmp-6.1.2.tar.xz"
     )
     mpfr_installer = GNUInstaller(
-        "mpfr", "4.1.0", "https://files.sri.inf.ethz.ch/eran/mpfr/mpfr-4.1.0.tar.xz"
+        "mpfr",
+        "4.1.0",
+        "https://files.sri.inf.ethz.ch/eran/mpfr/mpfr-4.1.0.tar.xz",
     )
     gurobi_installer = GurobiInstaller("9.1.2")
     cddlib_installer = GNUInstaller(

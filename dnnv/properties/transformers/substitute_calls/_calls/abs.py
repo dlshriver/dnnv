@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import logging
-import numpy as np
 import operator
-
 from typing import Callable, Optional, Union
 
-from .base import FunctionSubstitutor
+import numpy as np
+
+from .....errors import DNNVError
 from ....expressions import (
     And,
     ArithmeticExpression,
@@ -15,10 +15,9 @@ from ....expressions import (
     Expression,
     IfThenElse,
     LogicalExpression,
-    Not,
     Or,
 )
-from .....errors import DNNVError
+from .base import FunctionSubstitutor
 
 
 def get_arg(expr: Call):

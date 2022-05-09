@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from dnnv.nn.graph import OperationGraph
-from dnnv.nn.layers import Layer, Convolutional
+from dnnv.nn.layers import Convolutional, Layer
 from dnnv.nn.operations import *
 
 
@@ -11,22 +11,22 @@ def test_Layer():
     assert isinstance(layer, Layer)
 
 
-def test_new_layer_no_OP_PATTERN():
+def test_new_layer_no___pattern__():
     with pytest.raises(TypeError) as excinfo:
 
         class TestLayer(Layer):
             pass
 
-    assert str(excinfo.value) == "Layer TestLayer must specify `OP_PATTERN`"
+    assert str(excinfo.value) == "Layer TestLayer must specify `__pattern__`"
 
 
-def test_new_layer_bad_OP_PATTERN():
+def test_new_layer_bad___pattern__():
     with pytest.raises(TypeError) as excinfo:
 
         class TestLayer(Layer):
-            OP_PATTERN = "bad value"
+            __pattern__ = "bad value"
 
-    assert str(excinfo.value) == "`OP_PATTERN` must be an operation pattern"
+    assert str(excinfo.value) == "`__pattern__` must be an operation pattern"
 
 
 def test_match_with_layer_types_fail():
@@ -66,7 +66,7 @@ def test_match_convolutional():
 
 def test_match_op_pattern_none():
     class FakeLayer(Layer):
-        OP_PATTERN = None
+        __pattern__ = None
 
     op = Input((-1, 3, 2, 2), np.dtype(np.float32))
     atan_op = Atan(op)

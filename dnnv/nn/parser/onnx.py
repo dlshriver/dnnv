@@ -1,20 +1,56 @@
-import logging
-import onnx
+from __future__ import annotations
 
 from pathlib import Path
-from typing import Set
+from typing import Any, Dict, Optional, Set
+
+import onnx
 
 from .. import OperationGraph
 from ..operations import Operation
 from ..utils import as_numpy
 
 
-def _parse_onnx_model(onnx_model: onnx.ModelProto) -> OperationGraph:
-    logger = logging.getLogger(__name__)
+def traverse_nodes(
+    node: onnx.NodeProto,
+    node_map: Dict[str, onnx.NodeProto],
+    operation_map: Dict[str, Operation],
+    parameter_map: Dict[str, onnx.NodeProto],
+    visited: Optional[Set[onnx.NodeProto]] = None,
+):
+    if visited is None:
+        visited = set()
+    if id(node) in visited:
+        return
+    visited.add(id(node))
+    inputs = []
+    for name in node.input:
+        if name in node_map:
+            traverse_nodes(
+                node_map[name],
+                node_map,
+                operation_map,
+                parameter_map,
+                visited=visited,
+            )
+            inputs.append(operation_map[name])
+        elif name in parameter_map:
+            inputs.append(parameter_map[name])
+        elif name in operation_map:
+            inputs.append(operation_map[name])
+        else:
+            raise ValueError(f"Unknown input name: {name}")
+    operation = Operation.from_onnx(node, *inputs)
+    if len(node.output) > 1:
+        for i, output_name in enumerate(node.output):
+            operation_map[output_name] = operation[i]
+    else:
+        operation_map[node.output[0]] = operation
 
-    node_map = {}
-    operation_map = {}
-    parameter_map = {}
+
+def _parse_onnx_model(onnx_model: onnx.ModelProto) -> OperationGraph:
+    node_map: Dict[str, onnx.NodeProto] = {}
+    operation_map: Dict[str, Operation] = {}
+    parameter_map: Dict[str, Any] = {}
     for node in onnx_model.graph.node:
         if node.op_type in ["Constant"]:
             assert len(node.output) == 1
@@ -28,38 +64,8 @@ def _parse_onnx_model(onnx_model: onnx.ModelProto) -> OperationGraph:
         if input_node.name not in parameter_map:
             operation_map[input_node.name] = Operation.from_onnx(input_node)
 
-    operations = []
-    visited = set()  # type: Set[int]
-
-    def topo_sort(node):
-        if id(node) in visited:
-            return operation_map[id(node)]
-        visited.add(id(node))
-        inputs = []
-        for name in node.input:
-            if name in node_map:
-                topo_sort(node_map[name])
-                inputs.append(operation_map[name])
-            elif name in parameter_map:
-                inputs.append(parameter_map[name])
-            elif name in operation_map:
-                inputs.append(operation_map[name])
-            else:
-                raise ValueError("Unknown input name: %s" % name)
-        operation = Operation.from_onnx(node, *inputs)
-        if len(node.output) > 1:
-            for i, output_name in enumerate(node.output):
-                operation_map[output_name] = operation[i]
-        else:
-            operation_map[node.output[0]] = operation
-        operation_map[id(node)] = operation
-        operations.append(operation)
-
     for node in node_map.values():
-        topo_sort(node)
-
-    for i, operation in enumerate(operations, 1):
-        logger.debug("%3d: %s", i, operation)
+        traverse_nodes(node, node_map, operation_map, parameter_map)
 
     output_operations = []
     for output_info in onnx_model.graph.output:

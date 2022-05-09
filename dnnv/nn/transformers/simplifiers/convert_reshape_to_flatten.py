@@ -1,5 +1,5 @@
-from .base import Simplifier
 from ... import operations
+from .base import Simplifier
 
 
 class ConvertReshapeToFlatten(Simplifier):

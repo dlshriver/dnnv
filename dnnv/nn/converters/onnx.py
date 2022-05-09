@@ -1,8 +1,8 @@
-import numpy as np
-import onnx
-
 from collections import defaultdict
 from typing import Any, Dict, List, Union
+
+import numpy as np
+import onnx
 
 from .. import operations
 from ..graph import OperationGraph
@@ -67,9 +67,10 @@ class OnnxConverter(OperationVisitor):
         return self.visited[operation]
 
     def generic_visit(self, operation: Operation):
-        if not hasattr(self, "visit_%s" % operation.__class__.__name__):
+        if not hasattr(self, f"visit_{type(operation).__name__}"):
             raise ValueError(
-                f"ONNX converter not implemented for operation type {type(operation).__name__}"
+                "ONNX converter not implemented"
+                f" for operation type {type(operation).__name__}"
             )
         return super().generic_visit(operation)
 
@@ -78,11 +79,11 @@ class OnnxConverter(OperationVisitor):
     ) -> Union[onnx.NodeProto, onnx.TensorProto, onnx.ValueInfoProto]:
         if isinstance(value, Operation):
             return self.visit(value)
-        elif isinstance(value, np.ndarray):
+        if isinstance(value, np.ndarray):
             tensor_proto = onnx.numpy_helper.from_array(value, name=opname)
             self.initializer.append(tensor_proto)
             return tensor_proto
-        elif isinstance(value, (int, float)):
+        if isinstance(value, (int, float)):
             tensor_proto = onnx.numpy_helper.from_array(
                 np.array(value, dtype=f"{type(value).__name__}32"), name=opname
             )

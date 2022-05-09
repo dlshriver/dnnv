@@ -3,18 +3,18 @@ from __future__ import annotations
 import subprocess as sp
 import sys
 
+from ...errors import InstallError, UninstallError
 from ..environment import (
-    Environment,
     Dependency,
+    Environment,
+    GurobiInstaller,
     HeaderDependency,
+    Installer,
     LibraryDependency,
     ProgramDependency,
-    Installer,
-    GurobiInstaller,
 )
-from ...errors import InstallError, UninstallError
 
-wrapped_python_template = """#!/bin/bash
+WRAPPED_PYTHON_TEMPLATE = """#!/bin/bash
 
 export GUROBI_HOME={gurobi_home}
 export PATH={gurobi_home}/bin:$PATH
@@ -22,7 +22,7 @@ export LD_LIBRARY_PATH={gurobi_home}/lib:$LD_LIBRARY_PATH
 {python_venv}/bin/python $@
 """
 
-runner_template = """#!{python_venv}/bin/wrappedpython
+RUNNER_TEMPLATE = """#!{python_venv}/bin/wrappedpython
 import argparse
 import numpy as np
 
@@ -103,6 +103,13 @@ class VeriNetInstaller(Installer):
         gurobi_path = libgurobi_path.parent.parent
 
         python_major_version, python_minor_version = sys.version_info[:2]
+        python_version = f"python{python_major_version}.{python_minor_version}"
+        site_packages_dir = f"{verifier_venv_path}/lib/{python_version}/site-packages/"
+
+        dnnv_url = (
+            "https://github.com/dlshriver/DNNV/"
+            f"archive/refs/tags/{dnnv_version}.tar.gz"
+        )
 
         envvars = env.vars()
         commands = [
@@ -112,14 +119,23 @@ class VeriNetInstaller(Installer):
             f"python -m venv {name}",
             f". {name}/bin/activate",
             "pip install --upgrade pip",
-            'pip install "numba>=0.50,<0.60" "onnx>=1.8,<1.11" "torch>=1.8,<1.9" "torchvision>=0.9,<0.10"',
+            (
+                "pip install"
+                ' "numba>=0.50,<0.60"'
+                ' "onnx>=1.8,<1.11"'
+                ' "torch>=1.8,<1.9"'
+                ' "torchvision>=0.9,<0.10"'
+            ),
             f"cd {gurobi_path}",
             "python setup.py install",
             f"cd {cache_dir}",
             f"rm -rf {name}",
-            f"curl -O -L https://github.com/dlshriver/DNNV/archive/refs/tags/{dnnv_version}.tar.gz",
-            f"tar xf {dnnv_version}.tar.gz --wildcards */third_party/VeriNet --strip-components=2",
-            f"cp -r VeriNet/src {verifier_venv_path}/lib/python{python_major_version}.{python_minor_version}/site-packages/",
+            f"curl -O -L {dnnv_url}",
+            (
+                f"tar xf {dnnv_version}.tar.gz"
+                " --wildcards */third_party/VeriNet --strip-components=2"
+            ),
+            f"cp -r VeriNet/src {site_packages_dir}",
         ]
         install_script = "; ".join(commands)
         proc = sp.run(install_script, shell=True, env=envvars)
@@ -128,14 +144,14 @@ class VeriNetInstaller(Installer):
 
         with open(verifier_venv_path / "bin" / "wrappedpython", "w+") as f:
             f.write(
-                wrapped_python_template.format(
+                WRAPPED_PYTHON_TEMPLATE.format(
                     python_venv=verifier_venv_path,
                     gurobi_home=envvars.get("GUROBI_HOME", "."),
                 )
             )
         (verifier_venv_path / "bin" / "wrappedpython").chmod(0o700)
         with open(installation_path / name, "w+") as f:
-            f.write(runner_template.format(python_venv=verifier_venv_path))
+            f.write(RUNNER_TEMPLATE.format(python_venv=verifier_venv_path))
         (installation_path / name).chmod(0o700)
 
 

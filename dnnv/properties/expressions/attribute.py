@@ -7,7 +7,10 @@ from .logic import LogicalExpression
 
 
 class Attribute(
-    ArithmeticExpression, CallableExpression, LogicalExpression, BinaryExpression
+    ArithmeticExpression,
+    CallableExpression,
+    LogicalExpression,
+    BinaryExpression,
 ):
     def OPERATOR(self, expr, name):
         try:
