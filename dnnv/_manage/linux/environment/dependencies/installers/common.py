@@ -148,7 +148,7 @@ class OpenBLASInstaller(Installer):
             return
 
         openblas_url = (
-            "https://github.com/xianyi/OpenBLAS/archive/v{self.version}.tar.gz"
+            f"https://github.com/xianyi/OpenBLAS/archive/v{self.version}.tar.gz"
         )
         commands = [
             "set -ex",
