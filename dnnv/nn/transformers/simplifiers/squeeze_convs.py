@@ -9,7 +9,8 @@ from ... import operations
 class SqueezeConvs(Simplifier):
     def is_diagonal(self, array):
         i, j = array.shape
-        return ~np.any(array.reshape(-1)[:-1].reshape(i - 1, j + 1)[:, 1:])
+        # return ~np.any(array.reshape(-1)[:-1].reshape(i - 1, j + 1)[:, 1:])
+        return i == j and ~np.any(array.reshape(-1)[:-1].reshape(i - 1, j + 1)[:, 1:])
 
     def visit_Conv(self, operation: operations.Conv) -> operations.Conv:
         if (

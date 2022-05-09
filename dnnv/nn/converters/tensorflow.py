@@ -234,7 +234,7 @@ class TensorflowConverter(OperationVisitor):
             else:
                 bias = np.zeros((weights.shape[0],), dtype=weights.dtype)
             assert np.all(operation.dilations == 1)
-            assert np.all(operation.group == 1)
+            # assert np.all(operation.group == 1)
             num_pads = len(operation.pads)
             pads = tuple(
                 zip(operation.pads[: num_pads // 2], operation.pads[num_pads // 2 :])
@@ -297,7 +297,7 @@ class TensorflowConverter(OperationVisitor):
                 bias = operation.b
             else:
                 bias = np.zeros((weights.shape[1],), dtype=weights.dtype)
-            assert np.all(operation.group == 1)
+            # assert np.all(operation.group == 1)
 
             num_pads = len(operation.pads)
             pads = tuple(
@@ -872,3 +872,18 @@ class TensorflowConverter(OperationVisitor):
             return x
 
         return unsqueeze_func
+
+    def visit_Split(self, operation):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+        axis = operation.axis
+        split = operation.split
+
+        @self._cached
+        def split_func(*inputs):
+            x = _concretize([x_], inputs)
+            x = tf.split(x, split, axis=axis)
+            return x
+
+        return split_func
