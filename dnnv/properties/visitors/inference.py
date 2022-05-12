@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-import numpy as np
-
 from typing import Dict, List, Optional, Sequence
 
-from .base import ExpressionVisitor
-from .. import expressions, Expression, Constant, Context, get_context
+import numpy as np
+
 from ...errors import DNNVError
 from ...nn import OperationGraph
+from .. import Constant, Context, Expression, expressions, get_context
+from .base import ExpressionVisitor
 
 
 class DNNVInferenceError(DNNVError):

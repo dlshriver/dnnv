@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-import numpy as np
-
 from typing import Any, Optional
 
+import numpy as np
+
+from ....nn import OperationGraph
+from ..context import Context
 from .base import Term
 from .utils import get_callable_name
-from ..context import Context
-from ....nn import OperationGraph
 
 
 class Constant(Term):

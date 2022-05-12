@@ -1,7 +1,7 @@
 import numpy as np
 
-from dnnv.nn.graph import OperationGraph
 from dnnv.nn import operations
+from dnnv.nn.graph import OperationGraph
 from dnnv.properties.expressions import *
 from dnnv.verifiers.common.reductions.iopolytope import *
 from dnnv.verifiers.common.reductions.iopolytope import Variable

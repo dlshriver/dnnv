@@ -1,5 +1,5 @@
-import pytest
 import numpy as np
+import pytest
 
 from dnnv.nn.operations import *
 from dnnv.nn.visitors import PrintVisitor

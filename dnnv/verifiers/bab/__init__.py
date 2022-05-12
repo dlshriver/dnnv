@@ -1,12 +1,13 @@
-import numpy as np
 import tempfile
+from functools import partial
+
+import numpy as np
 
 from dnnv.verifiers.common.base import Parameter, Verifier
-from dnnv.verifiers.common.reductions import IOPolytopeReduction, HalfspacePolytope
-from dnnv.verifiers.common.results import SAT, UNSAT, UNKNOWN
+from dnnv.verifiers.common.reductions import HalfspacePolytope, IOPolytopeReduction
+from dnnv.verifiers.common.results import SAT, UNKNOWN, UNSAT
 from dnnv.verifiers.common.utils import as_layers
 from dnnv.verifiers.planet.utils import to_rlv_file
-from functools import partial
 
 from .errors import BabError, BabTranslatorError
 

@@ -1,11 +1,12 @@
 from __future__ import annotations
-import numpy as np
 
 from collections import defaultdict
 from typing import Dict, List, Tuple, Union
 
-from .dnf import DnfTransformer
+import numpy as np
+
 from ..expressions import *
+from .dnf import DnfTransformer
 
 
 def _extract_constants(expr: Add) -> Tuple[Add, Constant]:

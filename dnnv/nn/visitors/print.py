@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import numpy as np
 
+from .. import Operation, operations
 from .base import OperationVisitor
-from .. import operations, Operation
 
 
 class PrintVisitor(OperationVisitor):

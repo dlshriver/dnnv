@@ -1,13 +1,13 @@
 import logging
-import onnx
-
 from pathlib import Path
 from typing import Set
 
-from .errors import OnnxParserError
+import onnx
+
 from .. import OperationGraph
 from ..operations import Operation
 from ..utils import as_numpy
+from .errors import OnnxParserError
 
 
 def _parse_onnx_model(onnx_model: onnx.ModelProto) -> OperationGraph:

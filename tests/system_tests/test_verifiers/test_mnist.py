@@ -1,11 +1,11 @@
 import os
 import unittest
 
-from dnnv import nn
-from dnnv import properties
-from dnnv.properties import get_context
+from system_tests.utils import network_artifact_dir, property_artifact_dir
 
-from dnnv.verifiers import SAT, UNSAT, UNKNOWN
+from dnnv import nn, properties
+from dnnv.properties import get_context
+from dnnv.verifiers import SAT, UNKNOWN, UNSAT
 from dnnv.verifiers.bab import BaB
 from dnnv.verifiers.babsb import BaBSB
 from dnnv.verifiers.eran import ERAN
@@ -16,8 +16,6 @@ from dnnv.verifiers.nnenum import Nnenum
 from dnnv.verifiers.planet import Planet
 from dnnv.verifiers.reluplex import Reluplex
 from dnnv.verifiers.verinet import VeriNet
-
-from system_tests.utils import network_artifact_dir, property_artifact_dir
 
 RUNS_PER_PROP = int(os.environ.get("_DNNV_TEST_RUNS_PER_PROP", "1"))
 
@@ -46,7 +44,8 @@ VERIFIER_KWARGS = {
 
 
 @unittest.skipIf(
-    sum(v.is_installed() for v in VERIFIERS.values()) < 2, "Not enough verifiers installed"
+    sum(v.is_installed() for v in VERIFIERS.values()) < 2,
+    "Not enough verifiers installed",
 )
 class MNISTTests(unittest.TestCase):
     def setUp(self):

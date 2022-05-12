@@ -1,10 +1,10 @@
-import numpy as np
-
-from onnx import NodeProto
 from typing import Optional, Sequence
 
-from .base import Operation
+import numpy as np
+from onnx import NodeProto
+
 from ..utils import as_numpy
+from .base import Operation
 
 
 class RandomUniform(Operation):

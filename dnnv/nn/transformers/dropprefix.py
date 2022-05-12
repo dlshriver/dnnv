@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-import numpy as np
-
 from copy import deepcopy
+
+import numpy as np
 
 from ..graph import OperationGraph
 from ..operations import Input, Operation
-
 from .base import OperationTransformer
 
 

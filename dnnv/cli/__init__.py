@@ -3,12 +3,11 @@
 import argparse
 import importlib
 import pkgutil
-
 from pathlib import Path
 
-from .. import verifiers
 from .. import __version__
 from .. import logging_utils as logging
+from .. import verifiers
 
 
 class HelpFormatter(argparse.HelpFormatter):

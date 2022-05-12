@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import numpy as np
 import types
-
 from typing import Union
+
+import numpy as np
 
 from dnnv.properties.expressions.call import Compose
 
@@ -23,8 +23,8 @@ from ..expressions import (
     LogicalExpression,
     Network,
     Parameter,
-    Subtract,
     Subscript,
+    Subtract,
     Symbol,
     TernaryExpression,
     UnaryExpression,

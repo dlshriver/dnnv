@@ -1,6 +1,5 @@
 import sys
 
-
 if sys.platform == "linux":
     from .linux import *
 else:

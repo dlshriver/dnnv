@@ -1,13 +1,13 @@
-import numpy as np
 import os
 import tempfile
-
 from contextlib import contextmanager
 from functools import partial
 
+import numpy as np
+
 from dnnv.verifiers.common.base import Parameter, Verifier
-from dnnv.verifiers.common.reductions import IOPolytopeReduction, HalfspacePolytope
-from dnnv.verifiers.common.results import SAT, UNSAT, UNKNOWN
+from dnnv.verifiers.common.reductions import HalfspacePolytope, IOPolytopeReduction
+from dnnv.verifiers.common.results import SAT, UNKNOWN, UNSAT
 
 from .errors import NnenumError, NnenumTranslatorError
 

@@ -1,3 +1,2 @@
-from .base import *
-
 from . import ltl
+from .base import *

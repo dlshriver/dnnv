@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import numpy as np
-
 from typing import Callable, Union
+
+import numpy as np
 
 from ....expressions import (
     And,

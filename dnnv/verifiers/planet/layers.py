@@ -1,19 +1,19 @@
 import logging
-import numpy as np
-
 from typing import Generator, List, Optional, Tuple, Type, Union
 
-from dnnv.nn.layers import Layer, Convolutional
+import numpy as np
+
+from dnnv.nn.layers import Convolutional, Layer
 from dnnv.nn.operations import (
     Add,
     BatchNormalization,
     Conv,
     Input,
     MaxPool,
-    Relu,
-    Sigmoid,
     Operation,
     OperationPattern,
+    Relu,
+    Sigmoid,
 )
 
 from .errors import PlanetTranslatorError

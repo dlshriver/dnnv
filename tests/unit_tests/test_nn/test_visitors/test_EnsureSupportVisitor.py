@@ -1,5 +1,5 @@
-import pytest
 import numpy as np
+import pytest
 
 from dnnv.nn import OperationGraph
 from dnnv.nn.operations import *

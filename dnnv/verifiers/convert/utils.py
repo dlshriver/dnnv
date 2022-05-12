@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import tempfile
+from typing import Iterable, Optional, Type, Union
 
 from dnnv.nn.graph import OperationGraph
 from dnnv.verifiers.common import (
@@ -9,7 +10,6 @@ from dnnv.verifiers.common import (
     IOPolytopeProperty,
     VerifierTranslatorError,
 )
-from typing import Iterable, Optional, Type, Union
 
 
 def as_vnnlib(

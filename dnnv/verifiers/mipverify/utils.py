@@ -1,13 +1,13 @@
-import numpy as np
-import scipy.io
 import tempfile
-
 from collections import defaultdict
 from pathlib import Path
 from typing import Dict, List, Optional, Set, Type
 
+import numpy as np
+import scipy.io
+
 from dnnv import logging_utils as logging
-from dnnv.nn import operations, Operation, OperationGraph, OperationVisitor
+from dnnv.nn import Operation, OperationGraph, OperationVisitor, operations
 from dnnv.verifiers.common import VerifierTranslatorError
 
 

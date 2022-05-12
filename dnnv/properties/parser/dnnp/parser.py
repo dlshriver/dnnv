@@ -1,13 +1,12 @@
 import ast
 import importlib
 import types
-
 from pathlib import Path
 from typing import List, Optional
 
-from .errors import DNNPParserError
-from ..utils import LimitQuantifiers, parse_cli
 from ... import expressions
+from ..utils import LimitQuantifiers, parse_cli
+from .errors import DNNPParserError
 
 
 class Py2PropertyTransformer(ast.NodeTransformer):

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import numpy as np
-
 from typing import Dict
 
-from .base import OperationVisitor
-from .. import operations, Operation
+import numpy as np
+
+from .. import Operation, operations
 from ..utils import TensorDetails
+from .base import OperationVisitor
 
 
 # TODO: need to implement methods for all Operations types

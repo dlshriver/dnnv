@@ -1,10 +1,9 @@
 from typing import Optional
 
+from ....utils import get_subclasses
 from ... import operations
 from ...graph import OperationGraph
 from ...operations import Operation
-from ....utils import get_subclasses
-
 from .base import ComposeSimplifiers, Simplifier
 from .bundle_padding import BundlePadding
 from .bundle_transpose import BundleTranspose
@@ -19,6 +18,7 @@ from .drop_identities import *
 from .move_activations_back import MoveActivationsBackward
 from .squeeze_convs import SqueezeConvs
 from .squeeze_gemms import SqueezeGemms
+
 
 # @dlshriver: what was the use case here?
 class MatMulVectorArgsReorder(Simplifier):

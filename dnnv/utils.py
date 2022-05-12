@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import numpy as np
 import random
-
 from typing import Optional, Set, Type, TypeVar
+
+import numpy as np
 
 T = TypeVar("T")
 

@@ -1,17 +1,17 @@
 from __future__ import annotations
 
+from collections import defaultdict
+from typing import Any, Dict, List, Union
+
 import numpy as np
 import onnx
 import onnx.numpy_helper
 
-from collections import defaultdict
-from typing import Any, Dict, List, Union
-
-from .base import OperationConverter
 from .. import operations
 from ..graph import OperationGraph
 from ..operations import Operation
 from ..utils import NUMPY_TO_ONNX_DTYPE, ONNX_TO_NUMPY_DTYPE, TensorDetails
+from .base import OperationConverter
 
 
 class OnnxConverter(OperationConverter):

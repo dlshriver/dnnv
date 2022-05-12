@@ -1,15 +1,15 @@
 from __future__ import annotations
 
-import numpy as np
-
 from typing import Any, Dict, List, Optional, Union
 
-from .base import LTL, LTLMaxStepReached
-from ...base import Expression
-from ...terms import Network, Symbol
-from .....nn import operations, OperationGraph
+import numpy as np
+
+from .....nn import OperationGraph, operations
 from .....nn.transformers.mlp import MLPTransformer, SqueezeGemms
 from .....nn.utils import TensorDetails
+from ...base import Expression
+from ...terms import Network, Symbol
+from .base import LTL, LTLMaxStepReached
 
 IntExpression = Union[int, Expression]
 

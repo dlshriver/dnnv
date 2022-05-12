@@ -3,7 +3,6 @@ import numpy as np
 from dnnv.nn.converters.tensorflow import *
 from dnnv.nn.operations import *
 
-
 TOL = 1e-6
 
 

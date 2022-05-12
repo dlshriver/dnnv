@@ -7,7 +7,7 @@ import argparse
 import logging
 import sys
 
-from . import install, uninstall, list_verifiers, verifier_choices
+from . import install, list_verifiers, uninstall, verifier_choices
 
 
 def parse_args() -> argparse.Namespace:

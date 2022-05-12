@@ -8,7 +8,9 @@ from .constant import Constant
 
 
 class Symbol(Term):
-    def __init__(self, identifier: Union[Constant, str], *, ctx: Optional[Context] = None):
+    def __init__(
+        self, identifier: Union[Constant, str], *, ctx: Optional[Context] = None
+    ):
         super().__init__(ctx=ctx)
         if isinstance(identifier, Constant):
             self.identifier = identifier.value

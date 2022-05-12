@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from .base import OperationVisitor
 from .. import Operation, OperationGraph
+from .base import OperationVisitor
 
 
 class OperationCounter(OperationVisitor):

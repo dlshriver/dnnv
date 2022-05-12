@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import inspect
 
-from .base import OperationTransformer
 from ..operations import Operation
+from .base import OperationTransformer
 
 
 class Copier(OperationTransformer):

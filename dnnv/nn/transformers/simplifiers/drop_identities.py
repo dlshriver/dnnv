@@ -1,6 +1,6 @@
-from .base import Simplifier
 from ... import operations
 from ...graph import OperationGraph
+from .base import Simplifier
 
 
 class DropIdentity(Simplifier):

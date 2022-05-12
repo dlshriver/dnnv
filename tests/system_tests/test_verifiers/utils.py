@@ -1,14 +1,12 @@
 import os
-
 from typing import Optional
 
-from dnnv import nn
-from dnnv import properties
-from dnnv.properties import get_context
-from dnnv.verifiers import SAT, UNSAT, UNKNOWN
-from dnnv.verifiers.common.base import Verifier
-
 from system_tests.utils import network_artifact_dir, property_artifact_dir
+
+from dnnv import nn, properties
+from dnnv.properties import get_context
+from dnnv.verifiers import SAT, UNKNOWN, UNSAT
+from dnnv.verifiers.common.base import Verifier
 
 RUNS_PER_PROP = int(os.environ.get("_DNNV_TEST_RUNS_PER_PROP", "1"))
 

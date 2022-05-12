@@ -1,19 +1,17 @@
 from __future__ import annotations
 
-import numpy as np
-
 from collections import defaultdict
-from scipy.linalg import block_diag
 from typing import Dict, List, Optional, Sequence, Type
 
+import numpy as np
+from scipy.linalg import block_diag
 
-from .base import OperationTransformer
 from .. import operations
 from ..graph import OperationGraph
 from ..operations import Operation
 from ..transformers.simplifiers.squeeze_gemms import SqueezeGemms
 from ..utils import TensorDetails
-
+from .base import OperationTransformer
 
 ActivationOperation = (
     operations.Elu,

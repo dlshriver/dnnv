@@ -1,9 +1,8 @@
+from collections import namedtuple
+
 import numpy as np
 import onnx
-
-from collections import namedtuple
 from onnx import numpy_helper
-
 
 TensorDetails = namedtuple("TensorDetails", ["shape", "dtype"])
 

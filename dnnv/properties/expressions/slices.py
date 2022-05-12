@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from .base import Expression, AssociativeExpression, TernaryExpression
+from .base import AssociativeExpression, Expression, TernaryExpression
 from .context import Context
 from .terms import Constant
 

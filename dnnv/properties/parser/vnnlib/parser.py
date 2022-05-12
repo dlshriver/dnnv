@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-import lark
-import numpy as np
-
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set
 
+import lark
+import numpy as np
+
 from dnnv.properties.expressions.terms import symbol
 
-from .errors import VNNLIBParserError
-from ..utils import LimitQuantifiers, parse_cli
 from ...expressions import *
+from ..utils import LimitQuantifiers, parse_cli
+from .errors import VNNLIBParserError
 
 # TODO : implement full smt-lib grammar
 # currently enough for vnn-lib spec?

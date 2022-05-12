@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Sequence, Type
 
-from .base import OperationVisitor
 from .. import Operation
+from .base import OperationVisitor
 
 
 class EnsureSupportVisitor(OperationVisitor):

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from .symbol import Symbol
 from ..call import Compose
+from .symbol import Symbol
 
 
 class Network(Symbol):

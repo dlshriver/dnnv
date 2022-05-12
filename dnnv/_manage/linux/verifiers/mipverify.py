@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import subprocess as sp
 
+from ...errors import InstallError, UninstallError
 from ..environment import (
-    Environment,
     Dependency,
-    HeaderDependency,
-    LibraryDependency,
-    ProgramDependency,
-    Installer,
+    Environment,
     GNUInstaller,
     GurobiInstaller,
+    HeaderDependency,
+    Installer,
+    LibraryDependency,
+    ProgramDependency,
 )
-from ...errors import InstallError, UninstallError
 
 mipverify_runner = """#!/bin/bash
 export GUROBI_HOME={gurobi_home}

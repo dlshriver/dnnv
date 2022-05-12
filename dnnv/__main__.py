@@ -1,20 +1,17 @@
 """
 """
 import argparse
-import numpy as np
 import os
 import time
 import typing
-
 from pathlib import Path
 from typing import Collection, List, Optional, Type
 
-from . import cli
-from . import errors
+import numpy as np
+
+from . import cli, errors
 from . import logging_utils as logging
-from . import nn
-from . import properties
-from . import utils
+from . import nn, properties, utils
 from .verifiers.common.results import VerificationResult
 
 if typing.TYPE_CHECKING:

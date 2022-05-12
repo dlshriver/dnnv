@@ -5,9 +5,9 @@ from ..expressions import (
     Constant,
     Expression,
     Image,
+    Quantifier,
     Symbol,
     TernaryExpression,
-    Quantifier,
     UnaryExpression,
 )
 from ..visitors import ExpressionVisitor

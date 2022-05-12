@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Sequence, Union, TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional, Sequence, Union
 
 if TYPE_CHECKING:
     from .base import Op, Operation

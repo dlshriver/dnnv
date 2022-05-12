@@ -1,15 +1,9 @@
 from __future__ import annotations
 
 import operator
-
 from typing import Set, Type, TypeVar
 
-from .base import (
-    Expression,
-    AssociativeExpression,
-    BinaryExpression,
-    UnaryExpression,
-)
+from .base import AssociativeExpression, BinaryExpression, Expression, UnaryExpression
 
 NonUnaryArithmeticType = TypeVar(
     "NonUnaryArithmeticType", "Add", "Divide", "Multiply", "Subtract"

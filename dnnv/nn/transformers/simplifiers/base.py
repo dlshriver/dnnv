@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import List, Type
 
-from ..base import OperationTransformer
 from ...operations import Operation
+from ..base import OperationTransformer
 
 
 class Simplifier(OperationTransformer):

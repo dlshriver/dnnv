@@ -1,16 +1,16 @@
 """
 """
-import numpy as np
-
 from abc import ABC, abstractmethod
 from copy import deepcopy
 from typing import List, Optional, Type, Union
 
+import numpy as np
+
+from ...utils import get_subclasses
 from .. import OperationGraph
 from ..operations import *
-from ..visitors import OperationCounter
 from ..transformers import DropPrefix
-from ...utils import get_subclasses
+from ..visitors import OperationCounter
 
 
 class _Layer(type):

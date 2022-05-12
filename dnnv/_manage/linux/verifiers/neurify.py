@@ -2,17 +2,17 @@ from __future__ import annotations
 
 import subprocess as sp
 
+from ...errors import InstallError, UninstallError
 from ..environment import (
-    Environment,
     Dependency,
+    Environment,
     HeaderDependency,
-    LibraryDependency,
-    ProgramDependency,
     Installer,
+    LibraryDependency,
     LpsolveInstaller,
     OpenBLASInstaller,
+    ProgramDependency,
 )
-from ...errors import InstallError, UninstallError
 
 
 class NeurifyInstaller(Installer):

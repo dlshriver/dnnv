@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from ..expressions import *
 from .base import GenericExpressionTransformer
 from .substitute_expression import SubstituteExpression
-from ..expressions import *
 
 
 class FirstOrderLogicTransformer(GenericExpressionTransformer):

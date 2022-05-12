@@ -1,8 +1,8 @@
 import unittest
 
-from dnnv.verifiers.bab import BaB
-
 from system_tests.test_verifiers.utils import VerifierTests
+
+from dnnv.verifiers.bab import BaB
 
 
 @unittest.skipIf(not BaB.is_installed(), "BaB is not installed")

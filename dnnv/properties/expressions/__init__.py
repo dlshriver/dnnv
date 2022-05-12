@@ -7,6 +7,5 @@ from .ifthenelse import *
 from .logic import *
 from .slices import *
 from .subscript import *
-from .terms import *
-
 from .temporal import ltl
+from .terms import *

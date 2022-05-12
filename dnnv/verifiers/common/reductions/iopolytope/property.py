@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-import numpy as np
-
 from typing import List, Optional, Tuple, Union
 
-from .base import HalfspacePolytope, HyperRectangle
-from .utils import OpGraphMerger
-from ..base import Property
+import numpy as np
+
 from .....nn import OperationGraph, OperationTransformer, operations
 from .....properties import Network
+from ..base import Property
+from .base import HalfspacePolytope, HyperRectangle
+from .utils import OpGraphMerger
 
 
 class IOPolytopeProperty(Property):

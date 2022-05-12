@@ -3,16 +3,16 @@ from __future__ import annotations
 import subprocess as sp
 import sys
 
+from ...errors import InstallError, UninstallError
 from ..environment import (
-    Environment,
     Dependency,
+    Environment,
+    GurobiInstaller,
     HeaderDependency,
+    Installer,
     LibraryDependency,
     ProgramDependency,
-    Installer,
-    GurobiInstaller,
 )
-from ...errors import InstallError, UninstallError
 
 wrapped_python_template = """#!/bin/bash
 

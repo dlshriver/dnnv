@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import subprocess as sp
 import typing
-
 from pathlib import Path
 from typing import Optional
 
-from .base import Installer
-from ..base import Dependency
 from .....errors import InstallError
+from ..base import Dependency
+from .base import Installer
 
 if typing.TYPE_CHECKING:
     from ...base import Environment

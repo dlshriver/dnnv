@@ -1,10 +1,10 @@
+from pathlib import Path
+
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
-
-from pathlib import Path
 
 
 def build_known_behavior_artifacts():

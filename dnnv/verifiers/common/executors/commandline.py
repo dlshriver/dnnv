@@ -1,11 +1,10 @@
 import logging
 import select
 import subprocess as sp
-
 from typing import List, Tuple, Type
 
-from .base import VerifierExecutor
 from ..errors import VerifierError
+from .base import VerifierExecutor
 
 
 class CommandLineExecutor(VerifierExecutor):

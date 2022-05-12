@@ -2,13 +2,8 @@ from __future__ import annotations
 
 import subprocess as sp
 
-from ..environment import (
-    Environment,
-    Dependency,
-    ProgramDependency,
-    Installer,
-)
 from ...errors import InstallError, UninstallError
+from ..environment import Dependency, Environment, Installer, ProgramDependency
 
 
 class ReluplexInstaller(Installer):

@@ -1,7 +1,8 @@
-from dnnv.properties import *
+import os
 
 import numpy as np
-import os
+
+from dnnv.properties import *
 
 INPUT_LAYER = eval(os.environ.get("INPUT_LAYER", "None"))
 OUTPUT_LAYER = eval(os.environ.get("OUTPUT_LAYER", "None"))

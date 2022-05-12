@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import numpy as np
 import typing
-
 from functools import reduce
 from typing import Any, Callable, Iterator, List, Optional, Set, TypeVar, Union
+
+import numpy as np
 
 from .context import *
 

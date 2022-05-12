@@ -1,9 +1,9 @@
-import numpy as np
-
 from copy import copy
 
+import numpy as np
+
+from ... import OperationGraph, operations
 from .base import Simplifier
-from ... import operations, OperationGraph
 
 
 class BundleTranspose(Simplifier):

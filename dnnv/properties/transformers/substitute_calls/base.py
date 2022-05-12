@@ -3,9 +3,9 @@ from __future__ import annotations
 from dnnv.properties.expressions.base import Expression
 
 from ...expressions import BinaryExpression, Call
+from ...visitors import DetailsInference
 from ..base import GenericExpressionTransformer
 from ._calls import FunctionSubstitutor
-from ...visitors import DetailsInference
 
 
 class SubstituteCalls(GenericExpressionTransformer):

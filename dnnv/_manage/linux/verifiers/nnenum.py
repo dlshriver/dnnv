@@ -3,13 +3,8 @@ from __future__ import annotations
 import subprocess as sp
 import sys
 
-from ..environment import (
-    Environment,
-    Dependency,
-    ProgramDependency,
-    Installer,
-)
 from ...errors import InstallError, UninstallError
+from ..environment import Dependency, Environment, Installer, ProgramDependency
 
 runner_template = """#!{python_venv}/bin/python
 import argparse

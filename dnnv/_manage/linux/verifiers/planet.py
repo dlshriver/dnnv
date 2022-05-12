@@ -2,16 +2,16 @@ from __future__ import annotations
 
 import subprocess as sp
 
+from ...errors import InstallError, UninstallError
 from ..environment import (
-    Environment,
     Dependency,
+    Environment,
+    GNUInstaller,
     HeaderDependency,
+    Installer,
     LibraryDependency,
     ProgramDependency,
-    Installer,
-    GNUInstaller,
 )
-from ...errors import InstallError, UninstallError
 
 
 class PlanetInstaller(Installer):

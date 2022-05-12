@@ -1,8 +1,9 @@
-import numpy as np
 from typing import Union
 
-from .base import Simplifier
+import numpy as np
+
 from ... import operations
+from .base import Simplifier
 
 
 class ConvertDivToMul(Simplifier):

@@ -2,9 +2,9 @@ import numpy as np
 import onnx
 import tensorflow as tf
 
-from .base import OperationConverter
 from ..graph import OperationGraph
 from ..operations import Operation
+from .base import OperationConverter
 
 ONNX_TO_TENSORFLOW_DTYPE = {
     onnx.TensorProto.DOUBLE: tf.float64,

@@ -1,9 +1,9 @@
-import numpy as np
-
 from typing import Optional
 
-from .base import Operation
+import numpy as np
+
 from ..utils import as_numpy
+from .base import Operation
 
 
 class Cast(Operation):

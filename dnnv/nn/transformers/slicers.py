@@ -5,7 +5,6 @@ from typing import Optional, Sequence, Union
 
 from ..graph import OperationGraph
 from ..operations import Input, Operation
-
 from .base import OperationTransformer
 
 

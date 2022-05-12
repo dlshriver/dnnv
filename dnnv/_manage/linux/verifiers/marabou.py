@@ -3,16 +3,16 @@ from __future__ import annotations
 import subprocess as sp
 import sys
 
-from ..environment import (
-    Environment,
-    Dependency,
-    LibraryDependency,
-    ProgramDependency,
-    Installer,
-    GNUInstaller,
-    OpenBLASInstaller,
-)
 from ...errors import InstallError, UninstallError
+from ..environment import (
+    Dependency,
+    Environment,
+    GNUInstaller,
+    Installer,
+    LibraryDependency,
+    OpenBLASInstaller,
+    ProgramDependency,
+)
 
 marabou_runner = """#!{python_venv}/bin/python
 import argparse

@@ -1,7 +1,7 @@
 import pytest
 
 from dnnv.properties import *
-from dnnv.properties.parser.dnnp import parse_str, DNNPParserError
+from dnnv.properties.parser.dnnp import DNNPParserError, parse_str
 
 
 def test_GeneratorExp():

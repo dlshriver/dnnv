@@ -102,6 +102,7 @@ class Compose(BinaryExpression, CallableExpression):
 
     def OPERATOR(self, f, g):
         import types
+
         from ...nn import OperationGraph
 
         if isinstance(f, OperationGraph) and isinstance(g, OperationGraph):

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from ..base import TemporalExpression
 from ...logic import LogicalExpression
+from ..base import TemporalExpression
 
 
 class LTL(TemporalExpression, LogicalExpression):

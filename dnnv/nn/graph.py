@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import itertools
-
 from typing import Dict, List, Optional, Sequence, Tuple
 
 from . import operations
@@ -103,8 +102,8 @@ class OperationGraph:
         return tf_convert(self)
 
     def compose(self, input_op_graph: OperationGraph) -> OperationGraph:
-        from .transformers import OperationTransformer
         from . import operations
+        from .transformers import OperationTransformer
 
         self_input_details = self.input_details
         input_op_graph_output_details = input_op_graph.output_details

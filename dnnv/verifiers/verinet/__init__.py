@@ -1,11 +1,12 @@
-from dnnv.nn.graph import OperationGraph
-import numpy as np
 import tempfile
 
-from dnnv.nn import operations, OperationTransformer
+import numpy as np
+
+from dnnv.nn import OperationTransformer, operations
+from dnnv.nn.graph import OperationGraph
 from dnnv.nn.visitors import EnsureSupportVisitor
 from dnnv.verifiers.common.base import Parameter, Verifier
-from dnnv.verifiers.common.results import SAT, UNSAT, UNKNOWN
+from dnnv.verifiers.common.results import SAT, UNKNOWN, UNSAT
 
 from .errors import VerinetError, VerinetTranslatorError
 

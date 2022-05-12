@@ -1,8 +1,9 @@
-import pytest
 import re
 
+import pytest
+
 from dnnv.properties.expressions import *
-from dnnv.properties.parser.vnnlib import parse_str, VNNLIBParserError
+from dnnv.properties.parser.vnnlib import VNNLIBParserError, parse_str
 
 
 def test_bad_token_parse():

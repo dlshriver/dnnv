@@ -1,14 +1,14 @@
 """
 """
 import logging
+from typing import Optional, Sequence
+
 import numpy as np
 import onnx
 
-from typing import Optional, Sequence
-
-from .patterns import Or, Parallel, Sequential
-from ..utils import ONNX_TO_NUMPY_DTYPE
 from ...utils import get_subclasses
+from ..utils import ONNX_TO_NUMPY_DTYPE
+from .patterns import Or, Parallel, Sequential
 
 
 class Op(type):

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import importlib
 import pkgutil
-
 from types import ModuleType
 
 verifier_choices = [verifier.name for verifier in pkgutil.iter_modules(__path__)]

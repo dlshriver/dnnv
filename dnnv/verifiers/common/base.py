@@ -1,25 +1,25 @@
 import logging
-import numpy as np
 import os
 import tempfile
 import time
-
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from functools import partial
 from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, Type, Union
 
+import numpy as np
+
+from ...properties import Expression, LogicalExpression
 from .errors import VerifierError, VerifierTranslatorError
-from .executors import VerifierExecutor, CommandLineExecutor
+from .executors import CommandLineExecutor, VerifierExecutor
 from .reductions import (
-    Property,
-    Reduction,
-    IOPolytopeReduction,
     HalfspacePolytope,
     HyperRectangle,
+    IOPolytopeReduction,
+    Property,
+    Reduction,
 )
-from .results import SAT, UNSAT, UNKNOWN, PropertyCheckResult, VerificationResult
-from ...properties import Expression, LogicalExpression
+from .results import SAT, UNKNOWN, UNSAT, PropertyCheckResult, VerificationResult
 
 
 class Parameter:
