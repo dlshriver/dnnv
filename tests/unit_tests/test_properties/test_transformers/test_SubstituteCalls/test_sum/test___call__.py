@@ -1,6 +1,7 @@
+import sys
+
 import numpy as np
 import pytest
-import sys
 
 from dnnv.properties.expressions import *
 from dnnv.properties.transformers import SubstituteCalls

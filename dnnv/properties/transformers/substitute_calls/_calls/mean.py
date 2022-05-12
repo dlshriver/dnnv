@@ -2,14 +2,9 @@ from __future__ import annotations
 
 import numpy as np
 
+from ....expressions import Add, CallableExpression, Constant, Expression
 from .base import FunctionSubstitutor
 from .utils import get_parameters
-from ....expressions import (
-    Add,
-    CallableExpression,
-    Constant,
-    Expression,
-)
 
 
 class NumpyMean(FunctionSubstitutor):

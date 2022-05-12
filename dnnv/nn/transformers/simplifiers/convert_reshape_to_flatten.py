@@ -25,3 +25,6 @@ class ConvertReshapeToFlatten(Simplifier):
             return operation
         shape: operations.Shape = gather.x
         return operations.Flatten(shape.x, axis=1)
+
+
+__all__ = ["ConvertReshapeToFlatten"]

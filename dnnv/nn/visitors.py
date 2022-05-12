@@ -103,7 +103,6 @@ class PrintVisitor(OperationVisitor):
 
     def print_op_id(self, operation: Operation) -> None:
         op_id = self.get_op_id(operation)
-        # print("%-32s" % op_id, end=": ")
         print(f"{op_id:32s}", end=": ")
 
     def visit_Add(self, operation: operations.Add) -> None:

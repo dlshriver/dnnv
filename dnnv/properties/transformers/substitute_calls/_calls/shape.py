@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import numpy as np
 
+from .... import Expression, expressions
 from .base import FunctionSubstitutor
-from .... import expressions, Expression
 
 
 class Shape(FunctionSubstitutor):

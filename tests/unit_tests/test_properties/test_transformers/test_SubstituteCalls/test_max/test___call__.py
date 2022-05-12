@@ -1,6 +1,7 @@
+import re
+
 import numpy as np
 import pytest
-import re
 
 from dnnv.properties.expressions import *
 from dnnv.properties.transformers import SubstituteCalls

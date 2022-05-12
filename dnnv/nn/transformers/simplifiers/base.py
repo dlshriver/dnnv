@@ -1,6 +1,5 @@
-from typing import Dict, Optional, Type
+from typing import Dict, Type
 
-from ....utils import get_subclasses
 from ...analyzers import Analysis
 from ...graph import OperationGraph
 from ...operations import Operation
@@ -53,15 +52,4 @@ class ComposeSimplifiers(Simplifier):
         return operation
 
 
-def simplify(
-    dnn: OperationGraph, simplifier: Optional[Simplifier] = None
-) -> OperationGraph:
-    if simplifier is None:
-        simplifier = ComposeSimplifiers(
-            dnn, *[c for c in get_subclasses(Simplifier) if not c is ComposeSimplifiers]
-        )
-    simplified_graph = OperationGraph(dnn.walk(simplifier))
-    return simplified_graph
-
-
-__all__ = ["simplify", "Simplifier", "ComposeSimplifiers"]
+__all__ = ["Simplifier", "ComposeSimplifiers"]
