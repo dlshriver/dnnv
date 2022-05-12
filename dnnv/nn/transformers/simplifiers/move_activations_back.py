@@ -29,4 +29,4 @@ class MoveActivationsBackward(Simplifier):
         return self.move_back(operation)
 
 
-__all__ = MoveActivationsBackward
+__all__ = ["MoveActivationsBackward"]

@@ -1,4 +1,3 @@
-from copy import copy
 from typing import List, Union
 
 import numpy as np
@@ -128,3 +127,6 @@ class ReluifyMaxPool(Simplifier):
         if not isinstance(operation.x, operations.MaxPool):
             return operation
         return self.reluify_maxpool(operation.x)
+
+
+__all__ = ["ReluifyMaxPool"]
