@@ -1,18 +1,11 @@
 from __future__ import annotations
 
 import numpy as np
-
 from numpy._globals import _NoValue
 
+from ....expressions import And, CallableExpression, Constant, Expression, IfThenElse
 from .base import FunctionSubstitutor
 from .utils import FunctionSubstitutionError, get_parameters
-from ....expressions import (
-    And,
-    CallableExpression,
-    Constant,
-    Expression,
-    IfThenElse,
-)
 
 
 class BuiltinMax(FunctionSubstitutor):

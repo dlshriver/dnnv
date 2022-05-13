@@ -1,5 +1,3 @@
-from typing import Union
-
 import numpy as np
 
 from ... import operations
@@ -21,10 +19,6 @@ class ConvertDivToMul(Simplifier):
             c = operation.a
             if np.all(c == 0):
                 return c
-            return operation
-        else:
-            return operation
-        if isinstance(input_op, operations.Add):
             return operation
         # TODO : this loses a lot of precision, so don't do it
         # return operations.Mul(input_op, 1.0 / c)

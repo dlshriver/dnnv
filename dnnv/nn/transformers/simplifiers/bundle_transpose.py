@@ -59,3 +59,6 @@ class BundleTranspose(Simplifier):
         operation.b = b[weights_permutation]
         operation.transpose_b = False
         return operation
+
+
+__all__ = ["BundleTranspose"]

@@ -1,6 +1,7 @@
+import re
+
 import numpy as np
 import pytest
-import re
 
 from dnnv.errors import DNNVError
 from dnnv.properties.expressions import *

@@ -27,3 +27,6 @@ class MoveActivationsBackward(Simplifier):
 
     def visit_Sigmoid(self, operation: operations.Sigmoid):
         return self.move_back(operation)
+
+
+__all__ = ["MoveActivationsBackward"]

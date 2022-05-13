@@ -1,18 +1,13 @@
 from __future__ import annotations
 
 import inspect
-import numpy as np
 
+import numpy as np
 from numpy._globals import _NoValue
 
+from ....expressions import Add, CallableExpression, Constant, Expression
 from .base import FunctionSubstitutor
 from .utils import get_parameters
-from ....expressions import (
-    Add,
-    CallableExpression,
-    Constant,
-    Expression,
-)
 
 
 class BuiltinSum(FunctionSubstitutor):
