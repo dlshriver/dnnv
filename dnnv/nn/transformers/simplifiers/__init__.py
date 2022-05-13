@@ -16,9 +16,9 @@ from .convert_reshape_to_flatten import ConvertReshapeToFlatten
 from .convert_sub_to_add import ConvertSubToAdd
 from .drop_identities import (
     DropIdentity,
-    DropUnncessaryRelu,
     DropUnnecessaryConcat,
     DropUnnecessaryFlatten,
+    DropUnnecessaryRelu,
 )
 from .move_activations_back import MoveActivationsBackward
 from .reluify_maxpool import ReluifyMaxPool
@@ -38,7 +38,7 @@ DEFAULT_SIMPLIFIERS = [
     DropIdentity,
     DropUnnecessaryConcat,
     DropUnnecessaryFlatten,
-    DropUnncessaryRelu,
+    DropUnnecessaryRelu,
     MoveActivationsBackward,
     SqueezeConvs,
     SqueezeGemms,

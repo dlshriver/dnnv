@@ -4,9 +4,9 @@ from dnnv.nn import OperationGraph, operations
 from dnnv.nn.transformers.simplifiers import simplify
 from dnnv.nn.transformers.simplifiers.drop_identities import (
     DropIdentity,
-    DropUnncessaryRelu,
     DropUnnecessaryConcat,
     DropUnnecessaryFlatten,
+    DropUnnecessaryRelu,
 )
 from dnnv.nn.visitors import EnsureSupportVisitor, OperationCounter
 
@@ -58,7 +58,7 @@ def test_drop_unnecessary_relu():
     relu_op = operations.Relu(input_op)
     identity_op = operations.Relu(relu_op)
     op_graph = OperationGraph([identity_op])
-    simplified_op_graph = simplify(op_graph, DropUnncessaryRelu(op_graph))
+    simplified_op_graph = simplify(op_graph, DropUnnecessaryRelu(op_graph))
 
     assert simplified_op_graph.walk(OperationCounter())[-1] == 2
 
@@ -71,7 +71,7 @@ def test_drop_unnecessary_relu():
     relu_op = operations.Sigmoid(input_op)
     identity_op = operations.Relu(relu_op)
     op_graph = OperationGraph([identity_op])
-    simplified_op_graph = simplify(op_graph, DropUnncessaryRelu(op_graph))
+    simplified_op_graph = simplify(op_graph, DropUnnecessaryRelu(op_graph))
 
     assert simplified_op_graph.walk(
         EnsureSupportVisitor([operations.Input, operations.Sigmoid])

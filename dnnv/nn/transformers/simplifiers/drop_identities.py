@@ -25,7 +25,7 @@ class DropUnnecessaryFlatten(Simplifier):
         return operation
 
 
-class DropUnncessaryRelu(Simplifier):
+class DropUnnecessaryRelu(Simplifier):
     def visit_Relu(self, operation: operations.Relu):
         input_op = operation.x
         if isinstance(
@@ -39,5 +39,5 @@ __all__ = [
     "DropIdentity",
     "DropUnnecessaryConcat",
     "DropUnnecessaryFlatten",
-    "DropUnncessaryRelu",
+    "DropUnnecessaryRelu",
 ]
