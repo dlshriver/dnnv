@@ -1,49 +1,71 @@
-from typing import Optional
+import logging
+import os
+import typing
 
-from ....utils import get_subclasses
-from ... import operations
+from ....errors import DNNVError
 from ...graph import OperationGraph
-from ...operations import Operation
 from .base import ComposeSimplifiers, Simplifier
 from .bundle_padding import BundlePadding
 from .bundle_transpose import BundleTranspose
-from .convert_add import *
-from .convert_batch_norm import *
-from .convert_div_to_mul import *
-from .convert_matmul_to_gemm import *
-from .convert_mul import *
-from .convert_reshape_to_flatten import *
-from .convert_sub_to_add import *
-from .drop_identities import *
+from .convert_add import ConvertAdd
+from .convert_batch_norm import ConvertBatchNorm
+from .convert_div_to_mul import ConvertDivToMul
+from .convert_matmul_to_gemm import ConvertMatMulToGemm
+from .convert_mul import ConvertMul
+from .convert_reshape_to_flatten import ConvertReshapeToFlatten
+from .convert_sub_to_add import ConvertSubToAdd
+from .drop_identities import (
+    DropIdentity,
+    DropUnnecessaryConcat,
+    DropUnnecessaryFlatten,
+    DropUnnecessaryRelu,
+)
 from .move_activations_back import MoveActivationsBackward
+from .reluify_maxpool import ReluifyMaxPool
 from .squeeze_convs import SqueezeConvs
 from .squeeze_gemms import SqueezeGemms
 
+DEFAULT_SIMPLIFIERS = [
+    BundlePadding,
+    BundleTranspose,
+    ConvertAdd,
+    ConvertBatchNorm,
+    ConvertDivToMul,
+    ConvertMatMulToGemm,
+    ConvertMul,
+    ConvertReshapeToFlatten,
+    ConvertSubToAdd,
+    DropIdentity,
+    DropUnnecessaryConcat,
+    DropUnnecessaryFlatten,
+    DropUnnecessaryRelu,
+    MoveActivationsBackward,
+    SqueezeConvs,
+    SqueezeGemms,
+]
 
-# @dlshriver: what was the use case here?
-class MatMulVectorArgsReorder(Simplifier):
-    def visit_MatMul(self, operation: operations.MatMul) -> operations.MatMul:
-        if (
-            not isinstance(operation.a, Operation)
-            and isinstance(operation.b, Operation)
-            and len(OperationGraph([operation.b]).output_shape[0]) == 1
-            and len(operation.a.shape) == 2
-        ):
-            return operations.MatMul(operation.b, operation.a.T)
-        return operation
+OPTIONAL_SIMPLIFIERS: typing.Dict[str, typing.Type[Simplifier]] = {
+    simplifier_type.__name__: simplifier_type for simplifier_type in (ReluifyMaxPool,)
+}
 
 
 def simplify(
-    dnn: OperationGraph, simplifier: Optional[Simplifier] = None
+    dnn: OperationGraph, simplifier: typing.Optional[Simplifier] = None
 ) -> OperationGraph:
+    logger = logging.getLogger(__name__)
     if simplifier is None:
-        simplifier = ComposeSimplifiers(
-            *[c for c in get_subclasses(Simplifier) if not c is ComposeSimplifiers]
-        )
+        simplifiers = list(DEFAULT_SIMPLIFIERS)
+        optional_simplifiers = os.getenv("DNNV_OPTIONAL_SIMPLIFIERS")
+        if optional_simplifiers:
+            for name in optional_simplifiers.split(":"):
+                logger.log(logging.WARNING, "Using optional simplifier: %s", name)
+                try:
+                    simplifiers.append(OPTIONAL_SIMPLIFIERS[name])
+                except KeyError:
+                    raise DNNVError(f"Unknown simplifier: {name}")
+        simplifier = ComposeSimplifiers(*simplifiers)
     simplified_graph = simplifier.transform(dnn)
-    simplified_graph._input_details = dnn._input_details
-    simplified_graph._output_details = dnn._output_details
     return simplified_graph
 
 
-__all__ = ["simplify"]
+__all__ = ["simplify", "Simplifier", "ComposeSimplifiers"]

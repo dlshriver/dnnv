@@ -6,7 +6,7 @@ from typing import Sequence, Type
 from .base import OperationVisitor
 
 if typing.TYPE_CHECKING:
-    from .. import Operation
+    from .. import Operation, OperationGraph
 
 
 class EnsureSupportVisitor(OperationVisitor):
@@ -23,6 +23,10 @@ class EnsureSupportVisitor(OperationVisitor):
         if type(operation) not in self.supported:
             raise self.error_type(f"{type(operation)} operations are not supported.")
         super().visit(operation)
+
+    def walk(self, op_graph: OperationGraph) -> bool:
+        super().walk(op_graph)
+        return True
 
 
 __all__ = ["EnsureSupportVisitor"]

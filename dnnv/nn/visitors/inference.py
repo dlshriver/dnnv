@@ -73,7 +73,7 @@ class DetailsInference(OperationVisitor):
         w = operation.w
         assert isinstance(w, np.ndarray)
         b = operation.b
-        assert isinstance(b, np.ndarray)
+        assert b is None or isinstance(b, np.ndarray)
         assert np.all(operation.group == 1)
         assert np.all(operation.dilations == 1)
 

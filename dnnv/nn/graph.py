@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 import itertools
+import logging
 from typing import Dict, List, Optional, Sequence, Tuple
+
+import onnxruntime
+import onnxruntime.backend
+from numpy import squeeze
 
 from . import operations
 from .operations import Input, Operation
@@ -195,14 +200,23 @@ class OperationGraph:
         return self._simplified
 
     def __call__(self, *x, _squeeze=True, **kwargs):
-        assert len(kwargs) == 0
-        import onnxruntime.backend
+        try:
+            assert len(kwargs) == 0
 
-        onnx_model = self.as_onnx(**kwargs)
-        y = onnxruntime.backend.run(onnx_model, list(x))
-        if _squeeze and len(y) == 1:
-            return y[0]
-        return y
+            onnx_model = self.as_onnx(**kwargs)
+            y = onnxruntime.backend.run(onnx_model, list(x))
+            if _squeeze and len(y) == 1:
+                return y[0]
+            return y
+        except onnxruntime.capi.onnxruntime_pybind11_state.NotImplemented:
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                "onnxruntime could not execute graph,"
+                " falling back to tensorflow converter"
+            )
+        # fall back to tensorflow converter
+        tf_model = self.as_tf()
+        return tf_model(*x, squeeze=squeeze)
 
     def __getitem__(self, index):
         from .transformers import Slicer

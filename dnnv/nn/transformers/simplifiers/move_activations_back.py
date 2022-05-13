@@ -5,7 +5,7 @@ from .base import Simplifier
 
 
 class MoveActivationsBackward(Simplifier):
-    ShapingOperation = (
+    ShapingOperation: operations.Or = (
         operations.Expand
         | operations.Flatten
         | operations.Reshape
@@ -13,7 +13,16 @@ class MoveActivationsBackward(Simplifier):
         | operations.Unsqueeze
     )
 
-    def move_back(self, operation: Union[operations.Relu, operations.Sigmoid]):
+    def move_back(
+        self,
+        operation: Union[
+            operations.Elu,
+            operations.LeakyRelu,
+            operations.Relu,
+            operations.Sigmoid,
+            operations.Tanh,
+        ],
+    ):
         if next(self.ShapingOperation.match([operation.x]), None) is None:
             return operation
         # TODO : ensure graph linearity
@@ -41,3 +50,6 @@ class MoveActivationsBackward(Simplifier):
 
     def visit_Tanh(self, operation: operations.Tanh):
         return self.move_back(operation)
+
+
+__all__ = ["MoveActivationsBackward"]

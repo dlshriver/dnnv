@@ -26,9 +26,12 @@ class DropUnnecessaryFlatten(Simplifier):
 
 
 class DropUnnecessaryRelu(Simplifier):
-    def visit_Relu(self, operation: operations.Relu) -> operations.Operation:
-        if isinstance(operation.x, operations.Relu):
-            return operation.x
+    def visit_Relu(self, operation: operations.Relu):
+        input_op = operation.x
+        if isinstance(
+            input_op, (operations.Relu, operations.Sigmoid, operations.Softmax)
+        ):
+            return input_op
         return operation
 
 

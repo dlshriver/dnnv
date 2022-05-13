@@ -48,14 +48,23 @@ class BundleTranspose(Simplifier):
             .flatten()
         )
 
-        flatten_operation = copy(flatten_op)
-        flatten_operation.x = transpose_input_op
+        flatten_operation = operations.Flatten(transpose_input_op, axis=1)
 
-        operation = copy(operation)
-        operation.a = flatten_operation
         b = operation.b
         if operation.transpose_b:
             b = b.T
-        operation.b = b[weights_permutation]
-        operation.transpose_b = False
+        b = b[weights_permutation]
+
+        operation = operations.Gemm(
+            flatten_operation,
+            b,
+            operation.c,
+            alpha=operation.alpha,
+            beta=operation.beta,
+            transpose_a=operation.transpose_a,
+            transpose_b=False,
+        )
         return operation
+
+
+__all__ = ["BundleTranspose"]

@@ -40,3 +40,6 @@ class SqueezeConvs(Simplifier):
 
             return op
         return operation
+
+
+__all__ = ["SqueezeConvs"]

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import inspect
 from typing import Iterable, List
+
+import numpy as np
 
 from ..graph import OperationGraph
 from ..operations import Operation
@@ -16,7 +17,7 @@ class OperationTransformer:
     def generic_visit(self, operation: Operation) -> Operation:
         parameters = {}
         make_new_op = False
-        for name in inspect.signature(type(operation)).parameters:
+        for name in operation.parameters:
             value = getattr(operation, name)
             if isinstance(value, Operation):
                 visited_value = self.visit(value)
@@ -41,10 +42,12 @@ class OperationTransformer:
         return operation
 
     def transform(self, op_graph: OperationGraph) -> OperationGraph:
-        outputs = []
+        outputs: List[Operation] = []
         for op in op_graph.outputs:
             transformed_op = self.visit(op)
-            if isinstance(transformed_op, Iterable):
+            if isinstance(transformed_op, Iterable) and not isinstance(
+                transformed_op, np.ndarray
+            ):
                 outputs.extend(transformed_op)
             else:
                 outputs.append(transformed_op)

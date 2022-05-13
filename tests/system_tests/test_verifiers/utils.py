@@ -153,6 +153,9 @@ class VerifierTests:
             self.reset_property_context()
             dnn = nn.parse(network_artifact_dir / "a_gt_b.onnx")
             phi = properties.parse(property_artifact_dir / "class_localrobustness_0.py")
+            dnn.pprint()
+            print()
+            dnn.simplify().pprint()
             phi.concretize(N=dnn.simplify()[:-1])
             result = self.verifier.verify(phi).result
             if self.is_complete:

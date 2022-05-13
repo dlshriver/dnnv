@@ -1,5 +1,3 @@
-from typing import Union
-
 import numpy as np
 
 from ... import operations
@@ -34,7 +32,7 @@ class ConvertMul(Simplifier):
         else:
             return a * b
         input_shape = OperationGraph([input_op]).output_shape[0]
-        output_shape = np.broadcast_shapes(input_shape, c.shape)
+        output_shape = np.broadcast_shapes(input_shape, np.asarray(c).shape)
         if output_shape != input_shape:
             return operation
         c = np.broadcast_to(c, input_shape)
@@ -47,20 +45,6 @@ class ConvertMul(Simplifier):
             if np.size(c) > input_shape[-1]:
                 return operation
             w = np.diag(np.reshape(c, -1))
-        elif len(input_shape) == 4:
-            num_channels = input_shape[1]
-            if not np.size(c) == num_channels:
-                return operation
-            w = np.diag(np.reshape(c, -1)).reshape(num_channels, num_channels, 1, 1)
-            c = np.reshape(c, -1)
-            return operations.Conv(
-                input_op,
-                w,
-                c,
-                kernel_shape=np.array([num_channels, num_channels]),
-                pads=np.array([0, 0, 0, 0]),
-                strides=np.array([1, 1]),
-            )
         else:
             return operation
         return operations.Add(operations.MatMul(input_op, w), b)

@@ -1,5 +1,3 @@
-from copy import copy
-
 import numpy as np
 
 from ... import operations
@@ -22,9 +20,17 @@ class ConvertBatchNorm(Simplifier):
                 bias = np.zeros(weights.shape[0], dtype=weights.dtype)
             bias = a * bias + b
 
-            new_operation = copy(input_op)
-            new_operation.w = weights
-            new_operation.b = bias
+            new_operation = operations.Conv(
+                input_op.x,
+                weights,
+                bias,
+                dilations=input_op.dilations,
+                group=input_op.group,
+                kernel_shape=input_op.kernel_shape,
+                pads=input_op.pads,
+                strides=input_op.strides,
+                name=input_op.name,
+            )
             return new_operation
         elif isinstance(input_op, operations.Gemm):
             std = np.sqrt(operation.variance + operation.epsilon)
@@ -42,14 +48,16 @@ class ConvertBatchNorm(Simplifier):
             elif len(input_shape) == 4:
                 c = operation.mean.shape[0]
                 std = np.sqrt(operation.variance + operation.epsilon)
-                k = np.zeros(
+                W = np.zeros(
                     (c, c, 1, 1), dtype=input_dtype
                 )  # identity kernel (H, W, inC, outC)
                 for i in range(c):
-                    k[i, i, 0, 0] = 1
-                W = k * operation.scale / std
+                    W[i, i, 0, 0] = operation.scale[i] / std[i]
                 b = operation.bias - operation.scale * operation.mean / std
                 op = operations.Conv(input_op, W, b)
                 return op
         # TODO : in what other scenarios can BatchNorm be converted?
         return operation
+
+
+__all__ = ["ConvertBatchNorm"]
