@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from copy import deepcopy
-from typing import Optional, Sequence, Union
+from typing import Dict, Optional, Sequence, Tuple, Union
 
 from ..graph import OperationGraph
 from ..operations import Input, Operation
@@ -17,8 +16,10 @@ class Slicer(OperationTransformer):
 
         self.index = 0
         self.length = 0
-        self._index_cache = {}
-        self.current_pass = None
+        self._index_cache: Dict[
+            Operation, Tuple[Union[float, int], Union[float, int], Operation]
+        ] = {}
+        self.current_pass: Optional[str] = None
 
     def visit(self, operation: Operation) -> Union[Operation, Sequence[Operation]]:
         is_first = False
@@ -66,12 +67,24 @@ class Slicer(OperationTransformer):
             self.index -= 1
             self.length = max(self.length, -self.index)
             if operation not in self._index_cache:
-                self._index_cache[operation] = [float("inf"), float("-inf"), operation]
-            pos_index, neg_index, _ = self._index_cache[operation]
-            self._index_cache[operation][1] = max(neg_index, self.index)
+                self._index_cache[operation] = (
+                    float("inf"),
+                    float("-inf"),
+                    operation,
+                )
+            pos_index, neg_index, op = self._index_cache[operation]
+            self._index_cache[operation] = (
+                pos_index,
+                max(neg_index, self.index),
+                op,
+            )
             result = super().generic_visit(operation)
-            pos_index, neg_index, _ = self._index_cache[operation]
-            self._index_cache[operation][0] = min(pos_index, self.length + self.index)
+            pos_index, neg_index, op = self._index_cache[operation]
+            self._index_cache[operation] = (
+                min(pos_index, self.length + self.index),
+                neg_index,
+                op,
+            )
             self.index += 1
             return result
         elif self.current_pass == "selection":

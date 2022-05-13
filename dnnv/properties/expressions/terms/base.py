@@ -10,7 +10,10 @@ from ..logic import LogicalExpression
 
 class _CachedType(type):
     def __call__(
-        cls: _CachedType, *args: Any, ctx: Optional[Context] = None, **kwargs: Any
+        cls: _CachedType,
+        *args: Any,
+        ctx: Optional[Context] = None,
+        **kwargs: Any,
     ) -> Any:
         ctx = ctx or get_context()
         if cls not in ctx._instance_cache:
@@ -28,7 +31,10 @@ class _CachedType(type):
 
 
 class Term(
-    CallableExpression, ArithmeticExpression, LogicalExpression, metaclass=_CachedType
+    CallableExpression,
+    ArithmeticExpression,
+    LogicalExpression,
+    metaclass=_CachedType,
 ):
     pass
 

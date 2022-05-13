@@ -110,7 +110,9 @@ def to_vnnlib_property_file(
         mode="w+", dir=dirname, suffix=".vnnlib", delete=False
     ) as vnnlib_file:
         for line in as_vnnlib(
-            prop, translator_error=translator_error, extended_vnnlib=extended_vnnlib
+            prop,
+            translator_error=translator_error,
+            extended_vnnlib=extended_vnnlib,
         ):
             vnnlib_file.write(f"{line}\n")
         return vnnlib_file.name

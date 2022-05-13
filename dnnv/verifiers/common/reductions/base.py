@@ -23,7 +23,7 @@ class Reduction(ABC):
         self.reduction_error = reduction_error
 
     @abstractmethod
-    def reduce_property(self, phi: Expression) -> Iterator[Property]:
+    def reduce_property(self, expression: Expression) -> Iterator[Property]:
         raise NotImplementedError()
 
 

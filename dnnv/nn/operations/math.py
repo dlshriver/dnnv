@@ -1,7 +1,5 @@
 from typing import Optional
 
-import numpy as np
-
 from ..utils import as_numpy
 from .base import Operation
 

@@ -14,7 +14,10 @@ from .constant import Constant
 
 class Image(Term):
     def __init__(
-        self, path: Union[Expression, Path, str], *, ctx: Optional[Context] = None
+        self,
+        path: Union[Expression, Path, str],
+        *,
+        ctx: Optional[Context] = None,
     ):
         super().__init__(ctx=ctx)
         self.path = path

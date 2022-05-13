@@ -117,7 +117,9 @@ class DetailsInference(ExpressionVisitor):
                     ), f"{ctx.types[k]} != {self.types[k]}"
                 else:
                     if self.shapes[k].is_concrete:
-                        ctx.shapes[k] = self.shapes[k].value
+                        shape = self.shapes[k].value
+                        assert isinstance(shape, tuple)
+                        ctx.shapes[k] = shape
                     if self.types[k].is_concrete:
                         ctx.types[k] = self.types[k].value
 
@@ -438,10 +440,12 @@ class DetailsInference(ExpressionVisitor):
             self.types[expression.condition] == Constant(bool),
             expressions.Or(
                 Constant(np.can_cast)(
-                    self.types[expression.t_expr], self.types[expression.f_expr]
+                    self.types[expression.t_expr],
+                    self.types[expression.f_expr],
                 ),
                 Constant(np.can_cast)(
-                    self.types[expression.f_expr], self.types[expression.t_expr]
+                    self.types[expression.f_expr],
+                    self.types[expression.t_expr],
                 ),
             ),
         ]
@@ -501,7 +505,9 @@ class DetailsInference(ExpressionVisitor):
         self.assertions.extend(type_assertions)
 
         self.set_details(
-            expression, shape=self.shapes[expression.expr1], dtype=Constant(bool)
+            expression,
+            shape=self.shapes[expression.expr1],
+            dtype=Constant(bool),
         )
 
     def visit_LessThan(self, expression: expressions.LessThan):
@@ -711,4 +717,9 @@ class DetailsInference(ExpressionVisitor):
         self.set_details(expression)
 
 
-__all__ = ["DetailsInference", "DNNVInferenceError", "DNNVShapeError", "DNNVTypeError"]
+__all__ = [
+    "DetailsInference",
+    "DNNVInferenceError",
+    "DNNVShapeError",
+    "DNNVTypeError",
+]

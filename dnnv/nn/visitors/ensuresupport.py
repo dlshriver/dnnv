@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import typing
 from typing import Sequence, Type
 
-from .. import Operation
 from .base import OperationVisitor
+
+if typing.TYPE_CHECKING:
+    from .. import Operation
 
 
 class EnsureSupportVisitor(OperationVisitor):

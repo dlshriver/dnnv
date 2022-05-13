@@ -37,7 +37,9 @@ class ERAN(Verifier):
             float, default=1.0, help="Time limit for the MILP solver."
         ),
         "use_default_heuristic": Parameter(
-            bool, default=True, help="Whether or not to use the ERAN area heuristic."
+            bool,
+            default=True,
+            help="Whether or not to use the ERAN area heuristic.",
         ),
     }
 
@@ -69,7 +71,9 @@ class ERAN(Verifier):
             input_constraint_file.name,
             "-o",
             self._tmp_output_file.name,
-        ) + tuple(f"--{k}={v}" for k, v in self.parameters.items() if v is not None)
+        ) + tuple(
+            f"--{k}={v}" for k, v in self.parameter_values.items() if v is not None
+        )
         return args
 
     def parse_results(self, prop, results):

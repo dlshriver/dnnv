@@ -115,7 +115,8 @@ def _main():
                 (
                     Path(
                         os.path.join(
-                            os.getenv("XDG_DATA_HOME", "~/.local/share"), "dnnv"
+                            os.getenv("XDG_DATA_HOME", "~/.local/share"),
+                            "dnnv",
                         )
                     )
                     / "bin"
@@ -133,4 +134,4 @@ def _main():
 
 
 if __name__ == "__main__":
-    exit(_main())
+    _main()

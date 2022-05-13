@@ -7,6 +7,7 @@ from typing import Optional
 
 from .graph import OperationGraph
 from .operations import Operation
+from .parser.onnx import parse as parse_onnx
 from .transformers import OperationTransformer
 from .visitors import OperationVisitor
 
@@ -21,12 +22,10 @@ def try_parse_format(netname: Path) -> str:
 def parse(path: Path, net_format: Optional[str] = None) -> OperationGraph:
     if net_format is None:
         net_format = try_parse_format(path)
-    if net_format == "onnx":
-        from .parser.onnx import parse as _parse
-    else:
-        raise ValueError("Unsupported network format: %s" % net_format)
+    if net_format != "onnx":
+        raise ValueError(f"Unsupported network format: {net_format}")
 
-    return _parse(path)
+    return parse_onnx(path)
 
 
 __all__ = [

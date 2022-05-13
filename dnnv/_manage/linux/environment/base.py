@@ -16,7 +16,8 @@ class Environment:
                     os.getenv(
                         "VIRTUAL_ENV",
                         os.path.join(
-                            os.getenv("XDG_DATA_HOME", "~/.local/share"), "dnnv"
+                            os.getenv("XDG_DATA_HOME", "~/.local/share"),
+                            "dnnv",
                         ),
                     )
                 )

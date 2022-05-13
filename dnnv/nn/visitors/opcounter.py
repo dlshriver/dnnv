@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-import numpy as np
+import typing
 
-from .. import Operation, OperationGraph
 from .base import OperationVisitor
+
+if typing.TYPE_CHECKING:
+    from .. import Operation, OperationGraph
 
 
 class OperationCounter(OperationVisitor):

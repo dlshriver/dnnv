@@ -6,7 +6,7 @@ import sys
 from ...errors import InstallError, UninstallError
 from ..environment import Dependency, Environment, Installer, ProgramDependency
 
-runner_template = """#!{python_venv}/bin/python
+RUNNER_TEMPLATE = """#!{python_venv}/bin/python
 import argparse
 import numpy as np
 
@@ -92,6 +92,8 @@ class NnenumInstaller(Installer):
         verifier_venv_path.parent.mkdir(exist_ok=True, parents=True)
 
         python_major_version, python_minor_version = sys.version_info[:2]
+        python_version = f"python{python_major_version}.{python_minor_version}"
+        site_packages_dir = f"{verifier_venv_path}/lib/{python_version}/site-packages/"
 
         envvars = env.vars()
         commands = [
@@ -106,8 +108,18 @@ class NnenumInstaller(Installer):
             "git clone https://github.com/stanleybak/nnenum.git",
             f"cd {name}",
             f"git checkout {commit_hash}",
-            'pip install "numpy>=1.19,<1.22" "onnx>=1.8,<1.11" "onnxruntime>=1.7,<1.11" "scipy>=1.4.1<1.8" "threadpoolctl==2.1.0" "skl2onnx==1.7.0" "swiglpk" "termcolor"',
-            f"cp -r src/nnenum {verifier_venv_path}/lib/python{python_major_version}.{python_minor_version}/site-packages/",
+            (
+                "pip install"
+                ' "numpy>=1.19,<1.22"'
+                ' "onnx>=1.8,<1.11"'
+                ' "onnxruntime>=1.7,<1.11"'
+                ' "scipy>=1.4.1<1.8"'
+                ' "threadpoolctl==2.1.0"'
+                ' "skl2onnx==1.7.0"'
+                ' "swiglpk"'
+                ' "termcolor"'
+            ),
+            f"cp -r src/nnenum {site_packages_dir}",
         ]
         install_script = "; ".join(commands)
         proc = sp.run(install_script, shell=True, env=envvars)
@@ -115,7 +127,7 @@ class NnenumInstaller(Installer):
             raise InstallError(f"Installation of {name} failed")
 
         with open(installation_path / name, "w+") as f:
-            f.write(runner_template.format(python_venv=verifier_venv_path))
+            f.write(RUNNER_TEMPLATE.format(python_venv=verifier_venv_path))
         (installation_path / name).chmod(0o700)
 
 

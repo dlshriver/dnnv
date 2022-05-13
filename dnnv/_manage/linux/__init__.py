@@ -8,7 +8,7 @@ from typing import List
 
 from ..errors import *
 from .environment import Environment, ProgramDependency
-from .verifiers import *
+from .verifiers import import_verifier_module, verifier_choices
 
 
 def install(verifiers: List[str]) -> int:

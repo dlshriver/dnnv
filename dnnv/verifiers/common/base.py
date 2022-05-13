@@ -32,7 +32,15 @@ class Parameter:
     ):
         self.type: Callable[[Any], Any] = dtype
         if dtype == bool:
-            self.type = lambda x: x not in ["False", "false", "0", "F", "f", False, 0]
+            self.type = lambda x: x not in [
+                "False",
+                "false",
+                "0",
+                "F",
+                "f",
+                False,
+                0,
+            ]
         self.default = self.type(default) if default is not None else None
         self.choices = choices
         self.help = help
@@ -63,10 +71,10 @@ class Verifier(ABC):
         self.property = dnn_property
         self.eager_exit = eager_exit
         self.reraise_keyboardinterrupt = reraise_keyboardinterrupt
-        for key, value in kwargs.items():
+        for key in kwargs:
             if key not in self.__class__.parameters:
                 raise self.verifier_error(f"Unknown parameter: {key}")
-        self.parameters = {
+        self.parameter_values: Dict[str, Any] = {
             name: param.as_type(kwargs.get(name, param.default))
             for name, param in self.__class__.parameters.items()
         }
@@ -84,7 +92,7 @@ class Verifier(ABC):
 
     @contextmanager
     def contextmanager(self):
-        yield
+        yield self
 
     @classmethod
     def verify(cls, phi: Expression, **kwargs) -> VerificationResult:
@@ -121,12 +129,11 @@ class Verifier(ABC):
 
     def run(self) -> VerificationResult:
         if self.property.is_concrete:
-            if self.property.value == True:
+            if self.property.value:
                 self.logger.warning("Property is trivially UNSAT.")
                 return VerificationResult(UNSAT)
-            else:
-                self.logger.warning("Property is trivially SAT.")
-                return VerificationResult(SAT)
+            self.logger.warning("Property is trivially SAT.")
+            return VerificationResult(SAT)
         result = VerificationResult()
         orig_tempdir = tempfile.tempdir
         try:

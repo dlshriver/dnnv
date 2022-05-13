@@ -93,7 +93,8 @@ class Convert(Verifier):
             paths.append(
                 Path(
                     to_vnnlib_onnx_file(
-                        prop.op_graph.simplify(), translator_error=self.translator_error
+                        prop.op_graph.simplify(),
+                        translator_error=self.translator_error,
                     )
                 )
             )

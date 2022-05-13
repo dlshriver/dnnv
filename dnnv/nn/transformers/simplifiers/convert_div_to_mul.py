@@ -7,9 +7,7 @@ from .base import Simplifier
 
 
 class ConvertDivToMul(Simplifier):
-    def visit_Div(
-        self, operation: operations.Div
-    ) -> Union[operations.Div, operations.Mul]:
+    def visit_Div(self, operation: operations.Div) -> operations.Operation:
         if isinstance(operation.a, operations.Operation) and isinstance(
             operation.b, operations.Operation
         ):

@@ -5,6 +5,7 @@ from typing import Union
 
 import numpy as np
 
+from dnnv.nn.graph import OperationGraph
 from dnnv.properties.expressions.call import Compose
 
 from ..expressions import (
@@ -75,7 +76,9 @@ class PropagateConstants(GenericExpressionTransformer):
             new_expr = expression_type(*symbolic_expressions, ctx=expression.ctx)
         else:
             new_expr = expression_type(
-                Constant(concrete_expr_value), *symbolic_expressions, ctx=expression.ctx
+                Constant(concrete_expr_value),
+                *symbolic_expressions,
+                ctx=expression.ctx,
             )
         return new_expr
 
@@ -107,6 +110,8 @@ class PropagateConstants(GenericExpressionTransformer):
             result = expression.value
             if isinstance(result, Expression):
                 return result.propagate_constants()
+            if isinstance(result, OperationGraph):
+                return Network(str(expression)).concretize(result)
             return Constant(result)
         if (
             len(args) == 1

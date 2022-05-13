@@ -1,25 +1,39 @@
 """
 """
-from abc import ABC, abstractmethod
-from copy import deepcopy
+from abc import abstractmethod
 from typing import List, Optional, Type, Union
 
 import numpy as np
 
 from ...utils import get_subclasses
 from .. import OperationGraph
-from ..operations import *
+from ..operations import (
+    Activation,
+    Add,
+    Conv,
+    Flatten,
+    Gemm,
+    Input,
+    MatMul,
+    Operation,
+    OperationPattern,
+    Relu,
+    Reshape,
+    Sigmoid,
+    Tanh,
+    Transpose,
+)
 from ..transformers import DropPrefix
 from ..visitors import OperationCounter
 
 
 class _Layer(type):
-    def __new__(self, name, bases, namespace, **kwargs):
+    def __new__(cls, name, bases, namespace, **kwargs):
         if name == "Layer":
-            return super().__new__(self, name, bases, namespace, **kwargs)
-        if "OP_PATTERN" not in namespace:
-            raise TypeError(f"Layer {name} must specify `OP_PATTERN`")
-        op_pattern = namespace["OP_PATTERN"]
+            return super().__new__(cls, name, bases, namespace, **kwargs)
+        if "__pattern__" not in namespace:
+            raise TypeError(f"Layer {name} must specify `__pattern__`")
+        op_pattern = namespace["__pattern__"]
         if (
             op_pattern is not None
             and not isinstance(op_pattern, OperationPattern)
@@ -28,12 +42,8 @@ class _Layer(type):
                 or not issubclass(op_pattern, Operation)
             )
         ):
-            raise TypeError("`OP_PATTERN` must be an operation pattern")
-        return super().__new__(self, name, bases, namespace, **kwargs)
-
-    @property
-    def OP_PATTERN(self) -> Union[Type[Operation], OperationPattern, None]:
-        return self.__dict__["OP_PATTERN"]
+            raise TypeError("`__pattern__` must be an operation pattern")
+        return super().__new__(cls, name, bases, namespace, **kwargs)
 
 
 class LayerMatch:
@@ -43,6 +53,8 @@ class LayerMatch:
 
 
 class Layer(metaclass=_Layer):
+    __pattern__: Union[Type[Operation], OperationPattern, None]
+
     @classmethod
     @abstractmethod
     def from_operation_graph(cls, operation_graph):
@@ -68,9 +80,9 @@ class Layer(metaclass=_Layer):
         best_layer_type = Layer
         assert layer_types is not None
         for layer_type in layer_types:
-            if layer_type.OP_PATTERN is None:
+            if layer_type.__pattern__ is None:
                 continue
-            matches = layer_type.OP_PATTERN.match(operation_graph.outputs)
+            matches = layer_type.__pattern__.match(operation_graph.outputs)
             for match in matches:
                 op_count = 0
                 visitor = OperationCounter()
@@ -90,7 +102,7 @@ class Layer(metaclass=_Layer):
 
 
 class InputLayer(Layer):
-    OP_PATTERN = Input
+    __pattern__ = Input
 
     def __init__(self, shape, dtype):
         self.shape = tuple(shape)
@@ -104,7 +116,7 @@ class InputLayer(Layer):
 
 
 class FullyConnected(Layer):
-    OP_PATTERN = (
+    __pattern__ = (
         (((Transpose | None) >> (Flatten | Reshape)) | None)
         >> (Gemm | (MatMul >> Add))
         >> (Activation | None)
@@ -136,8 +148,8 @@ class FullyConnected(Layer):
             op = op[0]
         elif not isinstance(op, (Gemm, Add)):
             raise ValueError(
-                "Expected operation of type (Gemm | Add | Activation), but got %s"
-                % op.__class__.__name__
+                "Expected operation of type (Gemm | Add | Activation),"
+                f" but got {type(op).__name__}"
             )
 
         # get weights and biases
@@ -185,8 +197,7 @@ class FullyConnected(Layer):
             weights = op.b
         else:
             raise ValueError(
-                "Expected type (Gemm | (MatMul >> Add)), but got %s"
-                % op.__class__.__name__
+                f"Expected type (Gemm | (MatMul >> Add)), but got {type(op).__name__}"
             )
 
         op = op.inputs
@@ -196,8 +207,8 @@ class FullyConnected(Layer):
             return cls(weights, bias, activation=activation)
         if not isinstance(op, (Flatten, Reshape)):
             raise ValueError(
-                "Expected type (None | (Transpose >> (Flatten | Reshape))), but got %s"
-                % op.__class__.__name__
+                "Expected type (None | (Transpose >> (Flatten | Reshape))),"
+                f" but got {type(op).__name__}"
             )
         op = op.inputs
         # TODO : what is this check?
@@ -208,7 +219,7 @@ class FullyConnected(Layer):
         op = op[0]
         if isinstance(op, Input):
             return cls(weights, bias, activation=activation)
-        elif isinstance(op, Transpose):
+        if isinstance(op, Transpose):
             if not isinstance(op.x, Input):
                 raise ValueError("Expected Transpose to be applied to Input.")
             permutation = np.asarray(op.permutation)
@@ -221,19 +232,26 @@ class FullyConnected(Layer):
                 .flatten()
             )
         else:
-            raise ValueError(
-                "Expected type Transpose, but got %s" % op.__class__.__name__
-            )
+            raise ValueError(f"Expected type Transpose, but got {type(op).__name__}")
         return cls(
-            weights, bias, activation=activation, w_permutation=weights_permutation
+            weights,
+            bias,
+            activation=activation,
+            w_permutation=weights_permutation,
         )
 
 
 class Convolutional(Layer):
-    OP_PATTERN = Conv >> (Activation | None)
+    __pattern__ = Conv >> (Activation | None)
 
     def __init__(
-        self, weights, bias, activation=None, kernel_shape=None, strides=1, pads=0
+        self,
+        weights,
+        bias,
+        activation=None,
+        kernel_shape=None,
+        strides=1,
+        pads=0,
     ):
         self.weights = weights
         self.bias = bias
@@ -261,8 +279,8 @@ class Convolutional(Layer):
             op = op[0]
         elif not isinstance(op, Conv):
             raise ValueError(
-                "Expected operation of type (Conv | Activation), but got %s"
-                % op.__class__.__name__
+                "Expected operation of type (Conv | Activation),"
+                f" but got {type(op).__name__}"
             )
 
         # get weights, biases, and configuration
@@ -291,7 +309,7 @@ class Convolutional(Layer):
             strides = op.strides
             pads = op.pads
         else:
-            raise ValueError("Expected type Conv, but got %s" % op.__class__.__name__)
+            raise ValueError(f"Expected type Conv, but got {type(op).__name__}")
         return cls(
             weights,
             bias,

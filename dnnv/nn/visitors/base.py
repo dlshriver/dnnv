@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import typing
 from typing import List
 
-from ..graph import OperationGraph
-from ..operations import Operation
+if typing.TYPE_CHECKING:
+    from ..graph import OperationGraph
+    from ..operations import Operation
 
 
 class OperationVisitor:

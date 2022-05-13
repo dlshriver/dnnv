@@ -36,7 +36,7 @@ def convert(op_graph: OperationGraph):
         output_funcs.append(converter.visit(op))
 
     def func(*inputs, squeeze=True):
-        converter._cache.clear()
+        converter.clear_cache()
         outputs = []
         for output_func in output_funcs:
             output = output_func(*inputs)
@@ -92,6 +92,9 @@ class TensorflowConverter(OperationConverter):
 
         return wrapped_func
 
+    def clear_cache(self):
+        self._cache.clear()
+
     def visit_Add(self, operation):
         a_ = operation.a
         if isinstance(a_, Operation):
@@ -143,7 +146,10 @@ class TensorflowConverter(OperationConverter):
             strides = operation.strides
             num_pads = len(operation.pads)
             pads = tuple(
-                zip(operation.pads[: num_pads // 2], operation.pads[num_pads // 2 :])
+                zip(
+                    operation.pads[: num_pads // 2],
+                    operation.pads[num_pads // 2 :],
+                )
             )
 
             x_ndim = int(tf.rank(x))
@@ -218,7 +224,7 @@ class TensorflowConverter(OperationConverter):
 
         @self._cached
         def concat_func(*inputs):
-            tensors = x = _concretize(tensors_, inputs)
+            tensors = _concretize(tensors_, inputs)
             result = tf.concat(tensors, axis=operation.axis)
             return result
 
@@ -245,7 +251,10 @@ class TensorflowConverter(OperationConverter):
             assert np.all(operation.group == 1)
             num_pads = len(operation.pads)
             pads = tuple(
-                zip(operation.pads[: num_pads // 2], operation.pads[num_pads // 2 :])
+                zip(
+                    operation.pads[: num_pads // 2],
+                    operation.pads[num_pads // 2 :],
+                )
             )
 
             x_ndim = int(tf.rank(x))
@@ -285,7 +294,8 @@ class TensorflowConverter(OperationConverter):
                 conv_transpose = tf.nn.conv3d_transpose
             else:
                 raise NotImplementedError(
-                    f"{len(operation.kernel_shape)}d ConvTranspose operations are not currently supported."
+                    f"{len(operation.kernel_shape)}d ConvTranspose"
+                    " operations are not currently supported."
                 )
             if (
                 operation.auto_pad != "NOTSET"
@@ -309,7 +319,10 @@ class TensorflowConverter(OperationConverter):
 
             num_pads = len(operation.pads)
             pads = tuple(
-                zip(operation.pads[: num_pads // 2], operation.pads[num_pads // 2 :])
+                zip(
+                    operation.pads[: num_pads // 2],
+                    operation.pads[num_pads // 2 :],
+                )
             )
             if any(p != 0 for p in operation.pads):
                 raise NotImplementedError(
@@ -399,7 +412,8 @@ class TensorflowConverter(OperationConverter):
         def elu_func(*inputs):
             if operation.alpha != 1.0:
                 raise NotImplementedError(
-                    "The tensorflow converter currently does not support ELU activations with alpha other than 1.0"
+                    "Elu operations with alpha other than 1.0"
+                    " are not currently supported."
                 )
             x = _concretize([x_], inputs)
             result = tf.nn.elu(x)
@@ -489,7 +503,11 @@ class TensorflowConverter(OperationConverter):
 
             x = tf.transpose(x, (0, 2, 3, 1))
             result = tf.nn.pool(
-                x, x.shape[1:3], pooling_type="AVG", strides=(1, 1), padding="VALID"
+                x,
+                x.shape[1:3],
+                pooling_type="AVG",
+                strides=(1, 1),
+                padding="VALID",
             )
             result = tf.transpose(result, (0, 3, 1, 2))
             return result
@@ -519,12 +537,12 @@ class TensorflowConverter(OperationConverter):
                 for d1, d2 in zip(operation.shape[1:], x.shape[1:])
             ):
                 raise ValueError(
-                    "Incorrect input shape: %s != %s" % (operation.shape, x.shape)
+                    f"Incorrect input shape: {operation.shape} != {x.shape}"
                 )
             if x.dtype != operation.dtype:
                 raise TypeError(
-                    "Incorrect type, %s, for input %d. Expected type %s."
-                    % (x.dtype, input_idx, operation.dtype)
+                    f"Incorrect type, {x.dtype}, for input {input_idx}."
+                    f" Expected type {operation.dtype}."
                 )
             return tf.convert_to_tensor(x)
 
@@ -599,7 +617,10 @@ class TensorflowConverter(OperationConverter):
             strides = operation.strides
             num_pads = len(operation.pads)
             pads = tuple(
-                zip(operation.pads[: num_pads // 2], operation.pads[num_pads // 2 :])
+                zip(
+                    operation.pads[: num_pads // 2],
+                    operation.pads[num_pads // 2 :],
+                )
             )
 
             x_ndim = int(tf.rank(x))
@@ -662,7 +683,10 @@ class TensorflowConverter(OperationConverter):
                 raise ValueError(f"{mode} padding is not currently supported")
             num_pads = len(operation.pads)
             pads = tuple(
-                zip(operation.pads[: num_pads // 2], operation.pads[num_pads // 2 :])
+                zip(
+                    operation.pads[: num_pads // 2],
+                    operation.pads[num_pads // 2 :],
+                )
             )
             result = tf.pad(x, pads, mode=mode, constant_values=operation.value)
             return result

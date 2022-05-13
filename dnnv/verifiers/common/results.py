@@ -68,7 +68,11 @@ class PropertyCheckResult:
     def __and__(self, other):
         if not isinstance(other, PropertyCheckResult):
             return NotImplemented
-        if self not in (SAT, UNSAT, UNKNOWN) or other not in (SAT, UNSAT, UNKNOWN):
+        if self not in (SAT, UNSAT, UNKNOWN) or other not in (
+            SAT,
+            UNSAT,
+            UNKNOWN,
+        ):
             return UNKNOWN
         if self == UNSAT or other == UNSAT:
             return UNSAT

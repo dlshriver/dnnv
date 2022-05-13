@@ -163,7 +163,9 @@ class Expression:
         with self.ctx:
             return CanonicalTransformer().visit(self)
 
-    def concretize(self: ExpressionType, *args, **kwargs) -> ExpressionType:
+    def concretize(
+        self: ExpressionType, *args, **kwargs
+    ) -> Union[ExpressionType, Symbol]:
         from .terms import Symbol
 
         nargs = len(args)
@@ -279,7 +281,9 @@ class AssociativeExpression(Expression):
         if len(self.expressions) > 0:
             return reduce(self.OPERATOR, (expr.value for expr in self.expressions))
         return reduce(
-            self.OPERATOR, (expr.value for expr in self.expressions), self.BASE_VALUE
+            self.OPERATOR,
+            (expr.value for expr in self.expressions),
+            self.BASE_VALUE,
         )
 
     def __repr__(self):
@@ -301,7 +305,11 @@ class AssociativeExpression(Expression):
 
 class BinaryExpression(Expression):
     def __init__(
-        self, expr1: Expression, expr2: Expression, *, ctx: Optional[Context] = None
+        self,
+        expr1: Expression,
+        expr2: Expression,
+        *,
+        ctx: Optional[Context] = None,
     ):
         super().__init__(ctx=ctx)
         self.expr1 = expr1

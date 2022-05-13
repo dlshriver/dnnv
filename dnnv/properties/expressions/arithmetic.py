@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import operator
-from typing import Set, Type, TypeVar
+from typing import Type, TypeVar
 
 from .base import AssociativeExpression, BinaryExpression, Expression, UnaryExpression
 
@@ -90,4 +90,11 @@ class Divide(ArithmeticExpression, BinaryExpression):
     OPERATOR_SYMBOL = "/"
 
 
-__all__ = ["Add", "ArithmeticExpression", "Divide", "Multiply", "Negation", "Subtract"]
+__all__ = [
+    "Add",
+    "ArithmeticExpression",
+    "Divide",
+    "Multiply",
+    "Negation",
+    "Subtract",
+]

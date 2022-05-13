@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Hashable, List, Optional, Type, TypeVar
+from typing import Any, Dict, Hashable, List, Optional, Sequence, Type, TypeVar
 
 from .. import expressions
 
@@ -17,7 +17,7 @@ class Context:
         self._instance_cache: Dict[Type, Dict[Hashable, Any]] = {}
         self._prev_contexts: List[Context] = []
 
-        self.shapes: Dict[expressions.Expression, Any] = {}
+        self.shapes: Dict[expressions.Expression, Sequence[int]] = {}
         self.types: Dict[expressions.Expression, Any] = {}
 
     def __repr__(self):

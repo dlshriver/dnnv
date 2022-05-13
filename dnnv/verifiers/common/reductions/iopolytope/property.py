@@ -56,7 +56,10 @@ class IOPolytopeProperty(Property):
             return False, "NaN values in input."
         if not self.input_constraint.validate(*cex, threshold=threshold):
             return False, "Invalid counter example found: input outside bounds."
-        output = self.op_graph(*cex)
+        reshaped_cex = [
+            x.reshape(shape) for x, shape in zip(cex, self.op_graph.input_shape)
+        ]
+        output = self.op_graph(*reshaped_cex)
         if not self.output_constraint.validate(*output, threshold=threshold):
             return False, "Invalid counter example found: output outside bounds."
         return True, None
@@ -68,12 +71,15 @@ class IOPolytopeProperty(Property):
         Tuple[OperationGraph, Tuple[np.ndarray, np.ndarray]],
         Tuple[OperationGraph, Tuple[OperationGraph, ...]],
         Tuple[
-            OperationGraph, Tuple[np.ndarray, np.ndarray], Tuple[OperationGraph, ...]
+            OperationGraph,
+            Tuple[np.ndarray, np.ndarray],
+            Tuple[OperationGraph, ...],
         ],
     ]:
         if not isinstance(self.input_constraint, HyperRectangle):
             raise ValueError(
-                f"{type(self.input_constraint).__name__} input constraints are not yet supported"
+                f"{type(self.input_constraint).__name__} input constraints"
+                " are not yet supported"
             )
 
         suffixed_op_graph = self.suffixed_op_graph()

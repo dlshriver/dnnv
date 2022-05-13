@@ -9,7 +9,12 @@ from .terms import Constant
 
 class Slice(TernaryExpression):
     def __init__(
-        self, start: Any, stop: Any, step: Any, *, ctx: Optional[Context] = None
+        self,
+        start: Any,
+        stop: Any,
+        step: Any,
+        *,
+        ctx: Optional[Context] = None,
     ):
         start = start if isinstance(start, Expression) else Constant(start)
         stop = stop if isinstance(stop, Expression) else Constant(stop)

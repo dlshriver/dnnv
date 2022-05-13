@@ -6,6 +6,7 @@ from typing import Dict, List, Optional, Sequence, Tuple
 from . import operations
 from .operations import Input, Operation
 from .utils import TensorDetails
+from .visitors import PrintVisitor
 
 
 class OperationGraph:
@@ -102,7 +103,6 @@ class OperationGraph:
         return tf_convert(self)
 
     def compose(self, input_op_graph: OperationGraph) -> OperationGraph:
-        from . import operations
         from .transformers import OperationTransformer
 
         self_input_details = self.input_details
@@ -183,8 +183,6 @@ class OperationGraph:
         return self._is_linear
 
     def pprint(self):
-        from .visitors import PrintVisitor
-
         return PrintVisitor().walk(self)
 
     def simplify(self) -> OperationGraph:
@@ -207,13 +205,16 @@ class OperationGraph:
         return y
 
     def __getitem__(self, index):
+        from .transformers import Slicer
+
         if isinstance(index, slice):
             index = (index, list(range(len(self.outputs))))
         elif isinstance(index, int):
             index = (slice(None), [index])
         elif not isinstance(index, tuple):
             raise TypeError(
-                f"Unsupported type for indexing operation graph: {type(index).__name__!r}"
+                "Unsupported type for indexing operation graph:"
+                f" {type(index).__name__!r}"
             )
         elif len(index) > 2:
             raise TypeError(f"Unsupported indexing expression {index!r}")
@@ -223,7 +224,8 @@ class OperationGraph:
             )
         elif len(index) > 1 and not isinstance(index[1], int):
             raise TypeError(
-                f"Unsupported type for selecting operations: {type(index[1]).__name__!r}"
+                "Unsupported type for selecting operations:"
+                f" {type(index[1]).__name__!r}"
             )
 
         if index[0].step is not None and index[0].step != 1:

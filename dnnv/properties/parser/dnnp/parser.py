@@ -248,7 +248,10 @@ class Py2PropertyTransformer(ast.NodeTransformer):
         attributes = {"lineno": 0, "col_offset": 0}
         ext_slice_func = ast.Name("ExtSlice", ast.Load(), **attributes)
         new_node = ast.Call(
-            ext_slice_func, [self.visit(d) for d in node.dims], [], **attributes
+            ext_slice_func,
+            [self.visit(d) for d in node.dims],
+            [],
+            **attributes,
         )
         return new_node
 
@@ -378,7 +381,9 @@ def parse_str(
         "col_offset": property_node.col_offset,
     }
     module.body[-1] = ast.Assign(
-        [ast.Name("phi", ast.Store(), **attributes)], property_node.value, **attributes
+        [ast.Name("phi", ast.Store(), **attributes)],
+        property_node.value,
+        **attributes,
     )
 
     global_dict = SymbolFactory()
