@@ -3,7 +3,6 @@ from collections import defaultdict
 from pathlib import Path
 from typing import IO, Dict, Optional, Set, Type
 
-import logging
 import numpy as np
 import scipy.io
 
