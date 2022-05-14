@@ -118,6 +118,7 @@ def install(env: Environment):
             installer=MIPVerifyInstaller(),
             dependencies=(
                 ProgramDependency("julia", installer=JuliaInstaller()),
+                LibraryDependency("libjulia", installer=JuliaInstaller()),
                 ProgramDependency("git"),
                 HeaderDependency("zlib.h", installer=zlib_installer),
                 LibraryDependency("libz", installer=zlib_installer),
