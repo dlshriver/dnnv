@@ -10,9 +10,20 @@ from .errors import MIPVerifyError, MIPVerifyTranslatorError
 from .utils import to_mipverify_inputs
 
 
+from dnnv.verifiers.common.base import Parameter, Verifier
+
+
 class MIPVerify(Verifier):
     translator_error = MIPVerifyTranslatorError
     verifier_error = MIPVerifyError
+    parameters = {
+        "optimizer": Parameter(
+            str,
+            choices=["Gurobi", "GLPK", "HiGHS"],
+            default="Gurobi",
+            help="The optimizer to use (default: Gurobi).",
+        ),
+    }
 
     def build_inputs(self, prop):
         if prop.input_constraint.num_variables > 1:
@@ -21,18 +32,14 @@ class MIPVerify(Verifier):
             )
         lbs = prop.input_constraint.lower_bounds[0]
         ubs = prop.input_constraint.upper_bounds[0]
-        if (lbs >= 0).all() and (ubs <= 1).all():
-            op_graph = prop.suffixed_op_graph()
-            self._tmp_input_denormalizer = lambda x: x
-        else:
-            (
-                op_graph,
-                (new_lbs, new_ubs),
-                input_denormalizers,
-            ) = prop.prefixed_and_suffixed_op_graph(return_prefixes=True)
-            lbs = new_lbs[0]
-            ubs = new_ubs[0]
-            self._tmp_input_denormalizer = input_denormalizers[0]
+        (
+            op_graph,
+            (new_lbs, new_ubs),
+            input_denormalizers,
+        ) = prop.prefixed_and_suffixed_op_graph(return_prefixes=True)
+        lbs = new_lbs[0]
+        ubs = new_ubs[0]
+        self._tmp_input_denormalizer = input_denormalizers[0]
         output_dtype = op_graph.output_details[0].dtype
         two_class_output = operations.Gemm(
             op_graph.output_operations[0],
@@ -44,6 +51,7 @@ class MIPVerify(Verifier):
             lbs,
             ubs,
             robustness_op_graph,
+            optimizer=self.parameter_values["optimizer"],
             translator_error=self.translator_error,
         )
         self._tmp_output_file = mipverify_inputs["cex_file_path"]
@@ -55,19 +63,13 @@ class MIPVerify(Verifier):
         if "infeasible" in result:
             return UNSAT, None
         elif result == "optimal" or result == "trivial":
+            shape, dtype = prop.op_graph.input_details[0]
             with h5py.File(self._tmp_output_file, "r") as f:
                 cex_ds = f["cex"]
-                cex_ = cex = np.asarray(cex_ds).reshape(cex_ds.shape[::-1])
-            if cex.ndim == 4:
-                cex = cex.transpose((0, 3, 2, 1))
-            dtype = prop.op_graph.input_details[0].dtype
-            cex = cex.astype(dtype)
-
+                cex = np.asarray(cex_ds, dtype=dtype)
+            if len(shape) == 4:
+                cex = cex.transpose(0, 3, 2, 1)
+            cex = cex.reshape(shape)
             cex = self._tmp_input_denormalizer(cex)
-            lbs = prop.input_constraint.lower_bounds[0]
-            ubs = prop.input_constraint.upper_bounds[0]
-            if np.any(cex < lbs) or np.any(cex > ubs):
-                return UNKNOWN, None
-
             return SAT, cex
         raise self.translator_error(f"Unexpected verification result: {result}")

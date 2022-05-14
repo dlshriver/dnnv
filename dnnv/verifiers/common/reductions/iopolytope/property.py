@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -98,14 +98,14 @@ class IOPolytopeProperty(Property):
         suffixed_op_graph = self.suffixed_op_graph()
 
         class PrefixTransformer(OperationTransformer):
-            def __init__(self, lbs, ubs):
+            def __init__(self, lbs: Sequence[np.ndarray], ubs: Sequence[np.ndarray]):
                 super().__init__()
                 self.lbs = lbs
                 self.ubs = ubs
                 self._input_count = 0
-                self.final_lbs = []
-                self.final_ubs = []
-                self.prefix_ops = []
+                self.final_lbs: List[np.ndarray] = []
+                self.final_ubs: List[np.ndarray] = []
+                self.prefix_ops: List[operations.Operation] = []
 
             def visit_Input(
                 self, operation: operations.Input
@@ -114,7 +114,9 @@ class IOPolytopeProperty(Property):
                 new_op: Union[operations.Conv, operations.Gemm]
                 input_shape = self.lbs[self._input_count].shape
                 if len(input_shape) == 2:
-                    ranges = self.ubs[self._input_count] - self.lbs[self._input_count]
+                    ranges: np.ndarray = (
+                        self.ubs[self._input_count] - self.lbs[self._input_count]
+                    )
                     mins = self.lbs[self._input_count]
                     new_op = operations.Gemm(
                         operation,
@@ -124,26 +126,32 @@ class IOPolytopeProperty(Property):
                     self.final_lbs.append(np.zeros_like(mins))
                     self.final_ubs.append(np.ones_like(mins))
                 elif len(input_shape) == 4:
-                    b = self.lbs[self._input_count].min(axis=(0, 2, 3))
-                    r = self.ubs[self._input_count].max(axis=(0, 2, 3)) - b
-                    c = len(r)
-                    w = np.zeros((c, c, 1, 1))
-                    for i in range(c):
-                        w[i, i, 0, 0] = 1
-                    w = w * r.reshape((c, 1, 1, 1))
+                    ranges = (
+                        self.ubs[self._input_count] - self.lbs[self._input_count]
+                    ).astype(dtype)
+                    mins = self.lbs[self._input_count].astype(dtype)
+
+                    _, nc, nh, nw = input_shape
+                    n = nc * nh * nw
+                    w1 = np.zeros((n, nc, nh, nw), dtype=dtype)
+                    b1 = mins.flatten()
+                    for idx, (c, h, w) in enumerate(np.ndindex(nc, nh, nw)):
+                        w1[idx, c, h, w] = ranges[0, c, h, w]
+                    conv_1 = operations.Conv(operation, w1, b1)
+
+                    w2 = np.zeros((nc, n, nh, nw), dtype=dtype)
+                    b2 = np.zeros(nc, dtype=dtype)
+                    for idx, (c, h, w) in enumerate(np.ndindex(nc, nh, nw)):
+                        w2[c, idx, nh - h - 1, nw - w - 1] = 1
                     new_op = operations.Conv(
-                        operation, w.astype(dtype), b.astype(dtype)
+                        conv_1,
+                        w2,
+                        b2,
+                        pads=np.array([nh - 1, nw - 1, nh - 1, nw - 1]),
                     )
-                    tile_shape = list(self.lbs[self._input_count].shape)
-                    tile_shape[1] = 1
-                    tiled_b = np.tile(b.reshape((1, -1, 1, 1)), tile_shape)
-                    tiled_r = np.tile(r.reshape((1, -1, 1, 1)), tile_shape)
-                    self.final_lbs.append(
-                        (self.lbs[self._input_count] - tiled_b) / tiled_r
-                    )
-                    self.final_ubs.append(
-                        (self.ubs[self._input_count] - tiled_b) / tiled_r
-                    )
+
+                    self.final_lbs.append(np.zeros_like(mins))
+                    self.final_ubs.append(np.ones_like(mins))
                 else:
                     raise NotImplementedError(
                         f"Cannot prefix network with input shape {input_shape}"

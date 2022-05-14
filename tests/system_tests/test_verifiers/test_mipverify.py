@@ -1,4 +1,5 @@
 import unittest
+from functools import partial
 
 from system_tests.test_verifiers.utils import VerifierTests
 
@@ -9,11 +10,8 @@ from dnnv.verifiers.mipverify import MIPVerify
 class MIPVerifyVerifierTests(VerifierTests, unittest.TestCase):
     def initialize(self):
         self.verifier = MIPVerify
+        self.verifier.verify = partial(self.verifier.verify, optimizer="HiGHS")
         self.is_complete = False
-
-    @unittest.skip("MIPVerify throws unexpected error.")
-    def test_a_gt_b_localrobustness_sat(self):
-        super().test_a_gt_b_localrobustness_sat()
 
 
 if __name__ == "__main__":
