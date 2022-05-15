@@ -41,6 +41,16 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      - uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cache/dnnv
+            ~/.cache/pip
+          key: dnnv-${{ runner.os }}-${{ matrix.python-version }}
+          restore-keys: |
+            dnnv-${{ runner.os }}-
+            dnnv-
+
       - name: Install DNNV
         run: |
           python -m venv .venv
