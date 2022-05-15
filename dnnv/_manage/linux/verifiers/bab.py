@@ -86,7 +86,7 @@ if __name__ == "__main__":
 
 class BaBInstaller(Installer):
     def run(self, env: Environment, dependency: Dependency):
-        commit_hash = "d0e20ee"
+        commit_hash = "d0e20eed8d395c723d7b2903746feb7d0ec7db1c"
 
         cache_dir = env.cache_dir / f"bab-{commit_hash}"
         cache_dir.mkdir(exist_ok=True, parents=True)

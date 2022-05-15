@@ -78,6 +78,8 @@ class MNISTTests(unittest.TestCase):
         excluded_verifiers = {
             "bab",  # too slow
             "babsb",  # too slow
+            "mipverify",  # too slow
+            "mipverify_HiGHS",  # too slow
             "planet",  # too slow
             "reluplex",  # too slow
             "verinet",  # returns error # TODO: fix?
@@ -99,12 +101,12 @@ class MNISTTests(unittest.TestCase):
                 result, _ = verifier.verify(phi, **VERIFIER_KWARGS.get(name, {}))
                 self.check_results(result, results)
 
-    @unittest.skip("Too slow")
     def test_convSmallRELU__Point(self):
         excluded_verifiers = {
             "bab",  # too slow
             "babsb",  # too slow
             "mipverify",  # too slow
+            "mipverify_HiGHS",  # too slow
             "planet",  # too slow
             "reluplex",  # doesn't support Conv
         }
@@ -132,7 +134,6 @@ class MNISTTests(unittest.TestCase):
             "bab",  # too slow
             "babsb",  # too slow
             "marabou",  # too slow
-            "mipverify",  # property not supported (multiple epsilon values) # TODO : fix? is this still the case?
             "mipverify_HiGHS",  # too slow
             "planet",  # too slow
             "reluplex",  # too slow
