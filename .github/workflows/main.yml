@@ -8,19 +8,19 @@ on:
   push:
     branches: [main, develop]
     paths:
-    - ".github/**"
-    - "dnnv/**"
-    - "tests/**"
-    - "pyproject.toml"
-    - "requirements.txt"
+      - ".github/**"
+      - "dnnv/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "requirements.txt"
   pull_request:
     branches: [main, develop]
     paths:
-    - ".github/**"
-    - "dnnv/**"
-    - "tests/**"
-    - "pyproject.toml"
-    - "requirements.txt"
+      - ".github/**"
+      - "dnnv/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "requirements.txt"
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -86,6 +86,11 @@ jobs:
         run: |
           . .venv/bin/activate
           dnnv_manage install marabou
+
+      - name: "Install Verifier: MIPVerify"
+        run: |
+          . .venv/bin/activate
+          dnnv_manage install mipverify
 
       - name: "Install Verifier: nnenum"
         run: |

@@ -51,8 +51,10 @@ class MIPVerifyInstaller(Installer):
                 'Pkg.add("MathOptInterface");'
                 'Pkg.add("JuMP");'
                 'Pkg.add("MAT");'
-                'Pkg.add("MIPVerify");'
-                "Pkg.update();"
+                'Pkg.add("GLPK");'
+                'Pkg.add("HiGHS");'
+                'Pkg.add(name="MIPVerify", version="0.3");'
+                "Pkg.build();"
                 "Pkg.precompile();"
                 "'"
             ),
@@ -116,6 +118,7 @@ def install(env: Environment):
             installer=MIPVerifyInstaller(),
             dependencies=(
                 ProgramDependency("julia", installer=JuliaInstaller()),
+                LibraryDependency("libjulia", installer=JuliaInstaller()),
                 ProgramDependency("git"),
                 HeaderDependency("zlib.h", installer=zlib_installer),
                 LibraryDependency("libz", installer=zlib_installer),

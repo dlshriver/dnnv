@@ -209,7 +209,7 @@ class OnnxConverter(OperationVisitor):
             b = self._to_onnx_proto(operation.b, f"{opname}.b")
             inputs.append(b.name)
         elif self.add_missing_optional_inputs:
-            b_ = np.zeros(w.shape[0], dtype=w.dtype)
+            b_ = np.zeros(operation.w.shape[0], dtype=operation.w.dtype)
             b = self._to_onnx_proto(b_, f"{opname}.b")
             inputs.append(b.name)
 

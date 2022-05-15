@@ -27,7 +27,8 @@ VERIFIERS = {
     # "eran_refinezono": ERAN, # TODO : is_installed (needs to check for gurobi license)
     # "eran_refinepoly": ERAN, # TODO : is_installed (needs to check for gurobi license)
     "marabou": Marabou,
-    "mipverify": MIPVerify,
+    # "mipverify": MIPVerify, # TODO : is_installed (needs to check for gurobi license)
+    "mipverify_HiGHS": MIPVerify,
     "neurify": Neurify,
     "nnenum": Nnenum,
     "planet": Planet,
@@ -40,6 +41,7 @@ VERIFIER_KWARGS = {
     "eran_deeppoly": {"domain": "deeppoly"},
     "eran_refinezono": {"domain": "refinezono"},
     "eran_refinepoly": {"domain": "refinepoly"},
+    "mipverify_HiGHS": {"optimizer": "HiGHS"},
 }
 
 
@@ -130,7 +132,8 @@ class MNISTTests(unittest.TestCase):
             "bab",  # too slow
             "babsb",  # too slow
             "marabou",  # too slow
-            "mipverify",  # property not supported (multiple epsilon values) # TODO : fix?
+            "mipverify",  # property not supported (multiple epsilon values) # TODO : fix? is this still the case?
+            "mipverify_HiGHS",  # too slow
             "planet",  # too slow
             "reluplex",  # too slow
         }
