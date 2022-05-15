@@ -97,6 +97,8 @@ class MarabouInstaller(Installer):
         python_version = f"python{python_major_version}.{python_minor_version}"
         site_packages_dir = f"{verifier_venv_path}/lib/{python_version}/site-packages/"
 
+        marabou_url = "https://github.com/NeuralNetworkVerification/Marabou.git"
+
         commands = [
             "set -ex",
             f"cd {verifier_venv_path.parent}",
@@ -111,11 +113,10 @@ class MarabouInstaller(Installer):
                 ' "onnxruntime>=1.7,<1.11"'
             ),
             f"cd {cache_dir}",
-            "rm -rf Marabou",
-            "git clone https://github.com/NeuralNetworkVerification/Marabou.git",
+            "if [ ! -e Marabou ]",
+            "then git clone https://github.com/NeuralNetworkVerification/Marabou.git",
             "cd Marabou",
             f"git checkout {commit_hash}",
-            "rm -rf build",
             "mkdir -p build",
             "cd build",
             "mkdir -p OpenBlas",
@@ -123,6 +124,8 @@ class MarabouInstaller(Installer):
             f"ln -s {openblas_path} {cache_dir}/Marabou/build/OpenBlas/installed",
             f"cmake -D OPENBLAS_DIR={cache_dir}/Marabou/build/OpenBlas ..",
             "cmake --build .",
+            "else cd Marabou/build",
+            "fi",
             f"cp -r ../maraboupy {site_packages_dir}",
         ]
         install_script = "; ".join(commands)

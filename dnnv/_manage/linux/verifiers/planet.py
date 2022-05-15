@@ -35,8 +35,8 @@ class PlanetInstaller(Installer):
         commands = [
             "set -ex",
             f"cd {cache_dir}",
-            "rm -rf planet",
-            "git clone https://github.com/progirep/planet.git",
+            "if [ ! -e planet ]",
+            "then git clone https://github.com/progirep/planet.git",
             "cd planet",
             f"git checkout {commit_hash}",
             "cd src",
@@ -52,6 +52,8 @@ class PlanetInstaller(Installer):
                 " main.o verifierContext.o supersetdatabase.o"
                 f" {library_options}"
             ),
+            "else cd planet/src",
+            "fi",
             f"cp planet {installation_path}",
         ]
         install_script = "; ".join(commands)

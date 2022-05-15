@@ -133,8 +133,8 @@ class ELINAInstaller(Installer):
         commands = [
             "set -ex",
             f"cd {cache_dir}",
-            "rm -rf ELINA",
-            "git clone https://github.com/eth-sri/ELINA.git",
+            "if [ ! -e ELINA ]",
+            "then git clone https://github.com/eth-sri/ELINA.git",
             "cd ELINA",
             f"git checkout {commit_hash}",
             (
@@ -149,6 +149,7 @@ class ELINAInstaller(Installer):
             ),
             "make",
             "make install",
+            "fi",
             f"cd {installation_path}",
             "rm -rf ELINA",
             f"cp -r {cache_dir}/ELINA .",
@@ -210,10 +211,12 @@ class ERANInstaller(Installer):
             f"cd {gurobi_path}",
             "python setup.py install",
             f"cd {cache_dir}",
-            "rm -rf eran",
-            "git clone https://github.com/eth-sri/eran.git",
+            "if [ ! -e eran ]",
+            "then git clone https://github.com/eth-sri/eran.git",
             "cd eran",
             f"git checkout {commit_hash}",
+            "else cd eran",
+            "fi",
             f"cp -r tf_verify/* {site_packages_dir}",
         ]
         install_script = "; ".join(commands)

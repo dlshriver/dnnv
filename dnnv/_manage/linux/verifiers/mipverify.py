@@ -17,7 +17,7 @@ from ..environment import (
 MIPVERIFY_RUNNER = """#!/bin/bash
 export GUROBI_HOME={gurobi_home}
 cd {venv_path}
-./julia --project=. $@
+./julia --project=. -g 0 --track-allocation=none --code-coverage=none -O0 $@
 """
 
 

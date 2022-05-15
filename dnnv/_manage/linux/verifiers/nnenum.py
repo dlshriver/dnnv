@@ -103,12 +103,6 @@ class NnenumInstaller(Installer):
             f"python -m venv {name}",
             f". {name}/bin/activate",
             "pip install --upgrade pip",
-            f"cd {cache_dir}",
-            f"rm -rf {name}",
-            "git clone https://github.com/stanleybak/nnenum.git",
-            f"cd {name}",
-            f"git checkout {commit_hash}",
-            # "pip install -r requirements.txt",
             (
                 "pip install"
                 ' "numpy>=1.19,<1.22"'
@@ -120,6 +114,13 @@ class NnenumInstaller(Installer):
                 ' "swiglpk"'
                 ' "termcolor"'
             ),
+            f"cd {cache_dir}",
+            f"if [ ! -e {name} ]",
+            "then git clone https://github.com/stanleybak/nnenum.git",
+            f"cd {name}",
+            f"git checkout {commit_hash}",
+            f"else cd {name}",
+            "fi",
             f"cp -r src/nnenum {site_packages_dir}",
         ]
         install_script = "; ".join(commands)

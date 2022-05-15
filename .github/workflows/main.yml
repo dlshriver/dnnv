@@ -27,17 +27,42 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "test"
-  test:
-    # The type of runner that the job will run on
+  unit-tests:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: [3.7, 3.8, 3.9]
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
+      - uses: actions/checkout@v2
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install DNNV
+        run: |
+          python -m venv .venv
+          . .venv/bin/activate
+          pip install --upgrade pip
+          pip install .[test]
+
+      - name: Run DNNV Unit Tests
+        run: |
+          export TF_CPP_MIN_LOG_LEVEL=3
+          . .venv/bin/activate
+          coverage run -m pytest tests/unit_tests
+          coverage combine
+          coverage xml
+
+      - name: Upload Coverage to Codecov
+        uses: codecov/codecov-action@v1
+  system-tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.7, 3.8, 3.9]
+    steps:
       - uses: actions/checkout@v2
 
       - name: Set up Python ${{ matrix.python-version }}
@@ -59,8 +84,8 @@ jobs:
         run: |
           python -m venv .venv
           . .venv/bin/activate
-          pip install --upgrade pip flit
-          flit install
+          pip install --upgrade pip
+          pip install .[test]
 
       - name: "Install Verifier: Reluplex"
         run: |
@@ -97,16 +122,11 @@ jobs:
           . .venv/bin/activate
           dnnv_manage install nnenum
 
-      - name: Prepare Test Artifacts
-        run: |
-          . .venv/bin/activate
-          python tests/system_tests/artifacts/build_artifacts.py
-
       - name: Run DNNV Test Suite
         run: |
           export TF_CPP_MIN_LOG_LEVEL=3
           . .venv/bin/activate
-          coverage run
+          coverage run -m pytest tests/system_tests
           coverage combine
           coverage xml
 

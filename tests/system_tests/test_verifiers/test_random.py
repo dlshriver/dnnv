@@ -160,15 +160,10 @@ class RandomTests(unittest.TestCase):
     def test_random_conv_0(self):
         os.environ["OUTPUT_LAYER"] = "-1"
         excluded_configs = {
-            ("mipverify", 0.01),  # too slow
-            ("mipverify", 0.1),  # too slow
-            ("mipverify", 0.5),  # too slow
-            ("mipverify", 1.0),  # too slow
             ("reluplex", 0.01),  # conv unsupported
             ("reluplex", 0.1),  # conv unsupported
             ("reluplex", 0.5),  # conv unsupported
             ("reluplex", 1.0),  # conv unsupported
-            ("nnenum", 0.5),  # too slow
         }
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
@@ -192,10 +187,6 @@ class RandomTests(unittest.TestCase):
     def test_random_conv_1(self):
         os.environ["OUTPUT_LAYER"] = "-1"
         excluded_configs = {
-            ("mipverify", 0.01),  # too slow
-            ("mipverify", 0.1),  # too slow
-            ("mipverify", 0.5),  # too slow
-            ("mipverify", 1.0),  # too slow
             ("reluplex", 0.01),  # conv unsupported
             ("reluplex", 0.1),  # conv unsupported
             ("reluplex", 0.5),  # conv unsupported
@@ -224,10 +215,6 @@ class RandomTests(unittest.TestCase):
     def test_random_conv_2(self):
         os.environ["OUTPUT_LAYER"] = "-1"
         excluded_configs = {
-            ("mipverify", 0.01),  # too slow
-            ("mipverify", 0.1),  # too slow
-            ("mipverify", 0.5),  # too slow
-            ("mipverify", 1.0),  # too slow
             ("reluplex", 0.01),  # conv unsupported
             ("reluplex", 0.1),  # conv unsupported
             ("reluplex", 0.5),  # conv unsupported
@@ -276,7 +263,6 @@ class RandomTests(unittest.TestCase):
     def test_hyperlocal_random_conv_0(self):
         os.environ["OUTPUT_LAYER"] = "-1"
         excluded_verifiers = {
-            "mipverify",
             "reluplex",
             "verinet",
         }
@@ -303,65 +289,6 @@ class RandomTests(unittest.TestCase):
                     phi = properties.parse(
                         property_artifact_dir / "hyperlocalrobustness.py"
                     )
-                    phi.concretize(N=dnn)
-                    result, _ = verifier.verify(phi, **VERIFIER_KWARGS.get(name, {}))
-                    self.check_results(result, results)
-
-    def test_max_positive(self):
-        excluded_verifiers = {
-            "neurify",  # does not support MaxPool
-            "nnenum",  # does not support MaxPool
-            "reluplex",  # does not support MaxPool
-        }
-        excluded_configs = {}
-        for epsilon in [0.01, 0.1, 0.5, 1.0]:
-            os.environ["EPSILON"] = str(epsilon)
-            for i in range(RUNS_PER_PROP):
-                os.environ["SEED"] = str(i)
-                results = []
-                for name, verifier in VERIFIERS.items():
-                    if (name, epsilon) in excluded_configs:
-                        continue
-                    if name in excluded_verifiers:
-                        continue
-                    if not verifier.is_installed():
-                        continue
-                    self.reset_property_context()
-                    dnn = nn.parse(
-                        network_artifact_dir / "max_positive.onnx"
-                    ).simplify()
-                    phi = properties.parse(property_artifact_dir / "max_positive.py")
-                    phi.concretize(N=dnn)
-                    result, _ = verifier.verify(phi, **VERIFIER_KWARGS.get(name, {}))
-                    self.check_results(result, results)
-
-    def test_max_positive_nonstandard(self):
-        excluded_verifiers = {
-            "eran_deeppoly",  # segfaults # TODO: find out why (MaxPool not supported?)
-            "eran_deepzono",  # incorrect # TODO: find out why (MaxPool not supported?)
-            "neurify",  # does not support MaxPool
-            "nnenum",  # does not support MaxPool
-            "planet",  # does not support standalone Relus # TODO (fix this)
-            "reluplex",  # does not support MaxPool
-        }
-        excluded_configs = {}
-        for epsilon in [0.01, 0.1, 0.5, 1.0]:
-            os.environ["EPSILON"] = str(epsilon)
-            for i in range(RUNS_PER_PROP):
-                os.environ["SEED"] = str(i)
-                results = []
-                for name, verifier in VERIFIERS.items():
-                    if (name, epsilon) in excluded_configs:
-                        continue
-                    if name in excluded_verifiers:
-                        continue
-                    if not verifier.is_installed():
-                        continue
-                    self.reset_property_context()
-                    dnn = nn.parse(
-                        network_artifact_dir / "max_positive_nonstandard.onnx"
-                    ).simplify()
-                    phi = properties.parse(property_artifact_dir / "max_positive.py")
                     phi.concretize(N=dnn)
                     result, _ = verifier.verify(phi, **VERIFIER_KWARGS.get(name, {}))
                     self.check_results(result, results)

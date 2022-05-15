@@ -49,27 +49,28 @@ class SqueezeGemms(Simplifier):
                 return operation
             flatten_op = operation.a
             conv_op = flatten_op.x
-            conv_op_graph = OperationGraph([conv_op])
+            conv_op_graph = OperationGraph([conv_op])[-1:]
             conv_output_shape = conv_op_graph.output_shape[0]
             conv_input_shape = conv_op_graph.input_shape[0]
             dtype = operation.b.dtype
-            if conv_output_shape[1:] != conv_input_shape[1:]:
+            flat_output_shape = np.product(conv_output_shape[1:])
+            if conv_output_shape[1:] == conv_input_shape[1:]:
+                W = np.zeros((flat_output_shape, flat_output_shape), dtype=dtype)
+                for (b, i, h, w) in np.ndindex(*conv_output_shape):
+                    for j in range(conv_input_shape[1]):
+                        k = np.ravel_multi_index((b, i, h, w), conv_output_shape)
+                        l = np.ravel_multi_index((b, j, h, w), conv_output_shape)
+                        W[l, k] = conv_op.w[i, j, 0, 0]
+            else:
                 # TODO : handle this case
                 return operation
-            flat_shape = np.product(conv_output_shape[1:])
-            W = np.zeros((flat_shape, flat_shape), dtype=dtype)
-            for (b, i, h, w) in np.ndindex(*conv_output_shape):
-                for j in range(conv_output_shape[1]):
-                    k = np.ravel_multi_index((b, i, h, w), conv_output_shape)
-                    l = np.ravel_multi_index((b, j, h, w), conv_output_shape)
-                    W[l, k] = conv_op.w[i, j, 0, 0]
             op_b = operation.b.T if operation.transpose_b else operation.b
             W = W @ op_b
             bias: Optional[np.ndarray] = np.array(0, dtype=dtype)
             if conv_op.b is None and operation.c is None:
                 bias = None
             if conv_op.b is not None:
-                bias = np.zeros(flat_shape, dtype=dtype)
+                bias = np.zeros(flat_output_shape, dtype=dtype)
                 for (b, i, h, w) in np.ndindex(*conv_output_shape):
                     k = np.ravel_multi_index((b, i, h, w), conv_output_shape)
                     bias[k] = conv_op.b[i]
