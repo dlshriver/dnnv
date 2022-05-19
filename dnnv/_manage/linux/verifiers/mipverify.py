@@ -17,7 +17,7 @@ from ..environment import (
 MIPVERIFY_RUNNER = """#!/bin/bash
 export GUROBI_HOME={gurobi_home}
 cd {venv_path}
-./julia --project=. $@
+./julia --project=. -g 0 --track-allocation=none --code-coverage=none -O0 $@
 """
 
 
@@ -51,8 +51,10 @@ class MIPVerifyInstaller(Installer):
                 'Pkg.add("MathOptInterface");'
                 'Pkg.add("JuMP");'
                 'Pkg.add("MAT");'
-                'Pkg.add("MIPVerify");'
-                "Pkg.update();"
+                'Pkg.add("GLPK");'
+                'Pkg.add("HiGHS");'
+                'Pkg.add(name="MIPVerify", version="0.3");'
+                "Pkg.build();"
                 "Pkg.precompile();"
                 "'"
             ),
@@ -116,6 +118,7 @@ def install(env: Environment):
             installer=MIPVerifyInstaller(),
             dependencies=(
                 ProgramDependency("julia", installer=JuliaInstaller()),
+                LibraryDependency("libjulia", installer=JuliaInstaller()),
                 ProgramDependency("git"),
                 HeaderDependency("zlib.h", installer=zlib_installer),
                 LibraryDependency("libz", installer=zlib_installer),

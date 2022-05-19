@@ -38,12 +38,14 @@ class NeurifyInstaller(Installer):
         commands = [
             "set -ex",
             f"cd {cache_dir}",
-            "rm -rf Neurify",
-            "git clone https://github.com/dlshriver/Neurify.git",
+            "if [ ! -e Neurify ]",
+            "then git clone https://github.com/dlshriver/Neurify.git",
             "cd Neurify",
             f"git checkout {commit_hash}",
             "cd generic",
             f'make {ld_flags} LPFLAGS="" {include_flags}',
+            "else cd Neurify/generic",
+            "fi",
             f"cp src/neurify {installation_path}",
         ]
         install_script = "; ".join(commands)

@@ -19,11 +19,13 @@ class ReluplexInstaller(Installer):
         commands = [
             "set -ex",
             f"cd {cache_dir}",
-            "rm -rf ReluplexCav2017",
-            "git clone https://github.com/dlshriver/ReluplexCav2017.git",
+            "if [ ! -e ReluplexCav2017 ]",
+            "then git clone https://github.com/dlshriver/ReluplexCav2017.git",
             "cd ReluplexCav2017",
             f"git checkout {commit_hash}",
             "make",
+            "else cd ReluplexCav2017",
+            "fi",
             (
                 "cp"
                 " check_properties/generic_prover/generic_prover.elf"

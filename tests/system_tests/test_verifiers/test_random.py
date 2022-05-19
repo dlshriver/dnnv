@@ -1,5 +1,6 @@
 import os
 import unittest
+from typing import Dict
 
 from system_tests.utils import network_artifact_dir, property_artifact_dir
 
@@ -8,6 +9,7 @@ from dnnv.properties import get_context
 from dnnv.verifiers import SAT, UNKNOWN, UNSAT
 from dnnv.verifiers.bab import BaB
 from dnnv.verifiers.babsb import BaBSB
+from dnnv.verifiers.common.base import Verifier
 from dnnv.verifiers.eran import ERAN
 from dnnv.verifiers.marabou import Marabou
 from dnnv.verifiers.mipverify import MIPVerify
@@ -19,17 +21,30 @@ from dnnv.verifiers.verinet import VeriNet
 
 RUNS_PER_PROP = int(os.environ.get("_DNNV_TEST_RUNS_PER_PROP", "1"))
 
-VERIFIERS = {
+
+VERIFIERS: Dict[str, Verifier] = {
     "bab": BaB,
     "babsb": BaBSB,
-    "eran": ERAN,
+    "eran_deepzono": ERAN,
+    "eran_deeppoly": ERAN,
+    # "eran_refinezono": ERAN, # TODO : is_installed (needs to check for gurobi license)
+    # "eran_refinepoly": ERAN, # TODO : is_installed (needs to check for gurobi license)
     "marabou": Marabou,
-    "mipverify": MIPVerify,
+    # "mipverify": MIPVerify, # TODO : is_installed (needs to check for gurobi license)
+    "mipverify_HiGHS": MIPVerify,
     "neurify": Neurify,
     "nnenum": Nnenum,
     "planet": Planet,
     "reluplex": Reluplex,
     "verinet": VeriNet,
+}
+
+VERIFIER_KWARGS: Dict[str, Dict[str, str]] = {
+    "eran_deepzono": {"domain": "deepzono"},
+    "eran_deeppoly": {"domain": "deeppoly"},
+    "eran_refinezono": {"domain": "refinezono"},
+    "eran_refinepoly": {"domain": "refinepoly"},
+    "mipverify_HiGHS": {"optimizer": "HiGHS"},
 }
 
 
@@ -84,7 +99,9 @@ class RandomTests(unittest.TestCase):
                     dnn = nn.parse(network_artifact_dir / "random_fc_0.onnx")
                     phi = properties.parse(property_artifact_dir / "localrobustness.py")
                     phi.concretize(N=dnn)
-                    result = verifier.verify(phi).result
+                    result = verifier.verify(
+                        phi, **VERIFIER_KWARGS.get(name, {})
+                    ).result
                     self.check_results(result, results)
 
     def test_random_fc_1(self):
@@ -107,7 +124,9 @@ class RandomTests(unittest.TestCase):
                     dnn = nn.parse(network_artifact_dir / "random_fc_1.onnx")
                     phi = properties.parse(property_artifact_dir / "localrobustness.py")
                     phi.concretize(N=dnn)
-                    result = verifier.verify(phi).result
+                    result = verifier.verify(
+                        phi, **VERIFIER_KWARGS.get(name, {})
+                    ).result
                     self.check_results(result, results)
 
     def test_random_fc_2(self):
@@ -129,21 +148,18 @@ class RandomTests(unittest.TestCase):
                     dnn = nn.parse(network_artifact_dir / "random_fc_2.onnx")
                     phi = properties.parse(property_artifact_dir / "localrobustness.py")
                     phi.concretize(N=dnn)
-                    result = verifier.verify(phi).result
+                    result = verifier.verify(
+                        phi, **VERIFIER_KWARGS.get(name, {})
+                    ).result
                     self.check_results(result, results)
 
     def test_random_conv_0(self):
         os.environ["OUTPUT_LAYER"] = "-1"
         excluded_configs = {
-            ("mipverify", 0.01),  # too slow
-            ("mipverify", 0.1),  # too slow
-            ("mipverify", 0.5),  # too slow
-            ("mipverify", 1.0),  # too slow
             ("reluplex", 0.01),  # conv unsupported
             ("reluplex", 0.1),  # conv unsupported
             ("reluplex", 0.5),  # conv unsupported
             ("reluplex", 1.0),  # conv unsupported
-            ("nnenum", 0.5),  # too slow
         }
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
@@ -161,16 +177,14 @@ class RandomTests(unittest.TestCase):
                     ).simplify()
                     phi = properties.parse(property_artifact_dir / "localrobustness.py")
                     phi.concretize(N=dnn)
-                    result = verifier.verify(phi).result
+                    result = verifier.verify(
+                        phi, **VERIFIER_KWARGS.get(name, {})
+                    ).result
                     self.check_results(result, results)
 
     def test_random_conv_1(self):
         os.environ["OUTPUT_LAYER"] = "-1"
         excluded_configs = {
-            ("mipverify", 0.01),  # too slow
-            ("mipverify", 0.1),  # too slow
-            ("mipverify", 0.5),  # too slow
-            ("mipverify", 1.0),  # too slow
             ("reluplex", 0.01),  # conv unsupported
             ("reluplex", 0.1),  # conv unsupported
             ("reluplex", 0.5),  # conv unsupported
@@ -193,17 +207,15 @@ class RandomTests(unittest.TestCase):
                     ).simplify()
                     phi = properties.parse(property_artifact_dir / "localrobustness.py")
                     phi.concretize(N=dnn)
-                    result = verifier.verify(phi).result
+                    result = verifier.verify(
+                        phi, **VERIFIER_KWARGS.get(name, {})
+                    ).result
                     self.check_results(result, results)
 
     def test_random_conv_2(self):
         os.environ["OUTPUT_LAYER"] = "-1"
         excluded_configs = {
-            ("marabou", 1.0),  # incorrect (TODO)
-            ("mipverify", 0.01),  # too slow
-            ("mipverify", 0.1),  # too slow
-            ("mipverify", 0.5),  # too slow
-            ("mipverify", 1.0),  # too slow
+            ("marabou", 1.0),  # incorrect
             ("reluplex", 0.01),  # conv unsupported
             ("reluplex", 0.1),  # conv unsupported
             ("reluplex", 0.5),  # conv unsupported
@@ -225,7 +237,9 @@ class RandomTests(unittest.TestCase):
                     ).simplify()
                     phi = properties.parse(property_artifact_dir / "localrobustness.py")
                     phi.concretize(N=dnn)
-                    result = verifier.verify(phi).result
+                    result = verifier.verify(
+                        phi, **VERIFIER_KWARGS.get(name, {})
+                    ).result
                     self.check_results(result, results)
 
     def test_random_residual_0(self):
@@ -250,17 +264,21 @@ class RandomTests(unittest.TestCase):
                     ).simplify()
                     phi = properties.parse(property_artifact_dir / "localrobustness.py")
                     phi.concretize(N=dnn)
-                    result = verifier.verify(phi).result
+                    result = verifier.verify(
+                        phi, **VERIFIER_KWARGS.get(name, {})
+                    ).result
                     self.check_results(result, results)
 
     def test_hyperlocal_random_conv_0(self):
         os.environ["OUTPUT_LAYER"] = "-1"
         excluded_verifiers = {
-            "mipverify",
             "reluplex",
             "verinet",
         }
-        excluded_configs = {}
+        excluded_configs = {
+            ("marabou", 0.5),  # numerical inconsistencies
+            ("marabou", 1.0),  # numerical inconsistencies
+        }
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
             for i in range(RUNS_PER_PROP):
@@ -281,7 +299,9 @@ class RandomTests(unittest.TestCase):
                         property_artifact_dir / "hyperlocalrobustness.py"
                     )
                     phi.concretize(N=dnn)
-                    result = verifier.verify(phi).result
+                    result = verifier.verify(
+                        phi, **VERIFIER_KWARGS.get(name, {})
+                    ).result
                     self.check_results(result, results)
 
 

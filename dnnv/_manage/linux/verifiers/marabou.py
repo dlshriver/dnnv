@@ -39,7 +39,7 @@ def main(args):
     network = Marabou.read_onnx(args.model)
 
     inputVars = network.inputVars[0]
-    outputVars = network.outputVars
+    outputVars = network.outputVars[0]
 
     for x, l, u in zip(inputVars.flatten(), lb, ub):
         network.setLowerBound(x, l)
@@ -77,7 +77,7 @@ if __name__ == "__main__":
 
 class MarabouInstaller(Installer):
     def run(self, env: Environment, dependency: Dependency):
-        commit_hash = "69dc5eb71b5f4e7a813f20a4e1a01b8387102258"
+        commit_hash = "2641ce74ccf0ebb53345c4a0f6b4c773df40e8a4"
 
         cache_dir = env.cache_dir / f"marabou-{commit_hash}"
         cache_dir.mkdir(exist_ok=True, parents=True)
@@ -96,6 +96,8 @@ class MarabouInstaller(Installer):
         python_version = f"python{python_major_version}.{python_minor_version}"
         site_packages_dir = f"{verifier_venv_path}/lib/{python_version}/site-packages/"
 
+        marabou_url = "https://github.com/NeuralNetworkVerification/Marabou.git"
+
         commands = [
             "set -ex",
             f"cd {verifier_venv_path.parent}",
@@ -110,11 +112,10 @@ class MarabouInstaller(Installer):
                 ' "onnxruntime>=1.7,<1.11"'
             ),
             f"cd {cache_dir}",
-            "rm -rf Marabou",
-            "git clone https://github.com/NeuralNetworkVerification/Marabou.git",
+            "if [ ! -e Marabou ]",
+            "then git clone https://github.com/NeuralNetworkVerification/Marabou.git",
             "cd Marabou",
             f"git checkout {commit_hash}",
-            "rm -rf build",
             "mkdir -p build",
             "cd build",
             "mkdir -p OpenBlas",
@@ -122,6 +123,8 @@ class MarabouInstaller(Installer):
             f"ln -s {openblas_path} {cache_dir}/Marabou/build/OpenBlas/installed",
             f"cmake -D OPENBLAS_DIR={cache_dir}/Marabou/build/OpenBlas ..",
             "cmake --build .",
+            "else cd Marabou/build",
+            "fi",
             f"cp -r ../maraboupy {site_packages_dir}",
         ]
         install_script = "; ".join(commands)

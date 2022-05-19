@@ -176,6 +176,38 @@ class DetailsInference(OperationVisitor):
         output = a @ b
         self.tensor_details[operation] = TensorDetails(output.shape, output.dtype)
 
+    def visit_MaxPool(self, operation: operations.MaxPool):
+        x_details = self.get_details(operation.x)
+        batch_size, num_channels, *spatial_dims = x_details.shape
+        output_dtype = x_details.dtype
+
+        num_spatial_dims = len(spatial_dims)
+        batch_size = batch_size if batch_size >= 0 else 1
+        output_spatial_dims = [0 for _ in range(num_spatial_dims)]
+        pad_shape = [
+            operation.pads[i] + operation.pads[i + num_spatial_dims]
+            for i in range(num_spatial_dims)
+        ]
+
+        if operation.ceil_mode:
+            truncate_op = np.ceil
+        else:
+            truncate_op = np.floor
+        for i in range(num_spatial_dims):
+            output_spatial_dims[i] = truncate_op(
+                (
+                    spatial_dims[i]
+                    + pad_shape[i]
+                    - ((operation.kernel_shape[i] - 1) * operation.dilations[i] + 1)
+                )
+                / operation.strides[i]
+                + 1
+            )
+        self.tensor_details[operation] = TensorDetails(
+            (batch_size, num_channels, *output_spatial_dims),
+            output_dtype,
+        )
+
     def visit_Mul(self, operation: operations.Mul):
         a = operation.a
         if isinstance(a, Operation):

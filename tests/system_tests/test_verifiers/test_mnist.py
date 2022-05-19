@@ -1,5 +1,6 @@
 import os
 import unittest
+from typing import Dict
 
 from system_tests.utils import network_artifact_dir, property_artifact_dir
 
@@ -8,6 +9,7 @@ from dnnv.properties import get_context
 from dnnv.verifiers import SAT, UNKNOWN, UNSAT
 from dnnv.verifiers.bab import BaB
 from dnnv.verifiers.babsb import BaBSB
+from dnnv.verifiers.common.base import Verifier
 from dnnv.verifiers.eran import ERAN
 from dnnv.verifiers.marabou import Marabou
 from dnnv.verifiers.mipverify import MIPVerify
@@ -19,7 +21,7 @@ from dnnv.verifiers.verinet import VeriNet
 
 RUNS_PER_PROP = int(os.environ.get("_DNNV_TEST_RUNS_PER_PROP", "1"))
 
-VERIFIERS = {
+VERIFIERS: Dict[str, Verifier] = {
     "bab": BaB,
     "babsb": BaBSB,
     "eran_deepzono": ERAN,
@@ -27,7 +29,8 @@ VERIFIERS = {
     # "eran_refinezono": ERAN, # TODO : is_installed (needs to check for gurobi license)
     # "eran_refinepoly": ERAN, # TODO : is_installed (needs to check for gurobi license)
     "marabou": Marabou,
-    "mipverify": MIPVerify,
+    # "mipverify": MIPVerify, # TODO : is_installed (needs to check for gurobi license)
+    "mipverify_HiGHS": MIPVerify,
     "neurify": Neurify,
     "nnenum": Nnenum,
     "planet": Planet,
@@ -35,11 +38,12 @@ VERIFIERS = {
     "verinet": VeriNet,
 }
 
-VERIFIER_KWARGS = {
+VERIFIER_KWARGS: Dict[str, Dict[str, str]] = {
     "eran_deepzono": {"domain": "deepzono"},
     "eran_deeppoly": {"domain": "deeppoly"},
     "eran_refinezono": {"domain": "refinezono"},
     "eran_refinepoly": {"domain": "refinepoly"},
+    "mipverify_HiGHS": {"optimizer": "HiGHS"},
 }
 
 
@@ -76,6 +80,8 @@ class MNISTTests(unittest.TestCase):
         excluded_verifiers = {
             "bab",  # too slow
             "babsb",  # too slow
+            "mipverify",  # too slow
+            "mipverify_HiGHS",  # too slow
             "planet",  # too slow
             "reluplex",  # too slow
             "verinet",  # returns error # TODO: fix?
@@ -97,12 +103,12 @@ class MNISTTests(unittest.TestCase):
                 result = verifier.verify(phi, **VERIFIER_KWARGS.get(name, {})).result
                 self.check_results(result, results)
 
-    @unittest.skip("Too slow")
     def test_convSmallRELU__Point(self):
         excluded_verifiers = {
             "bab",  # too slow
             "babsb",  # too slow
             "mipverify",  # too slow
+            "mipverify_HiGHS",  # too slow
             "planet",  # too slow
             "reluplex",  # doesn't support Conv
         }
@@ -130,7 +136,7 @@ class MNISTTests(unittest.TestCase):
             "bab",  # too slow
             "babsb",  # too slow
             "marabou",  # too slow
-            "mipverify",  # property not supported (multiple epsilon values) # TODO : fix?
+            "mipverify_HiGHS",  # too slow
             "planet",  # too slow
             "reluplex",  # too slow
         }
