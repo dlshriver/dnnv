@@ -206,15 +206,22 @@ class ConvTranspose(Operation):
 
 
 class Dropout(Operation):
-    def __init__(self, x, *, ratio=0.5, name: Optional[str] = None):
+    def __init__(self, x, *, ratio=0.5, include_mask=False, name: Optional[str] = None):
         super().__init__(name=name)
         self.x = x
         self.ratio = ratio
+        self.include_mask = include_mask
 
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):
         attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
         ratio = attributes.get("ratio", 0.5)
+        if len(onnx_node.output) == 2:
+            raise NotImplementedError(
+                "Using the mask of a Dropout operation is not yet supported."
+                " If you need this functionality, please open a GitHub issue."
+            )
+            return cls(*inputs, ratio=ratio, include_mask=True, name=onnx_node.name)
         return cls(*inputs, ratio=ratio, name=onnx_node.name)
 
 
