@@ -391,7 +391,7 @@ class TensorflowConverter(OperationVisitor):
         @self._cached
         def dropout_func(*inputs):
             x = _concretize([x_], inputs)
-            return x, None
+            return x
 
         return dropout_func
 
