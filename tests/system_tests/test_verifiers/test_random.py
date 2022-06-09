@@ -219,6 +219,7 @@ class RandomTests(unittest.TestCase):
             ("reluplex", 0.1),  # conv unsupported
             ("reluplex", 0.5),  # conv unsupported
             ("reluplex", 1.0),  # conv unsupported
+            ("marabou", 1.0),  # numerical instability
         }
         for epsilon in [0.01, 0.1, 0.5, 1.0]:
             os.environ["EPSILON"] = str(epsilon)
