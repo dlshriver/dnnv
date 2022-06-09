@@ -83,6 +83,10 @@ class OnnxConverter(OperationVisitor):
             tensor_proto = onnx.numpy_helper.from_array(value, name=opname)
             self.initializer.append(tensor_proto)
             return tensor_proto
+        if isinstance(value, bool):
+            tensor_proto = onnx.numpy_helper.from_array(np.asarray(value), name=opname)
+            self.initializer.append(tensor_proto)
+            return tensor_proto
         if isinstance(value, (int, float)):
             tensor_proto = onnx.numpy_helper.from_array(
                 np.array(value, dtype=f"{type(value).__name__}32"), name=opname
@@ -289,10 +293,13 @@ class OnnxConverter(OperationVisitor):
 
         x = self._to_onnx_proto(operation.x, f"{opname}.x")
         ratio = self._to_onnx_proto(operation.ratio, f"{opname}.ratio")
+        training_mode = self._to_onnx_proto(
+            operation.training_mode, f"{opname}.training_mode"
+        )
 
         node = onnx.helper.make_node(
             op_type,
-            inputs=[x.name, ratio.name],
+            inputs=[x.name, ratio.name, training_mode.name],
             outputs=[opname],
             name=opname,
         )
@@ -548,6 +555,33 @@ class OnnxConverter(OperationVisitor):
 
         node = onnx.helper.make_node(
             op_type, inputs=[x.name], outputs=[opname], name=opname
+        )
+
+        return node
+
+    def visit_Slice(self, operation: operations.Slice) -> onnx.NodeProto:
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        x = self._to_onnx_proto(operation.x, f"{opname}.x")
+        starts = self._to_onnx_proto(operation.starts, f"{opname}.starts")
+        ends = self._to_onnx_proto(operation.ends, f"{opname}.ends")
+
+        inputs = [x.name, starts.name, ends.name]
+        if operation.steps is not None:
+            axes = self._to_onnx_proto(operation.axes, f"{opname}.axes")
+            steps = self._to_onnx_proto(operation.steps, f"{opname}.steps")
+            inputs.extend([axes.name, steps.name])
+        elif operation.axes is not None:
+            axes = self._to_onnx_proto(operation.axes, f"{opname}.axes")
+            inputs.append(axes.name)
+
+        node = onnx.helper.make_node(
+            op_type,
+            inputs=inputs,
+            outputs=[opname],
+            name=opname,
         )
 
         return node

@@ -317,6 +317,28 @@ class PrintVisitor(OperationVisitor):
         self.print_op_id(operation)
         print(f"Sigmoid({self.get_op_id(operation.x)})")
 
+    def visit_Slice(self, operation: operations.Slice) -> None:
+        self.generic_visit(operation)
+        self.print_op_id(operation)
+        axes = (
+            f", axes={self.get_op_id(operation.axes)}"
+            if operation.axes is not None
+            else ""
+        )
+        steps = (
+            f", steps={self.get_op_id(operation.steps)}"
+            if operation.steps is not None
+            else ""
+        )
+        print(
+            "Slice("
+            f"{self.get_op_id(operation.x)}, "
+            f"{self.get_op_id(operation.starts)}, "
+            f"{self.get_op_id(operation.ends)}"
+            f"{axes}{steps}"
+            ")"
+        )
+
     def visit_Sign(self, operation: operations.Sign) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
