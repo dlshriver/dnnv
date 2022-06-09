@@ -559,6 +559,33 @@ class OnnxConverter(OperationVisitor):
 
         return node
 
+    def visit_Slice(self, operation: operations.Slice) -> onnx.NodeProto:
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        x = self._to_onnx_proto(operation.x, f"{opname}.x")
+        starts = self._to_onnx_proto(operation.starts, f"{opname}.starts")
+        ends = self._to_onnx_proto(operation.ends, f"{opname}.ends")
+
+        inputs = [x.name, starts.name, ends.name]
+        if operation.steps is not None:
+            axes = self._to_onnx_proto(operation.axes, f"{opname}.axes")
+            steps = self._to_onnx_proto(operation.steps, f"{opname}.steps")
+            inputs.extend([axes.name, steps.name])
+        elif operation.axes is not None:
+            axes = self._to_onnx_proto(operation.axes, f"{opname}.axes")
+            inputs.append(axes.name)
+
+        node = onnx.helper.make_node(
+            op_type,
+            inputs=inputs,
+            outputs=[opname],
+            name=opname,
+        )
+
+        return node
+
     def visit_Sub(self, operation: operations.Sub) -> onnx.NodeProto:
         op_type = str(operation)
         idx = self.op_counts[op_type] = self.op_counts[op_type] + 1

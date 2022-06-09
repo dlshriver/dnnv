@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 
+from .. import operations
 from ..graph import OperationGraph
 from ..operations import Operation
 from ..utils import ONNX_TO_TENSORFLOW_DTYPE
@@ -808,6 +809,41 @@ class TensorflowConverter(OperationVisitor):
             return result
 
         return sign_func
+
+    def visit_Slice(self, operation: operations.Slice):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+        starts_ = operation.starts
+        if isinstance(starts_, Operation):
+            starts_ = self.visit(starts_)
+        ends_ = operation.ends
+        if isinstance(ends_, Operation):
+            ends_ = self.visit(ends_)
+        axes_ = operation.axes
+        if isinstance(axes_, Operation):
+            axes_ = self.visit(axes_)
+        steps_ = operation.steps
+        if isinstance(steps_, Operation):
+            steps_ = self.visit(steps_)
+
+        @self._cached
+        def slice_func(*inputs):
+            x, starts, ends, axes, steps = _concretize(
+                [x_, starts_, ends_, axes_, steps_], inputs
+            )
+            n = x.ndim
+            slices = [slice(None) for _ in range(n)]
+            if axes is None:
+                axes = range(n)
+            if steps is None:
+                steps = [1 for _ in range(n)]
+            for i, axis in enumerate(axes):
+                slices[axis] = slice(starts[i], ends[i], steps[i])
+            result = x[tuple(slices)]
+            return result
+
+        return slice_func
 
     def visit_Softmax(self, operation):
         x_ = operation.x

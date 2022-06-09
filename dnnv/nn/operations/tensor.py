@@ -176,6 +176,25 @@ class Shape(Operation):
         return cls(*inputs, name=onnx_node.name)
 
 
+class Slice(Operation):
+    def __init__(
+        self, x, starts, ends, *, axes=None, steps=None, name: Optional[str] = None
+    ):
+        super().__init__(name=name)
+        self.x = x
+        self.starts = starts
+        self.ends = ends
+        self.axes = axes
+        self.steps = steps
+
+    @classmethod
+    def from_onnx(cls, onnx_node, *inputs):
+        attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
+        axes = attributes.get("axes")
+        steps = attributes.get("steps")
+        return cls(*inputs, axes=axes, steps=steps, name=onnx_node.name)
+
+
 class Tile(Operation):
     def __init__(self, x, repeats, *, name: Optional[str] = None):
         super().__init__(name=name)
@@ -232,6 +251,7 @@ __all__ = [
     "Reshape",
     "Resize",
     "Shape",
+    "Slice",
     "Tile",
     "Transpose",
     "Unsqueeze",
