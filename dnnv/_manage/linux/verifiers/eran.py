@@ -99,7 +99,7 @@ if __name__ == "__main__":
 
 class ELINAInstaller(Installer):
     def run(self, env: Environment, dependency: Dependency):
-        commit_hash = "7e0e6fef43c9676c869199782f4beadd542449f6"
+        commit_hash = "eaefbbd9b42e0e80c0701b5c20b7906e88fbb954"
         name = "elina"
 
         cache_dir = env.cache_dir / f"{name}-{commit_hash}"
@@ -165,7 +165,7 @@ class ELINAInstaller(Installer):
 
 class ERANInstaller(Installer):
     def run(self, env: Environment, dependency: Dependency):
-        commit_hash = "d60cf5767da31e7834b202fbcbb840e9c7d3ef5e"
+        commit_hash = "8771d3158b2c64a360d5bdfd4433490863257dd6"
         name = "eran"
 
         cache_dir = env.cache_dir / f"{name}-{commit_hash}"
@@ -207,6 +207,7 @@ class ERANInstaller(Installer):
                 ' "torchvision>=0.9,<0.12"'
                 ' "mpmath>=1.2,<1.3"'
                 ' "pillow>=8.1"'
+                ' "protobuf<=3.20"'
             ),
             f"cd {gurobi_path}",
             "python setup.py install",
