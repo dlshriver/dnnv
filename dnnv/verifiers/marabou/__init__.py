@@ -54,11 +54,11 @@ class Marabou(Verifier):
         return args
 
     def parse_results(self, prop, results):
-        result, cinput = np.load(self._tmp_output_file.name, allow_pickle=True)
-        if result == False:
+        result_str, cinput = np.load(self._tmp_output_file.name, allow_pickle=True)
+        if result_str == "unsat":
             return UNSAT, None
-        elif result == True:
+        elif result_str == "sat":
             input_shape, input_dtype = prop.op_graph.input_details[0]
             cex = cinput.reshape(input_shape).astype(input_dtype)
             return SAT, cex
-        raise self.translator_error(f"Unknown verification result: {result}")
+        raise self.translator_error(f"Unknown verification result: {result_str}")

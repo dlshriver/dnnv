@@ -79,7 +79,7 @@ if __name__ == "__main__":
 
 class NnenumInstaller(Installer):
     def run(self, env: Environment, dependency: Dependency):
-        commit_hash = "fd07f2b6c55ca46387954559f40992ae0c9b06b7"
+        commit_hash = "fa1463b6f345ca143662c4143dfb4774e6615672"
         name = "nnenum"
 
         cache_dir = env.cache_dir / f"{name}-{commit_hash}"
@@ -113,6 +113,7 @@ class NnenumInstaller(Installer):
                 ' "skl2onnx==1.7.0"'
                 ' "swiglpk"'
                 ' "termcolor"'
+                ' "protobuf<=3.20"'
             ),
             f"cd {cache_dir}",
             f"if [ ! -e {name} ]",
