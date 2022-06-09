@@ -1,6 +1,6 @@
 import numpy as np
 import onnx
-import onnxruntime
+import onnxruntime.backend
 
 from dnnv.nn.converters.onnx import *
 from dnnv.nn.operations import *
