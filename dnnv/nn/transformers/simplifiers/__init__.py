@@ -15,6 +15,7 @@ from .convert_mul import ConvertMul
 from .convert_reshape_to_flatten import ConvertReshapeToFlatten
 from .convert_sub_to_add import ConvertSubToAdd
 from .drop_identities import (
+    DropDropout,
     DropIdentity,
     DropUnnecessaryConcat,
     DropUnnecessaryFlatten,
@@ -35,6 +36,7 @@ DEFAULT_SIMPLIFIERS = [
     ConvertMul,
     ConvertReshapeToFlatten,
     ConvertSubToAdd,
+    DropDropout,
     DropIdentity,
     DropUnnecessaryConcat,
     DropUnnecessaryFlatten,

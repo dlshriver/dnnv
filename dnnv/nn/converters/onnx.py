@@ -83,6 +83,10 @@ class OnnxConverter(OperationVisitor):
             tensor_proto = onnx.numpy_helper.from_array(value, name=opname)
             self.initializer.append(tensor_proto)
             return tensor_proto
+        if isinstance(value, bool):
+            tensor_proto = onnx.numpy_helper.from_array(np.asarray(value), name=opname)
+            self.initializer.append(tensor_proto)
+            return tensor_proto
         if isinstance(value, (int, float)):
             tensor_proto = onnx.numpy_helper.from_array(
                 np.array(value, dtype=f"{type(value).__name__}32"), name=opname
@@ -289,10 +293,13 @@ class OnnxConverter(OperationVisitor):
 
         x = self._to_onnx_proto(operation.x, f"{opname}.x")
         ratio = self._to_onnx_proto(operation.ratio, f"{opname}.ratio")
+        training_mode = self._to_onnx_proto(
+            operation.training_mode, f"{opname}.training_mode"
+        )
 
         node = onnx.helper.make_node(
             op_type,
-            inputs=[x.name, ratio.name],
+            inputs=[x.name, ratio.name, training_mode.name],
             outputs=[opname],
             name=opname,
         )

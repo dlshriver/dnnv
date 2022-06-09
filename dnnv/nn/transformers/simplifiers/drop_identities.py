@@ -3,6 +3,13 @@ from ...graph import OperationGraph
 from .base import Simplifier
 
 
+class DropDropout(Simplifier):
+    def visit_Dropout(self, operation: operations.Dropout):
+        if operation.training_mode:
+            return operation
+        return operation.x
+
+
 class DropIdentity(Simplifier):
     def visit_Identity(self, operation: operations.Identity):
         return operation.x
@@ -36,6 +43,7 @@ class DropUnnecessaryRelu(Simplifier):
 
 
 __all__ = [
+    "DropDropout",
     "DropIdentity",
     "DropUnnecessaryConcat",
     "DropUnnecessaryFlatten",

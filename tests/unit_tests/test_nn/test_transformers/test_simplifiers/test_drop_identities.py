@@ -3,12 +3,27 @@ import numpy as np
 from dnnv.nn import OperationGraph, operations
 from dnnv.nn.transformers.simplifiers import simplify
 from dnnv.nn.transformers.simplifiers.drop_identities import (
+    DropDropout,
     DropIdentity,
     DropUnnecessaryConcat,
     DropUnnecessaryFlatten,
     DropUnnecessaryRelu,
 )
 from dnnv.nn.visitors import EnsureSupportVisitor, OperationCounter
+
+
+def test_drop_dropout():
+    input_op = operations.Input((-1, 3, 2, 2), dtype=np.dtype(np.float64))
+    dropout_op = operations.Dropout(input_op)
+    op_graph = OperationGraph([dropout_op])
+    simplified_op_graph = simplify(op_graph, DropDropout(op_graph))
+
+    assert simplified_op_graph.walk(EnsureSupportVisitor([operations.Input]))
+
+    x = np.random.randn(100, *input_op.shape[1:]).astype(input_op.dtype)
+    y1 = op_graph(x)
+    y2 = simplified_op_graph(x)
+    assert np.allclose(y1, y2)
 
 
 def test_drop_identity():
