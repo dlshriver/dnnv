@@ -178,7 +178,7 @@ class Shape(Operation):
 
 class Slice(Operation):
     def __init__(
-        self, x, starts, ends, *, axes=None, steps=None, name: Optional[str] = None
+        self, x, starts, ends, axes=None, steps=None, *, name: Optional[str] = None
     ):
         super().__init__(name=name)
         self.x = x
@@ -190,9 +190,7 @@ class Slice(Operation):
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):
         attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
-        axes = attributes.get("axes")
-        steps = attributes.get("steps")
-        return cls(*inputs, axes=axes, steps=steps, name=onnx_node.name)
+        return cls(*inputs, name=onnx_node.name)
 
 
 class Tile(Operation):
