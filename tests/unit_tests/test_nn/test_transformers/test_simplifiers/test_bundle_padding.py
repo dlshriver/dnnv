@@ -49,7 +49,7 @@ def test_bundle_padding_conv_nopad():
 
 
 def test_bundle_padding_conv_noop():
-    input_op = operations.Input((-1, 3, 2, 2), dtype=np.dtype(np.float64))
+    input_op = operations.Input((-1, 3, 2, 2), dtype=np.dtype(np.float32))
     pad_op = operations.Pad(input_op, np.asarray((0, 1, 2, 2, 0, 1, 2, 2)))
     conv_op = operations.Conv(
         pad_op, np.random.randn(5, 3, 2, 2).astype(input_op.dtype)
@@ -59,7 +59,7 @@ def test_bundle_padding_conv_noop():
     simplified_op_graph = simplify(op_graph, BundlePadding())
     assert simplified_op_graph.outputs[0] == op_graph.outputs[0]
 
-    input_op = operations.Input((-1, 3, 2, 2), dtype=np.dtype(np.float64))
+    input_op = operations.Input((-1, 3, 2, 2), dtype=np.dtype(np.float32))
     pad_op = operations.Pad(
         input_op, np.asarray((0, 0, 2, 2, 0, 0, 2, 2)), mode="reflect"
     )
@@ -71,7 +71,7 @@ def test_bundle_padding_conv_noop():
     simplified_op_graph = simplify(op_graph, BundlePadding())
     assert simplified_op_graph.outputs[0] == op_graph.outputs[0]
 
-    input_op = operations.Input((-1, 3, 2, 2), dtype=np.dtype(np.float64))
+    input_op = operations.Input((-1, 3, 2, 2), dtype=np.dtype(np.float32))
     pad_op = operations.Pad(input_op, np.asarray((0, 0, 2, 2, 0, 0, 2, 2)), value=5)
     conv_op = operations.Conv(
         pad_op, np.random.randn(5, 3, 2, 2).astype(input_op.dtype)
@@ -83,9 +83,9 @@ def test_bundle_padding_conv_noop():
 
 
 def test_bundle_padding_maxpool():
-    input_op = operations.Input((-1, 3, 2, 2), dtype=np.dtype(np.float64))
+    input_op = operations.Input((-1, 3, 2, 2), dtype=np.dtype(np.float32))
     pad_op = operations.Pad(
-        input_op, np.asarray((0, 0, 1, 1, 0, 0, 1, 1)), value=np.nan
+        input_op, np.asarray((0, 0, 1, 1, 0, 0, 1, 1)), value=-np.inf
     )
     maxpool_op = operations.MaxPool(pad_op, (2, 2))
     op_graph = OperationGraph([maxpool_op])
@@ -104,7 +104,7 @@ def test_bundle_padding_maxpool():
 
 
 def test_bundle_padding_maxpool_nopad():
-    input_op = operations.Input((-1, 3, 2, 2), dtype=np.dtype(np.float64))
+    input_op = operations.Input((-1, 3, 2, 2), dtype=np.dtype(np.float32))
     pad_op = operations.Pad(input_op, np.asarray((0, 0, 0, 0, 0, 0, 0, 0)))
     maxpool_op = operations.MaxPool(pad_op, (2, 2))
     op_graph = OperationGraph([maxpool_op])
@@ -123,7 +123,7 @@ def test_bundle_padding_maxpool_nopad():
 
 
 def test_bundle_padding_maxpool_noop():
-    input_op = operations.Input((-1, 3, 2, 2), dtype=np.dtype(np.float64))
+    input_op = operations.Input((-1, 3, 2, 2), dtype=np.dtype(np.float32))
     pad_op = operations.Pad(input_op, np.asarray((0, 1, 1, 1, 0, 1, 1, 1)))
     maxpool_op = operations.MaxPool(pad_op, (2, 2))
     # testing weird padding
@@ -131,7 +131,7 @@ def test_bundle_padding_maxpool_noop():
     simplified_op_graph = simplify(op_graph, BundlePadding())
     assert simplified_op_graph.outputs[0] == op_graph.outputs[0]
 
-    input_op = operations.Input((-1, 3, 2, 2), dtype=np.dtype(np.float64))
+    input_op = operations.Input((-1, 3, 2, 2), dtype=np.dtype(np.float32))
     pad_op = operations.Pad(
         input_op, np.asarray((0, 0, 1, 1, 0, 0, 1, 1)), mode="reflect"
     )
@@ -141,7 +141,7 @@ def test_bundle_padding_maxpool_noop():
     simplified_op_graph = simplify(op_graph, BundlePadding())
     assert simplified_op_graph.outputs[0] == op_graph.outputs[0]
 
-    input_op = operations.Input((-1, 3, 2, 2), dtype=np.dtype(np.float64))
+    input_op = operations.Input((-1, 3, 2, 2), dtype=np.dtype(np.float32))
     pad_op = operations.Pad(input_op, np.asarray((0, 0, 1, 1, 0, 0, 1, 1)), value=5)
     maxpool_op = operations.MaxPool(pad_op, (2, 2))
     # testing non-nan constant padding

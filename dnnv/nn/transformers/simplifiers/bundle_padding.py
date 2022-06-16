@@ -65,7 +65,9 @@ class BundlePadding(Simplifier):
             p != 0 for p in input_op.pads[num_pads // 2 : num_pads // 2 + 2]
         ):
             return operation
-        if input_op.mode != "constant" or not np.isnan(input_op.value):
+        if input_op.mode != "constant" or (
+            not np.isnan(input_op.value) and not np.isneginf(input_op.value)
+        ):
             return operation
         pads = operation.pads
         pad_top, pad_left = input_op.pads[2:4]

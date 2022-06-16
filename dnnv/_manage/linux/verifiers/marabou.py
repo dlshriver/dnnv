@@ -77,7 +77,7 @@ if __name__ == "__main__":
 
 class MarabouInstaller(Installer):
     def run(self, env: Environment, dependency: Dependency):
-        commit_hash = "2641ce74ccf0ebb53345c4a0f6b4c773df40e8a4"
+        commit_hash = "492c1b8c703c8a383f421468a104c34710e6d26d"
 
         cache_dir = env.cache_dir / f"marabou-{commit_hash}"
         cache_dir.mkdir(exist_ok=True, parents=True)
@@ -92,11 +92,14 @@ class MarabouInstaller(Installer):
         assert libopenblas_path is not None
         openblas_path = libopenblas_path.parent.parent
 
-        python_major_version, python_minor_version = sys.version_info[:2]
+        python_major_version, python_minor_version, *_ = sys.version_info
         python_version = f"python{python_major_version}.{python_minor_version}"
         site_packages_dir = f"{verifier_venv_path}/lib/{python_version}/site-packages/"
 
         marabou_url = "https://github.com/NeuralNetworkVerification/Marabou.git"
+
+        build_dir = cache_dir / f"Marabou/build-{python_version}"
+        openblas_vars = f"-D OPENBLAS_DIR={build_dir}/OpenBlas"
 
         commands = [
             "set -ex",
@@ -108,22 +111,24 @@ class MarabouInstaller(Installer):
             (
                 "pip install"
                 ' "numpy>=1.19,<1.22"'
-                ' "onnx>=1.8,<1.11"'
-                ' "onnxruntime>=1.7,<1.11"'
+                ' "onnx>=1.8,<1.12"'
+                ' "onnxruntime>=1.7,<1.12"'
+                ' "protobuf<=3.20"'
             ),
             f"cd {cache_dir}",
-            "if [ ! -e Marabou ]",
-            "then git clone https://github.com/NeuralNetworkVerification/Marabou.git",
+            f"if [ ! -e Marabou ]",
+            f"then git clone {marabou_url}",
             "cd Marabou",
             f"git checkout {commit_hash}",
-            "mkdir -p build",
-            "cd build",
+            "fi",
+            f"if [ ! -e {build_dir} ]",
+            f"then mkdir -p {build_dir}",
+            f"cd {build_dir}",
             "mkdir -p OpenBlas",
-            f"rm -f {cache_dir}/Marabou/build/OpenBlas/installed",
-            f"ln -s {openblas_path} {cache_dir}/Marabou/build/OpenBlas/installed",
-            f"cmake -D OPENBLAS_DIR={cache_dir}/Marabou/build/OpenBlas ..",
+            f"ln -s {openblas_path} {build_dir}/OpenBlas/installed",
+            f"cmake {openblas_vars} ..",
             "cmake --build .",
-            "else cd Marabou/build",
+            f"else cd {build_dir}",
             "fi",
             f"cp -r ../maraboupy {site_packages_dir}",
         ]

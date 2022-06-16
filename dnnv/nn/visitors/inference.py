@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict
+from typing import Any, Dict, Tuple
 
 import numpy as np
 
@@ -62,6 +62,7 @@ class DetailsInference(OperationVisitor):
                 output_dtype = dtype
             else:
                 output_shape[axis] += shape[axis]
+        assert output_shape is not None
         self.tensor_details[operation] = TensorDetails(
             tuple(output_shape), output_dtype
         )
@@ -121,7 +122,7 @@ class DetailsInference(OperationVisitor):
     def visit_Gather(self, operation: operations.Gather):
         assert isinstance(operation.indices, np.ndarray)
         if operation.indices.size == 1:
-            indices = ()
+            indices: Tuple[Any, ...] = ()
         else:
             indices = tuple(operation.indices)
         axis = operation.axis
@@ -190,7 +191,7 @@ class DetailsInference(OperationVisitor):
         ]
 
         if operation.ceil_mode:
-            truncate_op = np.ceil
+            truncate_op: np.ufunc = np.ceil
         else:
             truncate_op = np.floor
         for i in range(num_spatial_dims):
@@ -264,6 +265,29 @@ class DetailsInference(OperationVisitor):
 
     def visit_Sigmoid(self, operation: operations.Sigmoid):
         self.tensor_details[operation] = self.get_details(operation.x)
+
+    def visit_Slice(self, operation: operations.Slice):
+        input_details = self.get_details(operation.x)
+        shape = list(input_details.shape)
+
+        n = len(shape)
+        starts = operation.starts
+        ends = operation.ends
+        axes = operation.axes
+        steps = operation.steps
+        if axes is None:
+            axes = range(n)
+        if steps is None:
+            steps = [1 for _ in range(n)]
+        for start, end, axis, step in zip(starts, ends, axes, steps):
+            size = shape[axis]
+            start = max(start if start >= 0 else start + size, 0)
+            end = min(end if end >= 0 else end + size, size)
+            shape[axis] = (end - start) // step
+
+        self.tensor_details[operation] = TensorDetails(
+            tuple(shape), input_details.dtype
+        )
 
     def visit_Softmax(self, operation: operations.Softmax):
         self.tensor_details[operation] = self.get_details(operation.x)
