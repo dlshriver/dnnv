@@ -610,7 +610,6 @@ class OnnxConverter(OperationVisitor):
         outputs = np.array(outputs)
         x = self._to_onnx_proto(operation.x, f"{opname}.x")
         split = self._to_onnx_proto(operation.split, f"{opname}.split")
-        print(f"{[x.name, split.name]}")
         node = onnx.helper.make_node(
             op_type,
             inputs=[x.name, split.name],

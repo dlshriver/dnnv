@@ -5,11 +5,6 @@ import pytest
 from dnnv.nn.converters.onnx import *
 from dnnv.nn.operations import *
 
-# Tests based on:
-# https://github.com/onnx/onnx/blob/2ab133404afce34552aaccd86e7023e1fb9a60d2/onnx/test/shape_inference_test.py
-# https://github.com/onnx/onnx/blob/2ab133404afce34552aaccd86e7023e1fb9a60d2/onnx/test/automatic_upgrade_test.py
-# https://github.com/onnx/onnx/blob/35092895d9bf3592e58f4710d098f8131afef259/onnx/backend/test/case/node/split.py
-
 
 def test_Split_export_1d() -> None:
     input = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]).astype(np.float32)
@@ -49,7 +44,6 @@ def test_Split_export_2d() -> None:
         outputselect = OutputSelect(op, i)
         onnx_model = convert(OperationGraph([outputselect]))
         results = onnxruntime.backend.run(onnx_model, [])
-        print(f"{results=}")
         all_results.append(results[0])
     expected_outputs = np.array(
         [[[1.0, 2.0, 3.0], [7.0, 8.0, 9.0]], [[4.0, 5.0, 6.0], [10.0, 11.0, 12.0]]]
