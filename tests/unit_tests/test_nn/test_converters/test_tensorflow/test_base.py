@@ -21,5 +21,6 @@ def test_has_all():
     for operation in get_subclasses(Operation):
         assert hasattr(converter, f"visit_{operation}")
 
+
 # def test_convert():
 #     # TODO

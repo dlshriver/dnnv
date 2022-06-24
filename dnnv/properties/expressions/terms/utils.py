@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import numpy as np
 import types
-
 from typing import Callable
+
+import numpy as np
 
 
 def get_callable_name(f: Callable) -> str:

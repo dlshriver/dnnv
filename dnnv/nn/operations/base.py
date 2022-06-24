@@ -1,37 +1,39 @@
 """
 """
+from __future__ import annotations
+
 import logging
+from typing import Optional, Sequence
+
 import numpy as np
 import onnx
 
-from typing import Optional, Sequence, Union
-
-from .patterns import Or, Parallel, Sequential
-from ..utils import ONNX_TO_NUMPY_DTYPE
 from ...utils import get_subclasses
+from ..utils import ONNX_TO_NUMPY_DTYPE
+from .patterns import Or, Parallel, Sequential
 
 
 class Op(type):
-    def __str__(self):
-        return self.__name__
+    def __str__(cls):
+        return cls.__name__
 
-    def __and__(self, other) -> Parallel:
-        return Parallel(self, other)
+    def __and__(cls, other) -> Parallel:
+        return Parallel(cls, other)
 
-    def __rand__(self, other) -> Parallel:
-        return Parallel(other, self)
+    def __rand__(cls, other) -> Parallel:
+        return Parallel(other, cls)
 
-    def __or__(self, other) -> Or:
-        return Or(self, other)
+    def __or__(cls, other) -> Or:
+        return Or(cls, other)
 
-    def __ror__(self, other) -> Or:
-        return Or(other, self)
+    def __ror__(cls, other) -> Or:
+        return Or(other, cls)
 
-    def __rshift__(self, other) -> Sequential:
-        return Sequential(self, other)
+    def __rshift__(cls, other) -> Sequential:
+        return Sequential(cls, other)
 
-    def __rrshift__(self, other) -> Sequential:
-        return Sequential(other, self)
+    def __rrshift__(cls, other) -> Sequential:
+        return Sequential(other, cls)
 
 
 class Operation(metaclass=Op):
@@ -88,10 +90,10 @@ class Operation(metaclass=Op):
                         "Operation on constant inputs returned non-constant."
                     )
                 return operation
-        raise ValueError("Unimplemented operation type: %s" % op_type)
+        raise ValueError(f"Unimplemented operation type: {op_type}")
 
     @classmethod
-    def match(cls, operations: Sequence["Operation"]):
+    def match(cls, operations: Sequence[Operation]):
         if len(operations) < 1:
             return None
         operation = operations[0]

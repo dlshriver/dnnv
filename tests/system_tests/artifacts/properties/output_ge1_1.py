@@ -1,5 +1,6 @@
-from dnnv.properties import *
 import numpy as np
+
+from dnnv.properties import *
 
 N = Network("N")
 ub = np.ones((1, 2))

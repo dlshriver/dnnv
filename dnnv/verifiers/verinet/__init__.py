@@ -1,11 +1,12 @@
-from dnnv.nn.graph import OperationGraph
-import numpy as np
 import tempfile
 
-from dnnv.nn import operations, OperationTransformer
+import numpy as np
+
+from dnnv.nn import OperationTransformer, operations
+from dnnv.nn.graph import OperationGraph
 from dnnv.nn.visitors import EnsureSupportVisitor
 from dnnv.verifiers.common.base import Parameter, Verifier
-from dnnv.verifiers.common.results import SAT, UNSAT, UNKNOWN
+from dnnv.verifiers.common.results import SAT, UNKNOWN, UNSAT
 
 from .errors import VerinetError, VerinetTranslatorError
 
@@ -119,10 +120,13 @@ class VeriNet(Verifier):
             "-o",
             self._tmp_output_file.name,
         )
-        if "max_proc" in self.parameters and self.parameters["max_proc"] is not None:
-            value = self.parameters["max_proc"]
+        if (
+            "max_proc" in self.parameter_values
+            and self.parameter_values["max_proc"] is not None
+        ):
+            value = self.parameter_values["max_proc"]
             args += (f"--max_procs={value}",)
-        if "no_split" in self.parameters and self.parameters["no_split"]:
+        if "no_split" in self.parameter_values and self.parameter_values["no_split"]:
             args += ("--no_split",)
         return args
 

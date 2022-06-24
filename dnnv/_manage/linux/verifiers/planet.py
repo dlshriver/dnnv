@@ -2,16 +2,16 @@ from __future__ import annotations
 
 import subprocess as sp
 
+from ...errors import InstallError, UninstallError
 from ..environment import (
-    Environment,
     Dependency,
+    Environment,
+    GNUInstaller,
     HeaderDependency,
+    Installer,
     LibraryDependency,
     ProgramDependency,
-    Installer,
-    GNUInstaller,
 )
-from ...errors import InstallError, UninstallError
 
 
 class PlanetInstaller(Installer):
@@ -25,29 +25,41 @@ class PlanetInstaller(Installer):
         installation_path.mkdir(exist_ok=True, parents=True)
 
         library_paths = " ".join(f"-L{p}" for p in env.ld_library_paths)
-        include_paths = " ".join(f"-I{p}" for p in env.include_paths)
+        include_paths = "-I. " + " ".join(f"-I{p}" for p in env.include_paths)
+
+        compiler_options = (
+            f"-c -m64 -pipe -std=c++14 -O2 -fPIC -DUSE_GLPK -DNDEBUG {include_paths}"
+        )
+        library_options = f"{library_paths} -Wl,-Bstatic -lglpk -lgmp -Wl,-Bdynamic -lz"
 
         commands = [
             "set -ex",
             f"cd {cache_dir}",
-            "rm -rf planet",
-            "git clone https://github.com/progirep/planet.git",
+            "if [ ! -e planet ]",
+            "then git clone https://github.com/progirep/planet.git",
             "cd planet",
             f"git checkout {commit_hash}",
             "cd src",
-            f"g++ -c -m64 -pipe -std=c++14 -g -O2 -Wall -W -fPIC -DUSE_GLPK -DNDEBUG -I. {include_paths} -o Options.o minisat2/Options.cc",
-            f"g++ -c -m64 -pipe -std=c++14 -g -O2 -Wall -W -fPIC -DUSE_GLPK -DNDEBUG -I. {include_paths} -o Solver.o minisat2/Solver.cc",
-            f"g++ -c -m64 -pipe -std=c++14 -g -O2 -Wall -W -fPIC -DUSE_GLPK -DNDEBUG -I. {include_paths} -o System.o minisat2/System.cc",
-            f"g++ -c -m64 -pipe -std=c++14 -g -O2 -Wall -W -fPIC -DUSE_GLPK -DNDEBUG -I. {include_paths} -o main.o main.cpp",
-            f"g++ -c -m64 -pipe -std=c++14 -g -O2 -Wall -W -fPIC -DUSE_GLPK -DNDEBUG -I. {include_paths} -o verifierContext.o verifierContext.cpp",
-            f"g++ -c -m64 -pipe -std=c++14 -g -O2 -Wall -W -fPIC -DUSE_GLPK -DNDEBUG -I. {include_paths} -o supersetdatabase.o supersetdatabase.cpp",
-            f"g++ -m64 -o planet Options.o Solver.o System.o main.o verifierContext.o supersetdatabase.o {library_paths} -Wl,-Bstatic -lglpk -lgmp -Wl,-Bdynamic -lz",
+            f"g++ {compiler_options} -o Options.o minisat2/Options.cc",
+            f"g++ {compiler_options} -o Solver.o minisat2/Solver.cc",
+            f"g++ {compiler_options} -o System.o minisat2/System.cc",
+            f"g++ {compiler_options} -o main.o main.cpp",
+            f"g++ {compiler_options} -o verifierContext.o verifierContext.cpp",
+            f"g++ {compiler_options} -o supersetdatabase.o supersetdatabase.cpp",
+            (
+                "g++ -m64 -o planet"
+                " Options.o Solver.o System.o"
+                " main.o verifierContext.o supersetdatabase.o"
+                f" {library_options}"
+            ),
+            "else cd planet/src",
+            "fi",
             f"cp planet {installation_path}",
         ]
         install_script = "; ".join(commands)
         proc = sp.run(install_script, shell=True, env=env.vars())
         if proc.returncode != 0:
-            raise InstallError(f"Installation of planet failed")
+            raise InstallError("Installation of planet failed")
 
 
 def install(env: Environment):
@@ -58,7 +70,9 @@ def install(env: Environment):
         "gmp", "6.1.2", "https://gmplib.org/download/gmp/gmp-6.1.2.tar.xz"
     )
     zlib_installer = GNUInstaller(
-        "zlib", "1.2.11", "https://www.zlib.net/zlib-1.2.11.tar.xz"
+        "zlib",
+        "1.2.12",
+        "https://github.com/madler/zlib/archive/refs/tags/v1.2.12.tar.gz",
     )
     glpk_installer = GNUInstaller("glpk", "4.65")
     valgrind_installer = GNUInstaller(

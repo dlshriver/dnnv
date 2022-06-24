@@ -1,7 +1,7 @@
-import numpy as np
 import tempfile
-
 from typing import Dict, Iterable, List, Optional, Type, Union
+
+import numpy as np
 
 from dnnv.nn.layers import Convolutional, FullyConnected, InputLayer, Layer
 from dnnv.verifiers.common.errors import VerifierTranslatorError

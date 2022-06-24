@@ -7,12 +7,13 @@ import argparse
 import logging
 import sys
 
-from . import install, uninstall, list_verifiers, verifier_choices
+from . import install, list_verifiers, uninstall, verifier_choices
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="dnnv_manage - management tool for DNNV", prog="dnnv_manage"
+        description="dnnv_manage - management tool for DNNV",
+        prog="dnnv_manage",
     )
     parser.add_argument("-V", "--version", action="version", version="0.0.0")
     verbosity_group = parser.add_mutually_exclusive_group()
@@ -24,7 +25,10 @@ def parse_args() -> argparse.Namespace:
         dest="debug",
     )
     verbosity_group.add_argument(
-        "-q", "--quiet", action="store_true", help="suppress non-essential messages"
+        "-q",
+        "--quiet",
+        action="store_true",
+        help="suppress non-essential messages",
     )
 
     subparsers = parser.add_subparsers(
@@ -77,7 +81,7 @@ def _main() -> int:
         logger.setLevel(logging.ERROR)
     else:
         logger.setLevel(logging.WARNING)
-    formatter = logging.Formatter(f"%(levelname)-8s %(asctime)s (%(name)s) %(message)s")
+    formatter = logging.Formatter("%(levelname)-8s %(asctime)s (%(name)s) %(message)s")
     console_handler = logging.StreamHandler(stream=sys.stdout)
     console_handler.setLevel(logging.DEBUG)
     console_handler.setFormatter(formatter)
@@ -88,8 +92,8 @@ def _main() -> int:
     params.pop("debug")
     params.pop("verbose")
     params.pop("quiet")
-    return exit(args.command(**params))
+    return args.command(**params)
 
 
 if __name__ == "__main__":
-    exit(_main())
+    _main()

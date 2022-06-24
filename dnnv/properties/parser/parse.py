@@ -1,9 +1,9 @@
 from pathlib import Path
 from typing import List, Optional
 
-from .dnnp import parse as parse_dsl
-from .vnnlib import parse as parse_vnnlib
 from ..expressions import Expression
+from .dnnp import parse as parse_dnnp
+from .vnnlib import parse as parse_vnnlib
 
 
 def parse(
@@ -11,4 +11,7 @@ def parse(
 ) -> Expression:
     if format == "vnnlib":
         return parse_vnnlib(path, args)
-    return parse_dsl(path, args)
+    return parse_dnnp(path, args)
+
+
+__all__ = ["parse"]

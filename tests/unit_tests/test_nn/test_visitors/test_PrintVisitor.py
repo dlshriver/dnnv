@@ -1,5 +1,5 @@
-import pytest
 import numpy as np
+import pytest
 
 from dnnv.nn.operations import *
 from dnnv.nn.visitors import PrintVisitor
@@ -117,7 +117,7 @@ def test_Conv(capsys):
     captured = capsys.readouterr()
     expected_output = """\
 Input_0                         : Input((1, 3, 4, 4), dtype=float32)
-Conv_0                          : Conv(Input_0, kernel_shape=[2, 2], strides=[1, 1], pads=[0, 0, 0, 0])
+Conv_0                          : Conv(Input_0, out_channels=3, kernel_shape=[2, 2], strides=[1, 1], pads=[0, 0, 0, 0], group=1, dilations=[1, 1])
 """
     assert captured.out == expected_output
 
@@ -133,7 +133,7 @@ def test_ConvTranspose(capsys):
     captured = capsys.readouterr()
     expected_output = """\
 Input_0                         : Input((1, 3, 4, 4), dtype=float32)
-ConvTranspose_0                 : ConvTranspose(Input_0, kernel_shape=[2, 2], strides=[1, 1], pads=[0, 0, 0, 0], output_padding=[0, 0])
+ConvTranspose_0                 : ConvTranspose(Input_0, out_channels=3, kernel_shape=[2, 2], strides=[1, 1], pads=[0, 0, 0, 0], output_padding=[0, 0], group=1, dilations=[1, 1])
 """
     assert captured.out == expected_output
 
@@ -543,6 +543,38 @@ def test_Sign(capsys):
     expected_output = """\
 Input_0                         : Input((1, 5), dtype=float32)
 Sign_0                          : Sign(Input_0)
+"""
+    assert captured.out == expected_output
+
+
+def test_Slice(capsys):
+    input_op = Input((1, 5), np.dtype(np.float32))
+    slice_op_0 = Slice(input_op, np.array([0, 1]), np.array([1, 4]))
+    PrintVisitor().visit(slice_op_0)
+    captured = capsys.readouterr()
+    expected_output = """\
+Input_0                         : Input((1, 5), dtype=float32)
+Slice_0                         : Slice(Input_0, [0 1], [1 4])
+"""
+    assert captured.out == expected_output
+
+    slice_op_1 = Slice(input_op, np.array([1]), np.array([4]), axes=np.array([1]))
+    PrintVisitor().visit(slice_op_1)
+    captured = capsys.readouterr()
+    expected_output = """\
+Input_0                         : Input((1, 5), dtype=float32)
+Slice_0                         : Slice(Input_0, [1], [4], axes=[1])
+"""
+    assert captured.out == expected_output
+
+    slice_op_2 = Slice(
+        input_op, np.array([1]), np.array([4]), axes=np.array([1]), steps=np.array([2])
+    )
+    PrintVisitor().visit(slice_op_2)
+    captured = capsys.readouterr()
+    expected_output = """\
+Input_0                         : Input((1, 5), dtype=float32)
+Slice_0                         : Slice(Input_0, [1], [4], axes=[1], steps=[2])
 """
     assert captured.out == expected_output
 

@@ -4,12 +4,10 @@ dnnv._manage - management tool for DNNV
 from __future__ import annotations
 
 import logging
-
 from typing import List
 
 from .environment import Environment, ProgramDependency
-from .verifiers import *
-from ..errors import *
+from .verifiers import import_verifier_module, verifier_choices
 
 
 def install(verifiers: List[str]) -> int:

@@ -2,13 +2,8 @@ from __future__ import annotations
 
 import subprocess as sp
 
-from ..environment import (
-    Environment,
-    Dependency,
-    ProgramDependency,
-    Installer,
-)
 from ...errors import InstallError, UninstallError
+from ..environment import Dependency, Environment, Installer, ProgramDependency
 
 
 class ReluplexInstaller(Installer):
@@ -24,17 +19,23 @@ class ReluplexInstaller(Installer):
         commands = [
             "set -ex",
             f"cd {cache_dir}",
-            "rm -rf ReluplexCav2017",
-            "git clone https://github.com/dlshriver/ReluplexCav2017.git",
+            "if [ ! -e ReluplexCav2017 ]",
+            "then git clone https://github.com/dlshriver/ReluplexCav2017.git",
             "cd ReluplexCav2017",
             f"git checkout {commit_hash}",
-            f"make",
-            f"cp check_properties/generic_prover/generic_prover.elf {installation_path}/reluplex",
+            "make",
+            "else cd ReluplexCav2017",
+            "fi",
+            (
+                "cp"
+                " check_properties/generic_prover/generic_prover.elf"
+                f" {installation_path}/reluplex"
+            ),
         ]
         install_script = "; ".join(commands)
         proc = sp.run(install_script, shell=True, env=env.vars())
         if proc.returncode != 0:
-            raise InstallError(f"Installation of reluplex failed")
+            raise InstallError("Installation of reluplex failed")
 
 
 def install(env: Environment):

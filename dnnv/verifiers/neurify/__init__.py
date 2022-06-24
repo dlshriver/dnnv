@@ -1,10 +1,11 @@
+from functools import partial
+
 import numpy as np
 
 from dnnv.verifiers.common.base import Parameter, Verifier
-from dnnv.verifiers.common.reductions import IOPolytopeReduction, HalfspacePolytope
-from dnnv.verifiers.common.results import SAT, UNSAT, UNKNOWN
+from dnnv.verifiers.common.reductions import HalfspacePolytope, IOPolytopeReduction
+from dnnv.verifiers.common.results import SAT, UNKNOWN, UNSAT
 from dnnv.verifiers.common.utils import as_layers
-from functools import partial
 
 from .errors import NeurifyError, NeurifyTranslatorError
 from .utils import to_neurify_inputs
@@ -47,7 +48,9 @@ class Neurify(Verifier):
             "-H",
             neurify_inputs["input_hpoly_path"],
             "-v",
-        ) + tuple(f"--{k}={v}" for k, v in self.parameters.items() if v is not None)
+        ) + tuple(
+            f"--{k}={v}" for k, v in self.parameter_values.items() if v is not None
+        )
 
     def parse_results(self, prop, results):
         stdout, stderr = results

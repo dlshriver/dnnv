@@ -1,11 +1,13 @@
 from typing import Union
 
-from .base import Simplifier
 from ... import operations
+from .base import Simplifier
 
 
 class MoveActivationsBackward(Simplifier):
-    ShapingOperation = operations.Reshape | operations.Transpose | operations.Flatten
+    ShapingOperation: operations.patterns.Or = (
+        operations.Reshape | operations.Transpose | operations.Flatten
+    )
 
     def move_back(self, operation: Union[operations.Relu, operations.Sigmoid]):
         if next(self.ShapingOperation.match([operation.x]), None) is None:
@@ -25,3 +27,6 @@ class MoveActivationsBackward(Simplifier):
 
     def visit_Sigmoid(self, operation: operations.Sigmoid):
         return self.move_back(operation)
+
+
+__all__ = ["MoveActivationsBackward"]

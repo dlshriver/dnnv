@@ -7,7 +7,7 @@ for writing property specifications, which we call DNNP.
 In this section we will go over this language in
 detail and describe how properties can be specified in DNNP.
 To see some examples of common properties specified in this
-language, check :doc:`here <../getting_started/examples>`).
+language, check :doc:`here <../getting_started/examples>`.
 
 Because DNNP extends from Python, it should support
 execution of arbitrary Python code. However, DNNV is still
@@ -37,9 +37,10 @@ load a dataset.
 Inputs can then be selected from the dataset, or statistics, such
 as the mean data point, can be computed on the fly.
 
-While not necessary for correctness, we recommend importing
-the ``dnnv.properties`` package as ``from dnnv.properties import *``,
-which can enable autocompletion and type hints in many code editors.
+In general, imported functions and modules can only operate on 
+concrete values, however we do offer 
+:doc:`limited support <../dnnp/function_support>` for the
+application of some builtin and numpy functions to symbolic values.
 
 
 Definitions

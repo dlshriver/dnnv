@@ -1,8 +1,8 @@
 import unittest
 
-from dnnv.verifiers.verinet import VeriNet
-
 from system_tests.test_verifiers.utils import VerifierTests
+
+from dnnv.verifiers.verinet import VeriNet
 
 
 @unittest.skipIf(not VeriNet.is_installed(), "VeriNet is not installed")

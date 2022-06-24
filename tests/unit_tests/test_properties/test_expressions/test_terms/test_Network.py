@@ -2,7 +2,6 @@ import numpy as np
 import pytest
 
 import dnnv.nn.operations as operations
-
 from dnnv.nn.graph import OperationGraph
 from dnnv.properties.expressions import *
 

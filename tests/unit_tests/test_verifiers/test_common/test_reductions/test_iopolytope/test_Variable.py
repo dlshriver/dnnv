@@ -47,9 +47,7 @@ def test_repr():
 
 
 def test_hash():
-    sizes = np.random.randint(
-        np.ones(100, dtype=int), np.full(100, 25, dtype=int)
-    )
+    sizes = np.random.randint(np.ones(100, dtype=int), np.full(100, 25, dtype=int))
     hashes = set()
     for size in sizes:
         v = Variable((1, size))

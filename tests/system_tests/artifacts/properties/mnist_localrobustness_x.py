@@ -1,6 +1,8 @@
-from dnnv.properties import *
-import numpy as np
 import os
+
+import numpy as np
+
+from dnnv.properties import *
 
 N = Network("N")
 x = (

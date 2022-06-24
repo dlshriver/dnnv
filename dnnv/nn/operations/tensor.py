@@ -1,9 +1,9 @@
-import numpy as np
-
 from typing import Optional
 
-from .base import Operation
+import numpy as np
+
 from ..utils import as_numpy
+from .base import Operation
 
 
 class Cast(Operation):
@@ -15,8 +15,8 @@ class Cast(Operation):
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):
         attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
-        axis = attributes.get("to")
-        return cls(inputs, axis=axis, name=onnx_node.name)
+        to = attributes.get("to")
+        return cls(*inputs, to=to, name=onnx_node.name)
 
 
 class Concat(Operation):
@@ -194,6 +194,23 @@ class Split(Operation):
         return cls(*inputs, axis=axis, name=onnx_node.name)
 
 
+class Slice(Operation):
+    def __init__(
+        self, x, starts, ends, axes=None, steps=None, *, name: Optional[str] = None
+    ):
+        super().__init__(name=name)
+        self.x = x
+        self.starts = starts
+        self.ends = ends
+        self.axes = axes
+        self.steps = steps
+
+    @classmethod
+    def from_onnx(cls, onnx_node, *inputs):
+        attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
+        return cls(*inputs, name=onnx_node.name)
+
+
 class Tile(Operation):
     def __init__(self, x, repeats, *, name: Optional[str] = None):
         super().__init__(name=name)
@@ -251,6 +268,7 @@ __all__ = [
     "Resize",
     "Shape",
     "Split",
+    "Slice",
     "Tile",
     "Transpose",
     "Unsqueeze",

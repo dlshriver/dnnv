@@ -11,4 +11,4 @@ class BaBSB(BaB):
 
     def __init__(self, dnn_property: Expression, **kwargs):
         super().__init__(dnn_property, **kwargs)
-        self.parameters["smart_branching"] = True
+        self.parameter_values["smart_branching"] = True

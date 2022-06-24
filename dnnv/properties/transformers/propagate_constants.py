@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from typing import Union
+
 import numpy as np
 
-from typing import Union
+from dnnv.nn.graph import OperationGraph
 
 from ..expressions import (
     ArithmeticExpression,
@@ -20,8 +22,8 @@ from ..expressions import (
     LogicalExpression,
     Network,
     Parameter,
-    Subtract,
     Subscript,
+    Subtract,
     Symbol,
     TernaryExpression,
     UnaryExpression,
@@ -72,7 +74,9 @@ class PropagateConstants(GenericExpressionTransformer):
             new_expr = expression_type(*symbolic_expressions, ctx=expression.ctx)
         else:
             new_expr = expression_type(
-                Constant(concrete_expr_value), *symbolic_expressions, ctx=expression.ctx
+                Constant(concrete_expr_value),
+                *symbolic_expressions,
+                ctx=expression.ctx,
             )
         return new_expr
 
@@ -98,6 +102,8 @@ class PropagateConstants(GenericExpressionTransformer):
             result = expression.value
             if isinstance(result, Expression):
                 return result.propagate_constants()
+            if isinstance(result, OperationGraph):
+                return Network(str(expression)).concretize(result)
             return Constant(result)
         return Call(function, args, kwargs)
 

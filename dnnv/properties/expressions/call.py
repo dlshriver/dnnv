@@ -16,7 +16,7 @@ class CallableExpression(Expression):
 class Call(CallableExpression, ArithmeticExpression, LogicalExpression):
     def __init__(
         self,
-        function: Expression,
+        function: CallableExpression,
         args: Tuple[Expression, ...],
         kwargs: Mapping[str, Expression],
         *,
@@ -27,6 +27,7 @@ class Call(CallableExpression, ArithmeticExpression, LogicalExpression):
         self.args = args
         self.kwargs = kwargs
         self._value = None
+        self._hash_cache_call = None
 
     @property
     def value(self):
@@ -59,12 +60,14 @@ class Call(CallableExpression, ArithmeticExpression, LogicalExpression):
         return False
 
     def __hash__(self):
-        args_hash = 1
-        for arg in self.args:
-            args_hash *= hash(arg)
-        for key, arg in self.kwargs.items():
-            args_hash *= hash(key) * hash(arg)
-        return super().__hash__() * hash(self.function) * args_hash
+        if self._hash_cache_call is None:
+            args_hash = 1
+            for arg in self.args:
+                args_hash *= hash(arg)
+            for key, arg in self.kwargs.items():
+                args_hash *= hash(key) * hash(arg)
+            self._hash_cache_call = super().__hash__() * hash(self.function) * args_hash
+        return self._hash_cache_call
 
     def __repr__(self):
         function_name = repr(self.function)

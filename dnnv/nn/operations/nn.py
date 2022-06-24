@@ -1,9 +1,10 @@
-import numpy as np
-
+import logging
 from typing import Optional
 
-from .base import Operation
+import numpy as np
+
 from ..utils import as_numpy
+from .base import Operation
 
 
 class AveragePool(Operation):
@@ -206,16 +207,44 @@ class ConvTranspose(Operation):
 
 
 class Dropout(Operation):
-    def __init__(self, x, *, ratio=0.5, name: Optional[str] = None):
+    def __init__(
+        self,
+        x,
+        *,
+        ratio=0.5,
+        training_mode=False,
+        include_mask=False,
+        name: Optional[str] = None,
+    ):
         super().__init__(name=name)
         self.x = x
         self.ratio = ratio
+        self.training_mode = training_mode
+        self.include_mask = include_mask
 
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):
         attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
         ratio = attributes.get("ratio", 0.5)
-        return cls(*inputs, ratio=ratio, name=onnx_node.name)
+        training_mode = bool(attributes.get("training_mode", False))
+        if training_mode:
+            logger = logging.getLogger(__name__)
+            logger.warning("Dropout operations in training mode have limited support.")
+        if training_mode and len(onnx_node.output) == 2:
+            raise NotImplementedError(
+                "Using the mask of a Dropout operation is not yet supported."
+                " If you need this functionality, please open a GitHub issue."
+            )
+            return cls(
+                *inputs,
+                ratio=ratio,
+                training_mode=training_mode,
+                include_mask=True,
+                name=onnx_node.name,
+            )
+        return cls(
+            *inputs, ratio=ratio, training_mode=training_mode, name=onnx_node.name
+        )
 
 
 class GlobalAveragePool(Operation):

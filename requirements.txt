@@ -1,6 +1,7 @@
 lark~=1.0
 numpy>=1.20,<1.22
 onnx>=1.8,<1.11
+onnxruntime~=1.8
 psutil~=5.6
 scikit-image>=0.18,<0.19
 scipy~=1.5
@@ -8,12 +9,12 @@ tensorflow>=2.2,<2.8
 # Requirements for testing
 coverage~=5.5; extra == "test"
 pytest~=6.2; extra == "test"
-onnxruntime~=1.8; extra == "test"
 torch~=1.5; extra == "test"
 torchvision~=0.6; extra == "test"
 # Requirements for development
-black~=21.7b0; extra == "dev"
-mypy~=0.910; extra == "dev"
+black~=22.3; extra == "dev"
+isort~=5.10; extra == "dev"
+mypy~=0.942; extra == "dev"
 # Requirements for building the docs
 sphinx; extra == "docs"
 furo; extra == "docs"

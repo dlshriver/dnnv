@@ -1,8 +1,9 @@
-from dnnv.properties import *
-
 import ast
-import numpy as np
 import os
+
+import numpy as np
+
+from dnnv.properties import *
 
 rng = np.random.default_rng(int(os.environ.get("SEED", "0")))
 

@@ -1,5 +1,5 @@
 import numpy as np
-import onnxruntime
+import onnxruntime.backend
 import pytest
 
 from dnnv.nn.converters.onnx import *
