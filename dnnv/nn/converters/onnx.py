@@ -499,8 +499,7 @@ class OnnxConverter(OperationVisitor):
 
         node = onnx.helper.make_node(
             "Identity",
-            # inputs=[op.name],
-            inputs=[op.outputs[operation.index]],
+            inputs=[op.output[operation.index]],
             outputs=[opname],
             name=opname,
         )
@@ -608,12 +607,13 @@ class OnnxConverter(OperationVisitor):
         outputs = []
         for i in range(len(operation.split)):
             outputs.append(f"output_{i}")
-
+        outputs = np.array(outputs)
         x = self._to_onnx_proto(operation.x, f"{opname}.x")
-
+        split = self._to_onnx_proto(operation.split, f"{opname}.split")
+        print(f"{[x.name, split.name]}")
         node = onnx.helper.make_node(
             op_type,
-            inputs=[x.name, operation.split],
+            inputs=[x.name, split.name],
             outputs=outputs,
             name=opname,
             axis=operation.axis,

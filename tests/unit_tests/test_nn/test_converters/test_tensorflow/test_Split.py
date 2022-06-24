@@ -5,130 +5,76 @@ from dnnv.nn.converters.tensorflow import *
 from dnnv.nn.operations import *
 
 
-def test_Reshape():
-    original_shape = [0, 3, 4]
-    data = np.random.random_sample(original_shape).astype(np.float32)
-    new_shape = np.array([3, 4, 0], dtype=np.int64)
-    y = np.reshape(data, new_shape)
-
-    op = Reshape(data, new_shape, allowzero=True)
+def test_Split_export_1d() -> None:
+    input = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]).astype(np.float32)
+    op = Split(input, axis=0, split=np.array([2, 2, 2]))
     tf_op = TensorflowConverter().visit(op)
-    result = tf_op().numpy()
-    assert np.allclose(result, y)
+    result_ = tf_op()
+    expected_outputs = np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]).astype(np.float32)
+    assert len(result_) == 3
+    assert np.array_equiv(result_, expected_outputs)
 
-    op = Reshape(
-        Input((0, 3, 4), np.dtype(np.float32)),
-        Input((3,), np.dtype(np.int64)),
-        allowzero=True,
-    )
+    op = Split(input, axis=0, split=np.array([2, 4]).astype(np.int64))
     tf_op = TensorflowConverter().visit(op)
-    result = tf_op(data, new_shape).numpy()
-    assert np.allclose(result, y)
+    result_ = tf_op()
+    assert len(result_) == 2
+    assert np.array_equiv(result_[0], np.array([1.0, 2.0]).astype(np.float32))
+    assert np.array_equiv(result_[1], np.array([3.0, 4.0, 5.0, 6.0]).astype(np.float32))
 
 
-def test_Reshape_reordered_all_dims():
-    original_shape = [2, 3, 4]
-    data = np.random.random_sample(original_shape).astype(np.float32)
-    new_shape = np.array([4, 2, 3], dtype=np.int64)
-    y = np.reshape(data, new_shape)
+def test_Split_export_2d() -> None:
+    input = np.array(
+        [[1.0, 2.0, 3.0, 4.0, 5.0, 6.0], [7.0, 8.0, 9.0, 10.0, 11.0, 12.0]]
+    ).astype(np.float32)
 
-    op = Reshape(data, new_shape)
+    op = Split(input, axis=1, split=np.array([3, 3]))
     tf_op = TensorflowConverter().visit(op)
-    result = tf_op().numpy()
-    assert np.allclose(result, y)
+    result_ = tf_op()
+    expected_outputs = np.array(
+        [[[1.0, 2.0, 3.0], [7.0, 8.0, 9.0]], [[4.0, 5.0, 6.0], [10.0, 11.0, 12.0]]]
+    ).astype(np.float32)
+    for i in range(2):
+        assert result_[i].shape == (2, 3)
+        assert np.array_equiv(result_[i], expected_outputs[i])
 
-
-def test_Reshape_reordered_last_dims():
-    original_shape = [2, 3, 4]
-    data = np.random.random_sample(original_shape).astype(np.float32)
-    new_shape = np.array([2, 4, 3], dtype=np.int64)
-    y = np.reshape(data, new_shape)
-
-    op = Reshape(data, new_shape)
+    op = Split(input, axis=1, split=np.array([2, 4]))
     tf_op = TensorflowConverter().visit(op)
-    result = tf_op().numpy()
-    assert np.allclose(result, y)
+    result_ = tf_op()
+    expected_outputs1 = np.array([[1.0, 2.0], [7.0, 8.0]]).astype(np.float32)
+    expected_outputs2 = np.array(
+        [[3.0, 4.0, 5.0, 6.0], [9.0, 10.0, 11.0, 12.0]]
+    ).astype(np.float32)
+    assert result_[0].shape == (2, 2)
+    assert np.array_equiv(result_[0], expected_outputs1)
+    assert result_[1].shape == (2, 4)
+    assert np.array_equiv(result_[1], expected_outputs2)
 
 
-def test_Reshape_reduced_dims():
-    original_shape = [2, 3, 4]
-    data = np.random.random_sample(original_shape).astype(np.float32)
-    new_shape = np.array([2, 12], dtype=np.int64)
-    y = np.reshape(data, new_shape)
-
-    op = Reshape(data, new_shape)
+def test_Split_export_default_values() -> None:
+    input = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]).astype(np.float32)
+    op = Split(input, split=np.array([2, 2, 2]))
     tf_op = TensorflowConverter().visit(op)
-    result = tf_op().numpy()
-    assert np.allclose(result, y)
+    result_ = tf_op()
+    expected_outputs = np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]).astype(np.float32)
+    assert len(result_) == 3
+    assert np.array(result_).shape == expected_outputs.shape
+    assert np.array_equiv(np.array(result_), expected_outputs)
 
-
-def test_Reshape_extended_dims():
-    original_shape = [2, 3, 4]
-    data = np.random.random_sample(original_shape).astype(np.float32)
-    new_shape = np.array([2, 3, 2, 2], dtype=np.int64)
-    y = np.reshape(data, new_shape)
-
-    op = Reshape(data, new_shape)
+    op = Split(input, split=np.array([2, 4]))
     tf_op = TensorflowConverter().visit(op)
-    result = tf_op().numpy()
-    assert np.allclose(result, y)
+    result_ = tf_op()
+    assert len(result_) == 2
+    assert len(result_[0]) == 2
+    assert len(result_[1]) == 4
+    assert np.array_equiv(result_[0], np.array([1.0, 2.0]).astype(np.float32))
+    assert np.array_equiv(result_[1], np.array([3.0, 4.0, 5.0, 6.0]).astype(np.float32))
 
 
-def test_Reshape_one_dim():
-    original_shape = [2, 3, 4]
-    data = np.random.random_sample(original_shape).astype(np.float32)
-    new_shape = np.array([24], dtype=np.int64)
-    y = np.reshape(data, new_shape)
-
-    op = Reshape(data, new_shape)
+def test_Split_export_zero_size_splits() -> None:
+    input = np.array([]).astype(np.float32)
+    op = Split(input, split=np.array([0, 0, 0]))
     tf_op = TensorflowConverter().visit(op)
-    result = tf_op().numpy()
-    assert np.allclose(result, y)
-
-
-def test_Reshape_negative_dim():
-    original_shape = [2, 3, 4]
-    data = np.random.random_sample(original_shape).astype(np.float32)
-    new_shape = np.array([2, -1, 2], dtype=np.int64)
-    y = np.reshape(data, new_shape)
-
-    op = Reshape(data, new_shape)
-    tf_op = TensorflowConverter().visit(op)
-    result = tf_op().numpy()
-    assert np.allclose(result, y)
-
-
-def test_Reshape_negative_extended_dims():
-    original_shape = [2, 3, 4]
-    data = np.random.random_sample(original_shape).astype(np.float32)
-    new_shape = np.array([-1, 2, 3, 4], dtype=np.int64)
-    y = np.reshape(data, new_shape)
-
-    op = Reshape(data, new_shape)
-    tf_op = TensorflowConverter().visit(op)
-    result = tf_op().numpy()
-    assert np.allclose(result, y)
-
-
-def test_Reshape_zero_dim():
-    original_shape = [2, 3, 4]
-    data = np.random.random_sample(original_shape).astype(np.float32)
-    new_shape = np.array([2, 0, 4, 1], dtype=np.int64)
-    y = np.reshape(data, [2, 3, 4, 1])
-
-    op = Reshape(data, new_shape)
-    tf_op = TensorflowConverter().visit(op)
-    result = tf_op().numpy()
-    assert np.allclose(result, y)
-
-
-def test_Reshape_zero_and_negative_dim():
-    original_shape = [2, 3, 4]
-    data = np.random.random_sample(original_shape).astype(np.float32)
-    new_shape = np.array([2, 0, 1, -1], dtype=np.int64)
-    y = np.reshape(data, [2, 3, 1, -1])
-
-    op = Reshape(data, new_shape)
-    tf_op = TensorflowConverter().visit(op)
-    result = tf_op().numpy()
-    assert np.allclose(result, y)
+    result_ = tf_op()
+    expected_outputs = np.array([[], [], []]).astype(np.float32)
+    assert np.array(result_).shape == (3, 0)
+    assert np.array_equiv(np.array(result_), expected_outputs)

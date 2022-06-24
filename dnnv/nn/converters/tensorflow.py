@@ -877,13 +877,15 @@ class TensorflowConverter(OperationVisitor):
         x_ = operation.x
         if isinstance(x_, Operation):
             x_ = self.visit(x_)
+        split_ = operation.split
+        if isinstance(split_, Operation):
+            split_ = self.visit(split_)
         axis = operation.axis
-        split = operation.split
 
         @self._cached
         def split_func(*inputs):
-            x = _concretize([x_], inputs)
-            x = tf.split(x, split, axis=axis)
+            x, split = _concretize([x_, split_], inputs)
+            x = tf.split(x, tf.convert_to_tensor(split), axis=axis)
             return x
 
         return split_func
