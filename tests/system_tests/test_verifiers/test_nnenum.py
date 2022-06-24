@@ -1,8 +1,8 @@
 import unittest
 
-from dnnv.verifiers.nnenum import Nnenum
-
 from system_tests.test_verifiers.utils import VerifierTests
+
+from dnnv.verifiers.nnenum import Nnenum
 
 
 @unittest.skipIf(not Nnenum.is_installed(), "nnenum is not installed")

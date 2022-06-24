@@ -13,6 +13,10 @@ Available Simplifications
 -------------------------
 
 Here we list some of the available simplifications provided by DNNV.
+Currently all simplfiications are applied to a network, unless the simplification is marked as optional below.
+Optional simplifications can be enabled with the ``DNNV_OPTIONAL_SIMPLIFICATIONS`` environment variable.
+This variable accepts a colon separated list of optional simplifications.
+For example, to include the optional ``ReluifyMaxPool`` simplification, set ``DNNV_OPTIONAL_SIMPLIFICATIONS=ReluifyMaxPool``.
 
 
 BatchNormalization Simplification
@@ -23,12 +27,17 @@ BatchNormalization simplification removes BatchNormalization operations from a n
 Identity Removal
 ^^^^^^^^^^^^^^^^
 
-DNNV removes many types of identity operations from DNN models, including explicit Identity operations, Concat operations with a single input, and Flatten operations applied to flat tensors. Such operations can occur in DNN models due to user error, or through automated processes, and their removal does not affect model behavior.
+DNNV removes many types of identity operations from DNN models, including explicit Identity operations, Concat operations with a single input, Flatten operations applied to flat tensors, and Relu operations applied to positive values. Such operations can occur in DNN models due to user error, or through automated processes, and their removal does not affect model behavior.
 
-Convert MatMul followed by Add to Gemm
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Convert Add
+^^^^^^^^^^^
 
-DNNV converts instances of MatMul (matrix multiplication) operations, followed immediately by Add operations to an equivalent Gemm (generalized matrix multiplication) operation. The Gemm operation generalizes the matrix multiplication and addition, and can simplify subsequent processing and analysis of the DNN.
+DNNV converts compatible instances of Add operations to an equivalent Gemm (generalized matrix multiplication) operation.
+
+Convert MatMul Gemm
+^^^^^^^^^^^^^^^^^^^
+
+DNNV converts compatible instances of MatMul (matrix multiplication) operations to an equivalent Gemm (generalized matrix multiplication) operation. The Gemm operation generalizes the matrix multiplication and addition, and can simplify subsequent processing and analysis of the DNN.
 
 Convert Reshape to Flatten
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -61,3 +70,9 @@ Move Activations Backward
 
 DNNV moves activation functions through reshaping operations to immediately succeed the most recent non-reshaping operation. This is possible since activation functions are element-wise operations. This transformation can simplify pattern matching in later analysis steps by reducing the number of possible patterns.
 
+Reluify MaxPool
+^^^^^^^^^^^^^^^
+
+This is an optional simplification, which can be enabled by adding ``ReluifyMaxPool`` to the list of optional simplifiers. This simplification converts MaxPool operations into an equivalent set of Conv and Relu operations. We do this by encoding max ops as :math:`max(a, b) = relu(a - b) + relu(b) - relu(-b)`. This encoding is only a pairwise comparison, and so we cannot translate a single max pool operation into a single convolution operation, we must translate the max pool into a sequence of convolution and relu operations (using this encoding). In general, a MaxPool with a kernel size of :math:`n` will be converterted to a sequence of :math:`2*lg(n)` Conv operations, each followed by a Relu operation.
+
+.. TODO: can we automatically generate this page? Maybe using docstrings?

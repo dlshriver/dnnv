@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Callable, List, Optional
+from typing import Callable, Collection, Optional
 
-from . import *
-from ....expressions import Expression
+from ....expressions import CallableExpression, Expression
 
 
 class FunctionSubstitutor:
-    __matches__: List[Callable] = []
+    __matches__: Collection[Callable]
 
     @classmethod
     def lookup(cls, f: Callable) -> Optional[FunctionSubstitutor]:
@@ -19,7 +18,7 @@ class FunctionSubstitutor:
 
     @abstractmethod
     def __call__(
-        self, f: Expression, *args: Expression, **kwargs: Expression
+        self, f: CallableExpression, *args: Expression, **kwargs: Expression
     ) -> Expression:
         pass
 

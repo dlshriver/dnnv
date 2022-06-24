@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import numpy as np
-
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from scipy.optimize import linprog
 from typing import Dict, List, Optional, Sequence, Tuple
+
+import numpy as np
+from scipy.optimize import linprog
 
 
 class Variable:
@@ -58,7 +58,7 @@ class Constraint(ABC):
             self.variables[variable] = self.size()
         return self
 
-    def unravel_index(self, index: int) -> Tuple[Variable, Tuple[int, ...]]:
+    def unravel_index(self, index: int) -> Tuple[Variable, Tuple[np.intp, ...]]:
         c_size = self.size()
         for variable, size in sorted(self.variables.items(), key=lambda kv: -kv[1]):
             if size <= index < c_size:
@@ -68,7 +68,7 @@ class Constraint(ABC):
         )
 
     @abstractmethod
-    def as_bounds(self) -> bool:
+    def as_bounds(self) -> Tuple[np.ndarray, np.ndarray]:
         pass
 
     @abstractmethod
@@ -151,8 +151,8 @@ class HalfspacePolytope(Constraint):
         # linprog breaks if bounds are too big or too small
         bounds = list(
             zip(
-                (l if l > -1e6 else None for l in lb),
-                (u if u < 1e6 else None for u in ub),
+                (b if b > -1e6 else None for b in lb),
+                (b if b < 1e6 else None for b in ub),
             )
         )
         try:
@@ -169,9 +169,9 @@ class HalfspacePolytope(Constraint):
             raise e
         if result.status == 4:
             return None
-        elif result.status == 2:  # infeasible
+        if result.status == 2:  # infeasible
             return False
-        elif result.status == 0:  # feasible
+        if result.status == 0:  # feasible
             return True
         return None  # unknown
 
@@ -199,7 +199,7 @@ class HalfspacePolytope(Constraint):
 
     def _update_bounds(
         self,
-        indices: Sequence[Tuple[int, ...]],
+        indices: Sequence[int],
         coefficients: Sequence[float],
         b: float,
         is_open=False,
@@ -220,21 +220,27 @@ class HalfspacePolytope(Constraint):
             n = self.size()
             for i in indices:
                 obj = np.zeros(n)
+                bounds = list(
+                    zip(
+                        (b if np.isfinite(b) else None for b in self._lower_bound),
+                        (b if np.isfinite(b) else None for b in self._upper_bound),
+                    )
+                )
                 try:
                     obj[i] = 1
                     result = linprog(
                         obj,
                         A_ub=self.A,
                         b_ub=self.b,
-                        bounds=(None, None),
+                        bounds=bounds,
                         method="highs",
                     )
                     if result.status == 0:
-                        self._lower_bound[i] = result.x[i]
+                        self._lower_bound[i] = max(result.x[i], self._lower_bound[i])
                 except ValueError as e:
-                    if (
-                        e.args[0]
-                        != "The algorithm terminated successfully and determined that the problem is infeasible."
+                    if e.args[0] != (
+                        "The algorithm terminated successfully and determined"
+                        " that the problem is infeasible."
                     ):
                         raise e
                 try:
@@ -243,15 +249,15 @@ class HalfspacePolytope(Constraint):
                         obj,
                         A_ub=self.A,
                         b_ub=self.b,
-                        bounds=(None, None),
+                        bounds=bounds,
                         method="highs",
                     )
                     if result.status == 0:
-                        self._upper_bound[i] = result.x[i]
+                        self._upper_bound[i] = min(result.x[i], self._upper_bound[i])
                 except ValueError as e:
-                    if (
-                        e.args[0]
-                        != "The algorithm terminated successfully and determined that the problem is infeasible."
+                    if e.args[0] != (
+                        "The algorithm terminated successfully and determined"
+                        " that the problem is infeasible."
                     ):
                         raise e
 
@@ -264,7 +270,7 @@ class HalfspacePolytope(Constraint):
         is_open=False,
     ) -> None:
         flat_indices = [
-            self.variables[var] + np.ravel_multi_index(idx, var.shape)
+            self.variables[var] + int(np.ravel_multi_index(idx, var.shape))
             for var, idx in zip(variables, indices)
         ]
         halfspace = Halfspace(flat_indices, coefficients, b, is_open)
@@ -295,9 +301,10 @@ class HalfspacePolytope(Constraint):
                 return False
             x_flat_.append(x_.flatten())
         x_flat = np.concatenate(x_flat_)
+        cast = np.cast[x_flat.dtype]
         for hs in self.halfspaces:
-            t = sum(c * x_flat[i] for c, i in zip(hs.coefficients, hs.indices))
-            b = hs.b
+            t = sum(cast(c) * x_flat[i] for c, i in zip(hs.coefficients, hs.indices))
+            b = cast(hs.b)
             if hs.is_open:
                 b = np.nextafter(b, b - 1)
             if (t - b) > threshold:
@@ -326,7 +333,7 @@ class HyperRectangle(HalfspacePolytope):
         return True
 
     @property
-    def lower_bounds(self) -> np.ndarray:
+    def lower_bounds(self) -> Sequence[np.ndarray]:
         lbs = []
         for variable, start_index in self.variables.items():
             size = variable.size()
@@ -338,7 +345,7 @@ class HyperRectangle(HalfspacePolytope):
         return lbs
 
     @property
-    def upper_bounds(self) -> np.ndarray:
+    def upper_bounds(self) -> Sequence[np.ndarray]:
         ubs = []
         for variable, start_index in self.variables.items():
             size = variable.size()

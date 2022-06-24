@@ -1,10 +1,10 @@
-import numpy as np
-
 from copy import copy
 
-from .base import Simplifier
+import numpy as np
+
 from ... import operations
 from ...analyzers import SplitAnalysis
+from .base import Simplifier
 
 
 class ConvertBatchNorm(Simplifier):
@@ -51,14 +51,16 @@ class ConvertBatchNorm(Simplifier):
             elif len(input_shape) == 4:
                 c = operation.mean.shape[0]
                 std = np.sqrt(operation.variance + operation.epsilon)
-                k = np.zeros(
+                W = np.zeros(
                     (c, c, 1, 1), dtype=input_dtype
                 )  # identity kernel (H, W, inC, outC)
                 for i in range(c):
-                    k[i, i, 0, 0] = 1
-                W = k * operation.scale / std
+                    W[i, i, 0, 0] = operation.scale[i] / std[i]
                 b = operation.bias - operation.scale * operation.mean / std
                 op = operations.Conv(input_op, W, b)
                 return op
         # TODO : in what other scenarios can BatchNorm be converted?
         return operation
+
+
+__all__ = ["ConvertBatchNorm"]

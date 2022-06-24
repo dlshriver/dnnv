@@ -1,9 +1,9 @@
-import pytest
-
 from pathlib import Path
 
+import pytest
+
 from dnnv.properties.expressions import Expression, Forall, get_context
-from dnnv.properties.parser.dnnp import parse, parse_str, DNNPParserError
+from dnnv.properties.parser.dnnp import DNNPParserError, parse, parse_str
 
 artifacts_dir = Path(__file__).parent / "test_parse_artifacts"
 
@@ -29,7 +29,7 @@ if True:
 Forall(x, x > c)
 """
     with pytest.raises(
-        DNNPParserError, match="line 3, col 0: Unsupported structure in property:"
+        DNNPParserError, match="line 3, column 0: Unsupported structure in property:"
     ):
         _ = parse_str(spec_str)
 

@@ -1,7 +1,7 @@
-import numpy as np
 import tempfile
+from typing import Iterable, List, Optional, Tuple, Type
 
-from typing import Iterable, List, Optional, Type
+import numpy as np
 
 from dnnv.nn.layers import Convolutional, FullyConnected, InputLayer, Layer
 from dnnv.verifiers.common import HalfspacePolytope, VerifierTranslatorError
@@ -27,8 +27,7 @@ def as_rlv(
         yield f"Input {name}"
     layer_id = 1
     prev_layer = tuple(curr_layer)
-    input_shape = tuple(input_layer.shape)
-    seen_fully_connected = False
+    input_shape: Tuple[int, ...] = tuple(input_layer.shape)
     for layer in layers[1:]:
         curr_layer = []
         output_shape = []  # type: List[int]
@@ -51,8 +50,14 @@ def as_rlv(
                 yield f"{activation} {name} {bias.item():.12f} {computation}"
             output_shape = [input_shape[0], len(curr_layer)]
         elif isinstance(layer, Convolutional):
+            assert len(input_shape) == 4
             yield from conv_as_rlv(
-                layer, str(layer_id), prev_layer, input_shape, curr_layer, output_shape
+                layer,
+                str(layer_id),
+                prev_layer,
+                input_shape,
+                curr_layer,
+                output_shape,
             )
         elif hasattr(layer, "as_rlv"):
             yield from layer.as_rlv(

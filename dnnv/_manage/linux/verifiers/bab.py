@@ -2,18 +2,18 @@ from __future__ import annotations
 
 import subprocess as sp
 
+from ...errors import InstallError, UninstallError
 from ..environment import (
-    Environment,
     Dependency,
+    Environment,
+    GurobiInstaller,
     HeaderDependency,
+    Installer,
     LibraryDependency,
     ProgramDependency,
-    Installer,
-    GurobiInstaller,
 )
-from ...errors import InstallError, UninstallError
 
-gurobi_python_template = """#!/bin/bash
+GUROBI_PYTHON_TEMPLATE = """#!/bin/bash
 
 export GUROBI_HOME={gurobi_home}
 export PATH={gurobi_home}/bin:$PATH
@@ -21,7 +21,7 @@ export LD_LIBRARY_PATH={gurobi_home}/lib:$LD_LIBRARY_PATH
 {python_venv}/bin/python $@
 """
 
-bab_runner = """#!{python_venv}/bin/gurobipython
+BAB_RUNNER_TEMPLATE = """#!{python_venv}/bin/gurobipython
 import argparse
 import numpy as np
 
@@ -62,7 +62,7 @@ def main(args):
     min_lb, min_ub, ub_point, nb_visited_states = bab(
         network, domain, epsilon, decision_bound, smart_brancher
     )
-    
+
     if min_lb > 0:
         print("safe")
     elif min_ub <= 0:
@@ -86,7 +86,7 @@ if __name__ == "__main__":
 
 class BaBInstaller(Installer):
     def run(self, env: Environment, dependency: Dependency):
-        commit_hash = "d0e20ee"
+        commit_hash = "d0e20eed8d395c723d7b2903746feb7d0ec7db1c"
 
         cache_dir = env.cache_dir / f"bab-{commit_hash}"
         cache_dir.mkdir(exist_ok=True, parents=True)
@@ -109,7 +109,13 @@ class BaBInstaller(Installer):
             "python -m venv bab",
             ". bab/bin/activate",
             "pip install --upgrade pip",
-            'pip install "numpy>=1.19,<1.20" "torch>=1.8,<1.9" "sh>=1.14,<1.15" "scipy>=1.6,<1.7"',
+            (
+                "pip install"
+                ' "numpy>=1.19,<1.20"'
+                ' "torch>=1.8,<1.9"'
+                ' "sh>=1.14,<1.15"'
+                ' "scipy>=1.6,<1.7"'
+            ),
             f"cd {gurobi_path}",
             "python setup.py install",
             f"cd {cache_dir}",
@@ -117,7 +123,7 @@ class BaBInstaller(Installer):
             "git clone https://github.com/oval-group/PLNN-verification.git",
             "cd PLNN-verification",
             f"git checkout {commit_hash}",
-            f"sed -i 's#torch==0.4.0#torch>=0.4.0#' setup.py",
+            "sed -i 's#torch==0.4.0#torch>=0.4.0#' setup.py",
             "python setup.py install",
             "rm -rf convex_adversarial",
             "git clone https://github.com/locuslab/convex_adversarial.git",
@@ -128,18 +134,18 @@ class BaBInstaller(Installer):
         install_script = "; ".join(commands)
         proc = sp.run(install_script, shell=True, env=envvars)
         if proc.returncode != 0:
-            raise InstallError(f"Installation of bab failed")
+            raise InstallError("Installation of bab failed")
 
         with open(verifier_venv_path / "bin" / "gurobipython", "w+") as f:
             f.write(
-                gurobi_python_template.format(
+                GUROBI_PYTHON_TEMPLATE.format(
                     python_venv=verifier_venv_path,
                     gurobi_home=envvars.get("GUROBI_HOME", "."),
                 )
             )
         (verifier_venv_path / "bin" / "gurobipython").chmod(0o700)
         with open(installation_path / "bab", "w+") as f:
-            f.write(bab_runner.format(python_venv=verifier_venv_path))
+            f.write(BAB_RUNNER_TEMPLATE.format(python_venv=verifier_venv_path))
         (installation_path / "bab").chmod(0o700)
 
 

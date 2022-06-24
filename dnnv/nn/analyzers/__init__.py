@@ -1,10 +1,8 @@
-import numpy as np
-
 from typing import Set
 
-from .base import Analysis
 from .. import Operation, operations
 from ..graph import OperationGraph
+from .base import Analysis
 
 
 class SplitAnalysis(Analysis):
@@ -23,9 +21,6 @@ class SplitAnalysis(Analysis):
 
 
 class ConstantsAnalysis(Analysis):
-    def __init__(self, dnn: OperationGraph):
-        super().__init__(dnn)
-
     def visit(self, operation: Operation):
         super().visit(operation)
         if operation in self.results:

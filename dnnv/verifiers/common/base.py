@@ -1,7 +1,6 @@
 import logging
 import os
 import tempfile
-
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from functools import partial
@@ -10,15 +9,15 @@ from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Type, 
 from dnnv.properties import Expression, LogicalExpression
 
 from .errors import VerifierError, VerifierTranslatorError
-from .executors import VerifierExecutor, CommandLineExecutor
+from .executors import CommandLineExecutor, VerifierExecutor
 from .reductions import (
-    Property,
-    Reduction,
-    IOPolytopeReduction,
     HalfspacePolytope,
     HyperRectangle,
+    IOPolytopeReduction,
+    Property,
+    Reduction,
 )
-from .results import SAT, UNSAT, UNKNOWN, PropertyCheckResult
+from .results import SAT, UNSAT, PropertyCheckResult
 
 
 class Parameter:
@@ -31,7 +30,15 @@ class Parameter:
     ):
         self.type: Callable[[Any], Any] = dtype
         if dtype == bool:
-            self.type = lambda x: x not in ["False", "false", "0", "F", "f", False, 0]
+            self.type = lambda x: x not in [
+                "False",
+                "false",
+                "0",
+                "F",
+                "f",
+                False,
+                0,
+            ]
         self.default = self.type(default) if default is not None else None
         self.choices = choices
         self.help = help
@@ -54,10 +61,10 @@ class Verifier(ABC):
             f"{type(self).__module__}.{type(self).__qualname__}"
         )
         self.property = dnn_property.propagate_constants()
-        for key, value in kwargs.items():
+        for key in kwargs:
             if key not in self.__class__.parameters:
                 raise self.verifier_error(f"Unknown parameter: {key}")
-        self.parameters = {
+        self.parameter_values: Dict[str, Any] = {
             name: param.as_type(kwargs.get(name, param.default))
             for name, param in self.__class__.parameters.items()
         }
@@ -75,7 +82,7 @@ class Verifier(ABC):
 
     @contextmanager
     def contextmanager(self):
-        yield
+        yield self
 
     @classmethod
     def verify(
@@ -98,12 +105,11 @@ class Verifier(ABC):
 
     def run(self) -> Tuple[PropertyCheckResult, Optional[Any]]:
         if self.property.is_concrete:
-            if self.property.value == True:
+            if self.property.value:
                 self.logger.warning("Property is trivially UNSAT.")
                 return UNSAT, None
-            else:
-                self.logger.warning("Property is trivially SAT.")
-                return SAT, None
+            self.logger.warning("Property is trivially SAT.")
+            return SAT, None
         orig_tempdir = tempfile.tempdir
         try:
             with tempfile.TemporaryDirectory() as tempdir:
@@ -117,7 +123,7 @@ class Verifier(ABC):
                             self.logger.debug("SAT! Validating counter example.")
                             self.validate_counter_example(subproperty, cex)
                         else:
-                            self.logger.warn("SAT result without counter example.")
+                            self.logger.warning("SAT result without counter example.")
                         return result, cex
         finally:
             tempfile.tempdir = orig_tempdir

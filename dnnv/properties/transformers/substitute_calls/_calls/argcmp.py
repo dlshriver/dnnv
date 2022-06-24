@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import numpy as np
-
 from typing import Callable, Union
+
+import numpy as np
 
 from ....expressions import (
     And,
@@ -11,6 +11,7 @@ from ....expressions import (
     Expression,
     IfThenElse,
     Implies,
+    LogicalExpression,
     Network,
     Or,
 )
@@ -48,10 +49,10 @@ def argcmp_eq(
         raise RuntimeError("Too many arguments for argcmp")
     A = F.args[0]
     if A.is_concrete and E.is_concrete:
-        A_value = A.value
+        A_value: np.ndarray = A.value
         assert isinstance(A_value, np.ndarray)
         j = E.value
-        for i in np.ndindex(A_value.shape):
+        for i in np.ndindex(*A_value.shape):
             if not cmp_fn(A_value[j], A_value[i]):
                 return Constant(False)
         return Constant(True)
@@ -81,17 +82,20 @@ class Argmax(FunctionSubstitutor):
         return argcmp(lambda a, b: a >= b, A)
 
     @staticmethod
-    def substitute_Equal(a: Expression, b: Expression, form=None) -> Expression:
+    def substitute_Equal(a: Expression, b: Expression, form=None) -> LogicalExpression:
         if (
             isinstance(a, Call)
             and a.function.is_concrete
             and a.function.value == np.argmax
         ):
             return argcmp_eq(lambda x, y: x >= y, a, b)
+        assert isinstance(b, Call)
         return argcmp_eq(lambda x, y: x >= y, b, a)
 
     @staticmethod
-    def substitute_NotEqual(a: Expression, b: Expression, form=None) -> Expression:
+    def substitute_NotEqual(
+        a: Expression, b: Expression, form=None
+    ) -> LogicalExpression:
         result = Argmax.substitute_Equal(a, b)
         if result is NotImplemented:
             return NotImplemented
@@ -108,17 +112,20 @@ class Argmin(FunctionSubstitutor):
         return argcmp(lambda a, b: a <= b, *args, **kwargs)
 
     @staticmethod
-    def substitute_Equal(a: Expression, b: Expression, form=None) -> Expression:
+    def substitute_Equal(a: Expression, b: Expression, form=None) -> LogicalExpression:
         if (
             isinstance(a, Call)
             and a.function.is_concrete
             and a.function.value == np.argmin
         ):
             return argcmp_eq(lambda x, y: x <= y, a, b)
+        assert isinstance(b, Call)
         return argcmp_eq(lambda x, y: x <= y, b, a)
 
     @staticmethod
-    def substitute_NotEqual(a: Expression, b: Expression, form=None) -> Expression:
+    def substitute_NotEqual(
+        a: Expression, b: Expression, form=None
+    ) -> LogicalExpression:
         result = Argmin.substitute_Equal(a, b)
         if result is NotImplemented:
             return NotImplemented

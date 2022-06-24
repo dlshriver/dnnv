@@ -1,10 +1,11 @@
+from functools import partial
+
 import numpy as np
 
 from dnnv.verifiers.common.base import Parameter, Verifier
-from dnnv.verifiers.common.reductions import IOPolytopeReduction, HalfspacePolytope
-from dnnv.verifiers.common.results import SAT, UNSAT, UNKNOWN
+from dnnv.verifiers.common.reductions import HalfspacePolytope, IOPolytopeReduction
+from dnnv.verifiers.common.results import SAT, UNKNOWN, UNSAT
 from dnnv.verifiers.common.utils import as_layers
-from functools import partial
 
 from .errors import PlanetError, PlanetTranslatorError
 from .layers import PLANET_LAYER_TYPES

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
+from collections import defaultdict
+from typing import Dict, List, Tuple, Union, cast
+
 import numpy as np
 
-from collections import defaultdict
-from typing import Dict, List, Tuple
-
-from .dnf import DnfTransformer
 from ..expressions import *
+from .dnf import DnfTransformer
 
 
 def _extract_constants(expr: Add) -> Tuple[Add, Constant]:
@@ -21,8 +21,12 @@ def _extract_constants(expr: Add) -> Tuple[Add, Constant]:
 
 
 class CanonicalTransformer(DnfTransformer):
-    def _extract_coefficients(self, expression: Add) -> Dict[Expression, Expression]:
-        coefficients = defaultdict(lambda: Constant(0))
+    def _extract_coefficients(
+        self, expression: Add
+    ) -> Dict[Expression, ArithmeticExpression]:
+        coefficients: Dict[Expression, ArithmeticExpression] = defaultdict(
+            lambda: Constant(0)
+        )
         for expr in expression.expressions:
             expr = self.visit(expr)
             if isinstance(expr, Add):
@@ -60,58 +64,106 @@ class CanonicalTransformer(DnfTransformer):
             summands.append(Multiply(Constant(coeff), expr))
         return Add(*summands)
 
-    def visit_Equal(self, expression: Equal) -> Or:
+    def visit_Equal(self, expression: Equal) -> Union[Constant, Or]:
         expr1 = expression.expr1
         expr2 = expression.expr2
-        return self.visit(Or(And(expr1 <= expr2, expr2 <= expr1)))
+        expr = self.visit(Or(And(expr1 <= expr2, expr2 <= expr1)))
+        assert isinstance(expr, (Constant, Or))
+        if expr.is_concrete:
+            return Constant(expr.value)
+        return expr
 
-    def visit_GreaterThan(self, expression: GreaterThan) -> Or:
+    def visit_GreaterThan(self, expression: GreaterThan) -> Union[Constant, Or]:
         lhs, rhs = _extract_constants(
-            self.visit(Add(Multiply(Constant(-1), expression.expr1), expression.expr2))
+            cast(
+                Add,
+                self.visit(
+                    Add(
+                        Multiply(Constant(-1), expression.expr1),
+                        expression.expr2,
+                    )
+                ),
+            )
         )
         expr = Or(And(LessThan(lhs, rhs)))
+        if expr.is_concrete:
+            return Constant(expr.value)
         return expr
 
-    def visit_GreaterThanOrEqual(self, expression: GreaterThanOrEqual) -> Or:
+    def visit_GreaterThanOrEqual(
+        self, expression: GreaterThanOrEqual
+    ) -> Union[Constant, Or]:
         lhs, rhs = _extract_constants(
-            self.visit(Add(Multiply(Constant(-1), expression.expr1), expression.expr2))
+            cast(
+                Add,
+                self.visit(
+                    Add(
+                        Multiply(Constant(-1), expression.expr1),
+                        expression.expr2,
+                    )
+                ),
+            )
         )
         expr = Or(And(LessThanOrEqual(lhs, rhs)))
+        if expr.is_concrete:
+            return Constant(expr.value)
         return expr
 
-    def visit_LessThan(self, expression: LessThan) -> Or:
+    def visit_LessThan(self, expression: LessThan) -> Union[Constant, Or]:
         lhs, rhs = _extract_constants(
-            self.visit(Add(expression.expr1, Multiply(Constant(-1), expression.expr2)))
+            cast(
+                Add,
+                self.visit(
+                    Add(
+                        expression.expr1,
+                        Multiply(Constant(-1), expression.expr2),
+                    )
+                ),
+            )
         )
         expr = Or(And(LessThan(lhs, rhs)))
+        if expr.is_concrete:
+            return Constant(expr.value)
         return expr
 
-    def visit_LessThanOrEqual(self, expression: LessThanOrEqual) -> Or:
+    def visit_LessThanOrEqual(self, expression: LessThanOrEqual) -> Union[Constant, Or]:
         lhs, rhs = _extract_constants(
-            self.visit(Add(expression.expr1, Multiply(Constant(-1), expression.expr2)))
+            cast(
+                Add,
+                self.visit(
+                    Add(
+                        expression.expr1,
+                        Multiply(Constant(-1), expression.expr2),
+                    )
+                ),
+            )
         )
         expr = Or(And(LessThanOrEqual(lhs, rhs)))
+        if expr.is_concrete:
+            return Constant(expr.value)
         return expr
 
     def visit_Multiply(self, expression: Multiply) -> Add:
-        expressions: List[List[Expression]] = [[]]
+        expression_lists: List[List[Expression]] = [[]]
         for expr in expression.expressions:
             expr = self.visit(expr)
             if isinstance(expr, Add):
-                new_expressions = []
-                for e in expressions:
-                    for e_ in expr.expressions:
-                        new_e = [v for v in e]
-                        new_e.append(e_)
-                        new_expressions.append(new_e)
-                expressions = new_expressions
+                new_expression_lists = []
+                for elist in expression_lists:
+                    for e in expr.expressions:
+                        new_elist = list(elist)
+                        new_elist.append(e)
+                        new_expression_lists.append(new_elist)
+                expression_lists = new_expression_lists
             else:
-                for e in expressions:
-                    e.append(expr)
-        if len(expressions) <= 1:
-            consts = []
-            symbols = [Constant(1)]
-            for e in expressions[0]:
+                for elist in expression_lists:
+                    elist.append(expr)
+        if len(expression_lists) == 0:
+            return Constant(0)
+        if len(expression_lists) <= 1:
+            consts: List[Expression] = []
+            symbols: List[Expression] = [Constant(1)]
+            for e in expression_lists[0]:
                 if e.is_concrete:
                     consts.append(e)
                 else:
@@ -119,15 +171,19 @@ class CanonicalTransformer(DnfTransformer):
             const = Constant(Multiply(*consts).value)
             product = Multiply(*symbols).propagate_constants()
             return Add(Multiply(const, product))
-        return self.visit(Add(*[Multiply(*e) for e in expressions]))
+        return self.visit(Add(*[Multiply(*e) for e in expression_lists]))
 
     def visit_Negation(self, expression: Negation) -> Add:
         return self.visit(Multiply(Constant(-1), expression.expr))
 
-    def visit_NotEqual(self, expression: NotEqual) -> Or:
+    def visit_NotEqual(self, expression: NotEqual) -> Union[Constant, Or]:
         expr1 = expression.expr1
         expr2 = expression.expr2
-        return self.visit(Or(And(expr1 > expr2), And(expr2 > expr1)))
+        expr = self.visit(Or(And(expr1 < expr2), And(expr2 < expr1)))
+        assert isinstance(expr, (Constant, Or))
+        if expr.is_concrete:
+            return Constant(expr.value)
+        return expr
 
     def visit_Subtract(self, expression: Subtract) -> Add:
         return self.visit(

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Union
+
 from ..expressions import And, IfThenElse, Implies, Not, Or
 from .base import GenericExpressionTransformer
 
@@ -10,7 +12,7 @@ class RemoveIfThenElse(GenericExpressionTransformer):
         # `form` provides a hint on how to efficiently format the IfThenElse replacement expression
         self.form = form
 
-    def visit_IfThenElse(self, expression: IfThenElse) -> And:
+    def visit_IfThenElse(self, expression: IfThenElse) -> Union[And, Or]:
         condition = self.visit(expression.condition)
         t_expr = self.visit(expression.t_expr)
         f_expr = self.visit(expression.f_expr)

@@ -1,4 +1,5 @@
 from email.policy import default
+
 import pytest
 
 from dnnv.properties.expressions import *

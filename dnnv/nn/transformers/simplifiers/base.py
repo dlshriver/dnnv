@@ -1,9 +1,9 @@
-from typing import Any, Dict, List, Optional, Set, Type, Union
+from typing import Dict, Type
 
-from ..base import OperationTransformer
 from ...analyzers import Analysis
 from ...graph import OperationGraph
 from ...operations import Operation
+from ..base import OperationTransformer
 
 
 class Simplifier(OperationTransformer):

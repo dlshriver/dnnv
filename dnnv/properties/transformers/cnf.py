@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-from typing import Optional, Set, Tuple
+from typing import Optional, Set, Tuple, Union
 
+from ..expressions import *
+from ..visitors.inference import DetailsInference
 from .base import GenericExpressionTransformer
 from .lift_ifthenelse import LiftIfThenElse
 from .remove_ifthenelse import RemoveIfThenElse
 from .substitute_calls import SubstituteCalls
-from ..expressions import *
-from ..visitors.inference import DetailsInference
 
 
 class CnfTransformer(GenericExpressionTransformer):
-    def visit(self, expression: Expression) -> Expression:
+    def visit(self, expression: Expression) -> Union[And, Constant]:
         if self._top_level:
             expression = expression.propagate_constants()
             DetailsInference().visit(expression)
@@ -28,7 +28,7 @@ class CnfTransformer(GenericExpressionTransformer):
         expr = super().visit(expression)
         return expr
 
-    def visit_And(self, expression: And) -> And:
+    def visit_And(self, expression: And) -> Union[And, Constant]:
         expressions: Set[Expression] = set()
         for expr in expression.expressions:
             expr = self.visit(expr)
@@ -38,17 +38,18 @@ class CnfTransformer(GenericExpressionTransformer):
                 expressions.add(Or(expr))
         return And(*expressions)
 
-    def visit_Exists(self, expression: Exists):
+    def visit_Exists(self, expression: Exists) -> Union[And, Constant]:
         raise NotImplementedError("Skolemization is not yet implemented.")
 
-    def visit_Forall(self, expression: Forall):
+    def visit_Forall(self, expression: Forall) -> Union[And, Constant]:
         expr = self.visit(expression.expression)
         return expr
 
-    def visit_Implies(self, expression: Implies) -> And:
+    def visit_Implies(self, expression: Implies) -> Union[And, Constant]:
+        assert isinstance(expression.expr1, LogicalExpression)
         return self.visit(Or(~expression.expr1, expression.expr2))
 
-    def visit_Or(self, expression: Or) -> And:
+    def visit_Or(self, expression: Or) -> Union[And, Constant]:
         conjunction: Optional[And] = None
         expressions: Set[Expression] = set()
         for expr in expression.expressions:

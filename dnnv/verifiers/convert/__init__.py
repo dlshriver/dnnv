@@ -1,11 +1,13 @@
 import shutil
+from functools import partial
+from pathlib import Path
 
 from dnnv.verifiers.common.base import Parameter, Verifier
 from dnnv.verifiers.common.executors import VerifierExecutor
 from dnnv.verifiers.common.reductions import (
-    IOPolytopeReduction,
     HalfspacePolytope,
     HyperRectangle,
+    IOPolytopeReduction,
 )
 from dnnv.verifiers.common.results import UNKNOWN
 from dnnv.verifiers.common.utils import as_layers
@@ -13,8 +15,6 @@ from dnnv.verifiers.planet.errors import PlanetTranslatorError
 from dnnv.verifiers.planet.utils import to_rlv_file
 from dnnv.verifiers.reluplex.errors import ReluplexTranslatorError
 from dnnv.verifiers.reluplex.utils import to_nnet_file
-from functools import partial
-from pathlib import Path
 
 from .errors import VnnlibTranslatorError
 from .utils import to_vnnlib_onnx_file, to_vnnlib_property_file
@@ -97,7 +97,8 @@ class Convert(Verifier):
             paths.append(
                 Path(
                     to_vnnlib_onnx_file(
-                        prop.op_graph.simplify(), translator_error=self.translator_error
+                        prop.op_graph.simplify(),
+                        translator_error=self.translator_error,
                     )
                 )
             )

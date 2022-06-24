@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import numpy as np
 import operator
 import typing
-
 from typing import Optional, Type, TypeVar
 
-from .base import Expression, AssociativeExpression, BinaryExpression, UnaryExpression
+import numpy as np
+
+from .base import AssociativeExpression, BinaryExpression, Expression, UnaryExpression
 from .context import Context
 
 if typing.TYPE_CHECKING:  # pragma: no cover
@@ -163,7 +163,7 @@ class Equal(LogicalExpression, BinaryExpression):
     OPERATOR = operator.eq
     OPERATOR_SYMBOL = "=="
 
-    def __invert__(self) -> NotEqual:
+    def __invert__(self) -> Not:
         return Not(self, ctx=self.ctx)
 
     def __bool__(self):
@@ -176,7 +176,7 @@ class GreaterThan(LogicalExpression, BinaryExpression):
     OPERATOR = operator.gt
     OPERATOR_SYMBOL = ">"
 
-    def __invert__(self) -> LessThanOrEqual:
+    def __invert__(self) -> Not:
         return Not(self, ctx=self.ctx)
 
 
@@ -184,7 +184,7 @@ class GreaterThanOrEqual(LogicalExpression, BinaryExpression):
     OPERATOR = operator.ge
     OPERATOR_SYMBOL = ">="
 
-    def __invert__(self) -> LessThan:
+    def __invert__(self) -> Not:
         return Not(self, ctx=self.ctx)
 
 
@@ -192,7 +192,7 @@ class LessThan(LogicalExpression, BinaryExpression):
     OPERATOR = operator.lt
     OPERATOR_SYMBOL = "<"
 
-    def __invert__(self) -> GreaterThanOrEqual:
+    def __invert__(self) -> Not:
         return Not(self, ctx=self.ctx)
 
 
@@ -200,7 +200,7 @@ class LessThanOrEqual(LogicalExpression, BinaryExpression):
     OPERATOR = operator.le
     OPERATOR_SYMBOL = "<="
 
-    def __invert__(self) -> GreaterThan:
+    def __invert__(self) -> Not:
         return Not(self, ctx=self.ctx)
 
 
@@ -208,7 +208,7 @@ class NotEqual(LogicalExpression, BinaryExpression):
     OPERATOR = operator.ne
     OPERATOR_SYMBOL = "!="
 
-    def __invert__(self) -> Equal:
+    def __invert__(self) -> Not:
         return Not(self, ctx=self.ctx)
 
     def __bool__(self):

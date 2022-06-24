@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import logging
-import numpy as np
 import operator
-
 from typing import Callable, Optional, Union
 
-from .base import FunctionSubstitutor
+import numpy as np
+
+from .....errors import DNNVError
 from ....expressions import (
     And,
     ArithmeticExpression,
@@ -14,10 +14,10 @@ from ....expressions import (
     Constant,
     Expression,
     IfThenElse,
-    Not,
+    LogicalExpression,
     Or,
 )
-from .....errors import DNNVError
+from .base import FunctionSubstitutor
 
 
 def get_arg(expr: Call):
@@ -29,15 +29,21 @@ def get_arg(expr: Call):
 
 
 class Abs(FunctionSubstitutor):
-    __matches__ = {abs, np.abs}
+    __matches__ = {abs, np.abs, np.absolute, np.fabs}
 
     def __call__(self, f, *args, **kwargs) -> Union[Constant, IfThenElse]:
+        assert len(args) == 1
+        assert len(kwargs) == 0
         (x,) = args
         assert isinstance(x, ArithmeticExpression)
         if x.is_concrete:
             return Constant(abs(x.value))
-        if x.ctx.shapes.get(x) != ():
-            raise DNNVError(f"Unsupported shape for expression {x} in abs({x})")
+        x_shape = x.ctx.shapes.get(x)
+        if x_shape != ():
+            # TODO : support this
+            raise DNNVError(
+                f"Unsupported shape for expression {x} in abs({x}): {x_shape}"
+            )
         return IfThenElse(x >= 0, x, -x)
 
     @staticmethod
@@ -59,6 +65,8 @@ class Abs(FunctionSubstitutor):
         ):
             a = get_arg(a)
             b = get_arg(b)
+            assert isinstance(a, ArithmeticExpression)
+            assert isinstance(b, ArithmeticExpression)
             a_shape = a.ctx.shapes.get(a, None)
             b_shape = a.ctx.shapes.get(b, None)
             if a_shape is None or b_shape is None:
@@ -99,7 +107,7 @@ class Abs(FunctionSubstitutor):
                             Or(a[idx] < 0, b[idx] >= 0, cmp(a[idx], -b[idx])),
                             Or(a[idx] >= 0, b[idx] >= 0, cmp(-a[idx], -b[idx])),
                         )
-                        for idx in np.ndindex(output_shape)
+                        for idx in np.ndindex(*output_shape)
                     )
                 )
             # TODO : is there an efficient DNF form of this?
@@ -114,7 +122,7 @@ class Abs(FunctionSubstitutor):
                         And(a[idx] >= 0, b[idx] < 0, cmp(a[idx], -b[idx])),
                         And(a[idx] < 0, b[idx] < 0, cmp(-a[idx], -b[idx])),
                     )
-                    for idx in np.ndindex(output_shape)
+                    for idx in np.ndindex(*output_shape)
                 )
             )
         elif (
@@ -123,6 +131,7 @@ class Abs(FunctionSubstitutor):
             and a.function.value in Abs.__matches__
         ):
             a = get_arg(a)
+            assert isinstance(a, ArithmeticExpression)
             a_shape = a.ctx.shapes.get(a, None)
             b_shape = a.ctx.shapes.get(b, None)
             if a_shape is None or b_shape is None:
@@ -146,9 +155,9 @@ class Abs(FunctionSubstitutor):
             if b_shape != output_shape:
                 b_ = Constant(np.broadcast_to)(b, Constant(output_shape))
             if np.all(np.asarray(b_shape) == 1):
-                b_gt_0 = b >= 0
+                b_gt_0: LogicalExpression = b >= 0
             else:
-                b_gt_0 = And(*(b[b_idx] >= 0 for b_idx in np.ndindex(b_shape)))
+                b_gt_0 = And(*(b[b_idx] >= 0 for b_idx in np.ndindex(*b_shape)))
             if form == "cnf":
                 return And(
                     b_gt_0,
@@ -157,7 +166,7 @@ class Abs(FunctionSubstitutor):
                             Or(a_[idx] < 0, cmp(a_[idx], b_[idx])),
                             Or(a_[idx] >= 0, cmp(-a_[idx], b_[idx])),
                         )
-                        for idx in np.ndindex(output_shape)
+                        for idx in np.ndindex(*output_shape)
                     ),
                 )
             # TODO : is there an efficient DNF form of this?
@@ -170,10 +179,13 @@ class Abs(FunctionSubstitutor):
                         And(b_[idx] >= 0, a_[idx] >= 0, cmp(a_[idx], b_[idx])),
                         And(b_[idx] >= 0, a_[idx] < 0, cmp(-a_[idx], b_[idx])),
                     )
-                    for idx in np.ndindex(output_shape)
+                    for idx in np.ndindex(*output_shape)
                 )
             )
+        assert isinstance(b, Call)
         b = get_arg(b)
+        assert isinstance(a, ArithmeticExpression)
+        assert isinstance(b, ArithmeticExpression)
         a_shape = a.ctx.shapes.get(a, None)
         b_shape = a.ctx.shapes.get(b, None)
         if a_shape is None or b_shape is None:
@@ -197,9 +209,9 @@ class Abs(FunctionSubstitutor):
         if b_shape != output_shape:
             b_ = Constant(np.broadcast_to)(b, Constant(output_shape))
         if np.all(np.asarray(a_shape) == 1):
-            a_gt_0 = a >= 0
+            a_gt_0: LogicalExpression = a >= 0
         else:
-            a_gt_0 = And(*(a[a_idx] >= 0 for a_idx in np.ndindex(a_shape)))
+            a_gt_0 = And(*(a[a_idx] >= 0 for a_idx in np.ndindex(*a_shape)))
         if form == "cnf":
             return And(
                 a_gt_0,
@@ -208,7 +220,7 @@ class Abs(FunctionSubstitutor):
                         Or(b_[idx] < 0, cmp(a_[idx], b_[idx])),
                         Or(b_[idx] >= 0, cmp(a_[idx], -b_[idx])),
                     )
-                    for idx in np.ndindex(output_shape)
+                    for idx in np.ndindex(*output_shape)
                 ),
             )
         # TODO : is there an efficient DNF form of this?
@@ -221,7 +233,7 @@ class Abs(FunctionSubstitutor):
                     And(a[idx] >= 0, b[idx] >= 0, cmp(a[idx], b[idx])),
                     And(a[idx] >= 0, b[idx] < 0, cmp(a[idx], -b[idx])),
                 )
-                for idx in np.ndindex(output_shape)
+                for idx in np.ndindex(*output_shape)
             )
         )
 

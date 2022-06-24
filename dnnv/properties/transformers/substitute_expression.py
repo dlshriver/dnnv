@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from .base import GenericExpressionTransformer
 from ..expressions import Expression
+from .base import GenericExpressionTransformer
 
 
 class SubstituteExpression(GenericExpressionTransformer):

@@ -1,17 +1,14 @@
 import numpy as np
 
-from typing import Union
-
-from .base import Simplifier
 from ... import operations
 from ...graph import OperationGraph
+from .base import Simplifier
 
 
 class ConvertAdd(Simplifier):
     def visit_Add(self, operation: operations.Add) -> operations.Operation:
         a = operation.a
         b = operation.b
-        transpose_a = False
         if isinstance(a, operations.Operation) and isinstance(b, operations.Operation):
             return operation
         elif isinstance(a, operations.Operation):
@@ -22,7 +19,6 @@ class ConvertAdd(Simplifier):
         elif isinstance(b, operations.Operation):
             input_op = b
             c = a
-            transpose_a = True
             if np.all(c == 0):
                 return input_op
         else:
@@ -35,12 +31,12 @@ class ConvertAdd(Simplifier):
         elif len(input_shape) == 1:
             return operation
         elif len(input_shape) == 2:
-            w = np.eye(input_shape[1 - transpose_a], dtype=input_dtype)
+            w = np.eye(input_shape[1], dtype=input_dtype)
         elif len(input_shape) == 4:
             return operation
         else:
             return operation
-        return operations.Gemm(input_op, w, c, transpose_a=transpose_a)
+        return operations.Gemm(input_op, w, c)
 
 
 __all__ = ["ConvertAdd"]

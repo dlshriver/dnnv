@@ -1,8 +1,10 @@
+from typing import Optional
+
 import numpy as np
 
-from .base import Simplifier
 from ... import operations
 from ...graph import OperationGraph
+from .base import Simplifier
 
 
 class SqueezeGemms(Simplifier):
@@ -38,33 +40,47 @@ class SqueezeGemms(Simplifier):
         elif isinstance(operation.b, operations.Gemm):
             # TODO : reduce when operation.b is Gemm
             return operation
-        elif isinstance(operation.a, operations.Flatten) and isinstance(
-            operation.a.x, operations.Conv
+        elif (
+            isinstance(operation.a, operations.Flatten)
+            and operation.a.axis == 1
+            and isinstance(operation.a.x, operations.Conv)
         ):
             if operation.transpose_a:
                 return operation
             flatten_op = operation.a
             conv_op = flatten_op.x
-            if conv_op.w.shape[0] != conv_op.w.shape[1]:
-                return operation
-            if conv_op.w.shape[2] != conv_op.w.shape[3] and conv_op.shape[2] != 1:
+            conv_op_graph = OperationGraph([conv_op])[-1:]
+            conv_output_shape = conv_op_graph.output_shape[0]
+            conv_input_shape = conv_op_graph.input_shape[0]
+            dtype = operation.b.dtype
+            flat_output_shape = np.product(conv_output_shape[1:])
+            if conv_output_shape[1:] == conv_input_shape[1:]:
+                W = np.zeros((flat_output_shape, flat_output_shape), dtype=dtype)
+                for (b, i, h, w) in np.ndindex(*conv_output_shape):
+                    for j in range(conv_input_shape[1]):
+                        k = np.ravel_multi_index((b, i, h, w), conv_output_shape)
+                        l = np.ravel_multi_index((b, j, h, w), conv_output_shape)
+                        W[l, k] = conv_op.w[i, j, 0, 0]
+            else:
                 # TODO : handle this case
                 return operation
-            input_shape = OperationGraph([conv_op]).output_shape[0]
-            flat_input_shape = np.product(input_shape[1:])
-            W = np.zeros((flat_input_shape, flat_input_shape)).astype(operation.b.dtype)
-            for (b, i, h, w) in np.ndindex(input_shape):
-                for j in range(input_shape[1]):
-                    k = np.ravel_multi_index((b, i, h, w), input_shape)
-                    l = np.ravel_multi_index((b, j, h, w), input_shape)
-                    W[k, l] = conv_op.w[i, j, 0, 0]
-            op_b = operation.b
-            if operation.transpose_b:
-                op_b = op_b.T
+            op_b = operation.b.T if operation.transpose_b else operation.b
             W = W @ op_b
-            bias = np.tile(conv_op.b, np.product(input_shape[2:]))
-            bias = bias @ op_b + operation.c
+            bias: Optional[np.ndarray] = np.array(0, dtype=dtype)
+            if conv_op.b is None and operation.c is None:
+                bias = None
+            if conv_op.b is not None:
+                bias = np.zeros(flat_output_shape, dtype=dtype)
+                for (b, i, h, w) in np.ndindex(*conv_output_shape):
+                    k = np.ravel_multi_index((b, i, h, w), conv_output_shape)
+                    bias[k] = conv_op.b[i]
+                bias = bias @ op_b
+            if operation.c is not None:
+                bias = bias + operation.c
             new_flatten_op = operations.Flatten(conv_op.x, axis=flatten_op.axis)
             gemm_op = operations.Gemm(new_flatten_op, W, bias)
             return gemm_op
         return operation
+
+
+__all__ = ["SqueezeGemms"]

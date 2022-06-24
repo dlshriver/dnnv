@@ -1,10 +1,11 @@
-import numpy as np
 import tempfile
+from functools import partial
+
+import numpy as np
 
 from dnnv.verifiers.common.base import Parameter, Verifier
-from dnnv.verifiers.common.reductions import IOPolytopeReduction, HalfspacePolytope
-from dnnv.verifiers.common.results import SAT, UNSAT, UNKNOWN
-from functools import partial
+from dnnv.verifiers.common.reductions import HalfspacePolytope, IOPolytopeReduction
+from dnnv.verifiers.common.results import SAT, UNKNOWN, UNSAT
 
 from .errors import MarabouError, MarabouTranslatorError
 
@@ -47,15 +48,17 @@ class Marabou(Verifier):
             constraint_file.name,
             "-o",
             self._tmp_output_file.name,
-        ) + tuple(f"--{k}={v}" for k, v in self.parameters.items() if v is not None)
+        ) + tuple(
+            f"--{k}={v}" for k, v in self.parameter_values.items() if v is not None
+        )
         return args
 
     def parse_results(self, prop, results):
-        result, cinput = np.load(self._tmp_output_file.name, allow_pickle=True)
-        if result == False:
+        result_str, cinput = np.load(self._tmp_output_file.name, allow_pickle=True)
+        if result_str == "unsat":
             return UNSAT, None
-        elif result == True:
+        elif result_str == "sat":
             input_shape, input_dtype = prop.op_graph.input_details[0]
             cex = cinput.reshape(input_shape).astype(input_dtype)
             return SAT, cex
-        raise self.translator_error(f"Unknown verification result: {result}")
+        raise self.translator_error(f"Unknown verification result: {result_str}")

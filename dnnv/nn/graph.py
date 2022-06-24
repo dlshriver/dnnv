@@ -1,10 +1,15 @@
-import itertools
-import numpy as np
+from __future__ import annotations
 
+import itertools
 from typing import Dict, List
 
+import numpy as np
+import onnx
+
+from . import operations
 from .operations import Operation
 from .utils import TensorDetails
+from .visitors import GetInputDetails, PrintVisitor
 
 
 class OperationGraph:
@@ -31,15 +36,11 @@ class OperationGraph:
         return simplify(self.copy())
 
     def pprint(self):
-        from .visitors import PrintVisitor
-
         return self.walk(PrintVisitor())
 
     @property
     def input_details(self):
         if self._input_details is None:
-            from .visitors import GetInputDetails
-
             input_details_visitor = GetInputDetails()
             result = ()
             for output_op in self.output_operations:
@@ -75,8 +76,6 @@ class OperationGraph:
         return tuple(details.shape for details in self.output_details)
 
     def export_onnx(self, filename, *, add_missing_optional_inputs=False):
-        import onnx
-
         onnx.save(
             self.as_onnx(add_missing_optional_inputs=add_missing_optional_inputs),
             filename,
@@ -94,9 +93,8 @@ class OperationGraph:
 
         return tf_convert(self)
 
-    def compose(self, input_op_graph: "OperationGraph") -> "OperationGraph":
+    def compose(self, input_op_graph: OperationGraph) -> OperationGraph:
         from .transformers import OperationTransformer
-        from . import operations
 
         self_input_details = self.input_details
         input_op_graph_output_details = input_op_graph.output_details
@@ -123,7 +121,7 @@ class OperationGraph:
                 self.input_id = 0
                 self.visited: Dict[Operation, Operation] = {}
 
-            def visit_Input(self, operation: operations.Input):
+            def visit_Input(self, _: operations.Input):
                 new_op = self.input_op_graph.output_operations[self.input_id]
                 self.input_id += 1
                 return new_op
@@ -138,13 +136,16 @@ class OperationGraph:
         return output
 
     def __getitem__(self, index):
+        from .transformers import Slicer
+
         if isinstance(index, slice):
             index = (index,)
         elif isinstance(index, int):
             index = (slice(None), index)
         elif not isinstance(index, tuple):
             raise TypeError(
-                f"Unsupported type for indexing operation graph: {type(index).__name__!r}"
+                "Unsupported type for indexing operation graph:"
+                f" {type(index).__name__!r}"
             )
         elif len(index) > 2:
             raise TypeError(f"Unsupported indexing expression {index!r}")
@@ -154,15 +155,14 @@ class OperationGraph:
             )
         elif len(index) > 1 and not isinstance(index[1], int):
             raise TypeError(
-                f"Unsupported type for selecting operations: {type(index[1]).__name__!r}"
+                "Unsupported type for selecting operations:"
+                f" {type(index[1]).__name__!r}"
             )
 
         if index[0].step is not None and index[0].step != 1:
             raise ValueError("Slicing does not support non-unit steps.")
         start = index[0].start or 0
         stop = index[0].stop
-
-        from .transformers import Slicer
 
         result = list(itertools.chain.from_iterable(self.walk(Slicer(start, stop))))
         if len(index) > 1:
