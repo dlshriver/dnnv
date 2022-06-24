@@ -232,6 +232,10 @@ class Split(Operation):
     def from_onnx(cls, onnx_node, *inputs):
         attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
         axis = attributes.get("axis", 0)
+        if len(inputs) < 2:
+            # TODO: split is an input past version 11 (?)
+            split = attributes.get("split")
+            return cls(*inputs, axis=axis, split=split, name=onnx_node.name)
         return cls(*inputs, axis=axis, name=onnx_node.name)
 
 
