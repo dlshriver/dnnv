@@ -349,6 +349,14 @@ class PrintVisitor(OperationVisitor):
         self.print_op_id(operation)
         print(f"Softmax({self.get_op_id(operation.x)}, axis={operation.axis})")
 
+    def visit_Split(self, operation: operations.Sub) -> None:
+        self.generic_visit(operation)
+        self.print_op_id(operation)
+        print(
+            "Split(%s, axis=%s, split=%s)"
+            % (self.get_op_id(operation.x), operation.axis, operation.split)
+        )
+
     def visit_Sub(self, operation: operations.Sub) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
