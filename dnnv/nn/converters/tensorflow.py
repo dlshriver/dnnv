@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 
+from .. import operations
 from ..graph import OperationGraph
 from ..operations import Operation
 from ..utils import ONNX_TO_TENSORFLOW_DTYPE
@@ -211,6 +212,7 @@ class TensorflowConverter(OperationVisitor):
         @self._cached
         def concat_func(*inputs):
             tensors = x = _concretize(tensors_, inputs)
+            # tensors = _concretize(tensors_, inputs)
             result = tf.concat(tensors, axis=operation.axis)
             return result
 
@@ -220,20 +222,25 @@ class TensorflowConverter(OperationVisitor):
         x_ = operation.x
         if isinstance(x_, Operation):
             x_ = self.visit(x_)
+        w_ = operation.w
+        if isinstance(w_, Operation):
+            w_ = self.visit(w_)
 
         @self._cached
         def conv_func(*inputs):
-            x = _concretize([x_], inputs)
+            x, weights = _concretize([x_, w_], inputs)
             if len(operation.kernel_shape) != 2:
                 raise NotImplementedError(
                     "Non 2d convolutions are not currently supported."
                 )
-            weights = operation.w
+            if not isinstance(weights,np.ndarray):
+                weights = np.array(weights)
+            # weights = operation.w
             if operation.b is not None:
                 bias = operation.b
             else:
                 bias = np.zeros((weights.shape[0],), dtype=weights.dtype)
-            assert np.all(operation.dilations == 1)
+            # assert np.all(operation.dilations == 1)
             # assert np.all(operation.group == 1)
             num_pads = len(operation.pads)
             pads = tuple(
@@ -249,6 +256,7 @@ class TensorflowConverter(OperationVisitor):
                     weights.transpose((2, 3, 1, 0)),
                     operation.strides,
                     padding="VALID",
+                    dilations=operation.dilations
                 ),
                 bias,
             )
@@ -403,11 +411,14 @@ class TensorflowConverter(OperationVisitor):
         x_ = operation.x
         if isinstance(x_, Operation):
             x_ = self.visit(x_)
+        shape_ = operation.shape
+        if isinstance(shape_, Operation):
+            shape_ = self.visit(shape_)
 
         @self._cached
         def expand_func(*inputs):
-            x = _concretize([x_], inputs)
-            shape = operation.shape
+            x, shape = _concretize([x_, shape_], inputs)
+            # shape = operation.shape
             result = x * tf.ones(shape, x.dtype)
             return result
 
@@ -714,6 +725,7 @@ class TensorflowConverter(OperationVisitor):
             assert operation.coordinate_transformation_mode in [
                 "asymmetric",
                 "tf_crop_and_resize",
+                "align_corners"
             ]
             assert operation.mode in ["nearest", "linear"]
             assert operation.exclude_outside == 0
@@ -724,9 +736,11 @@ class TensorflowConverter(OperationVisitor):
                 assert roi.size == 8 and roi.ndim == 1
                 roi = roi[None, [2, 3, 6, 7]]
             if sizes is None or sizes.size == 0:
+            # if sizes is None or sizes.shape == 0:
                 assert scales[0] == 1.0 and scales[1] == 1.0
                 sizes = (scales * [int(d) for d in x.shape]).astype(int)
             assert sizes.ndim == 1 and sizes.size == 4
+            # assert sizes.ndim == 1 and sizes.shape == 4
             sizes = sizes[2:]
             method = operation.mode
             if method == "linear":
@@ -887,3 +901,103 @@ class TensorflowConverter(OperationVisitor):
             return x
 
         return split_func
+
+    def visit_ReduceL2(self, operation):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+        axes = operation.axes
+        keepdims = operation.keepdims
+
+        @self._cached
+        def reduceL2_func(*inputs):
+            x = _concretize([x_], inputs)
+            x = tf.norm(x, ord=2, axis=axes, keepdims=keepdims)
+            return x
+        
+        return reduceL2_func
+
+    def visit_Clip(self, operation):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+        _min = operation.min
+        _max = operation.max
+
+        @self._cached
+        def clip_func(*inputs):
+            x = _concretize([x_], inputs)
+            x = tf.clip_by_value(x, _min, _max)
+            return x
+
+        return clip_func
+
+    def visit_Squeeze(self, operation):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+        axes = operation.axes
+
+        @self._cached
+        def squeeze_func(*inputs):
+            x = _concretize([x_], inputs)
+            x = tf.squeeze(x, axis=axes)
+            return x
+
+        return squeeze_func
+
+    def visit_Upsample(self, operation):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+        scales = operation.scales
+        mode = operation.mode
+
+        @self._cached
+        def upsample_func(*inputs):
+            x = _concretize([x_], inputs)
+            # x = tf.keras.layers.UpSampling2D(size=scales[-2:], interpolation=mode, data_format="channels_first")(x)
+            scaled_dim = [int(sd) for sd in x.shape[2:] * scales[2:]]
+            # xr = tf.reshape(x, [x.shape[0],x.shape[2],x.shape[3],x.shape[1]])
+            xr = tf.transpose(x, perm=[0,2,3,1])
+            xr = tf.image.resize(xr, scaled_dim, method="nearest")
+            # xr = tf.reshape(xr, [xr.shape[0],xr.shape[3],xr.shape[1],xr.shape[2]])
+            xr = tf.transpose(xr, perm=[0,3,1,2])
+            return xr
+
+        return upsample_func
+    
+    def visit_Slice(self, operation: operations.Slice):
+            x_ = operation.x
+            if isinstance(x_, Operation):
+                x_ = self.visit(x_)
+            starts_ = operation.starts
+            if isinstance(starts_, Operation):
+                starts_ = self.visit(starts_)
+            ends_ = operation.ends
+            if isinstance(ends_, Operation):
+                ends_ = self.visit(ends_)
+            axes_ = operation.axes
+            if isinstance(axes_, Operation):
+                axes_ = self.visit(axes_)
+            steps_ = operation.steps
+            if isinstance(steps_, Operation):
+                steps_ = self.visit(steps_)
+
+            @self._cached
+            def slice_func(*inputs):
+                x, starts, ends, axes, steps = _concretize(
+                    [x_, starts_, ends_, axes_, steps_], inputs
+                )
+                n = x.ndim
+                slices = [slice(None) for _ in range(n)]
+                if axes is None:
+                    axes = range(n)
+                if steps is None:
+                    steps = [1 for _ in range(n)]
+                for i, axis in enumerate(axes):
+                    slices[axis] = slice(starts[i], ends[i], steps[i])
+                result = x[tuple(slices)]
+                return result
+
+            return slice_func
