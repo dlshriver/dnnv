@@ -6,6 +6,8 @@ import numpy as np
 
 from dnnv.nn.graph import OperationGraph
 
+from dnnv.nn.graph import OperationGraph
+
 from ..expressions import (
     ArithmeticExpression,
     AssociativeExpression,
