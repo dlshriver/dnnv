@@ -916,6 +916,8 @@ class TensorflowConverter(OperationVisitor):
         if isinstance(x_, Operation):
             x_ = self.visit(x_)
         axes = operation.axes
+        if isinstance(axes, np.ndarray):
+            axes = axes.tolist()
 
         @self._cached
         def squeeze_func(*inputs):
@@ -1006,6 +1008,7 @@ class TensorflowConverter(OperationVisitor):
         if isinstance(x_, Operation):
             x_ = self.visit(x_)
         scales = operation.scales
+        mode = operation.mode
 
         @self._cached
         def upsample_func(*inputs):

@@ -94,6 +94,18 @@ Cast_0                          : Cast(Input_0, to=float64)
     assert captured.out == expected_output
 
 
+def test_Clip(capsys):
+    input_op = Input((1, 5), np.dtype(np.float32))
+    clip_op = Clip(input_op, min=0, max=1)
+    PrintVisitor().visit(clip_op)
+    captured = capsys.readouterr()
+    expected_output = """\
+Input_0                         : Input((1, 5), dtype=float32)
+Clip_0                          : Clip(Input_0, min=0, max=1)
+"""
+    assert captured.out == expected_output
+
+
 def test_Concat(capsys):
     input_op = Input((1, 5), np.dtype(np.float32))
     concat_op = Concat([input_op, input_op], axis=1)
@@ -431,6 +443,28 @@ Pad_0                           : Pad(Input_0, pads=(0, 0, 0, 0))
     assert captured.out == expected_output
 
 
+def test_ReduceL2(capsys):
+    input_op = Input((1, 5), np.dtype(np.float32))
+    reduceL2_op = ReduceL2(input_op, axes=[1], keepdims=1)
+    PrintVisitor().visit(reduceL2_op)
+    captured = capsys.readouterr()
+    expected_output = """\
+Input_0                         : Input((1, 5), dtype=float32)
+ReduceL2_0                      : ReduceL2(Input_0, axes=1, keepdims=1)
+"""
+    assert captured.out == expected_output
+
+    input_op = Input((1, 5), np.dtype(np.float32))
+    reduceL2_op = ReduceL2(input_op, axes=[1, 2], keepdims=1)
+    PrintVisitor().visit(reduceL2_op)
+    captured = capsys.readouterr()
+    expected_output = """\
+Input_0                         : Input((1, 5), dtype=float32)
+ReduceL2_0                      : ReduceL2(Input_0, axes=(1, 2), keepdims=1)
+"""
+    assert captured.out == expected_output
+
+
 def test_Relu(capsys):
     input_op = Input((1, 5), np.dtype(np.float32))
     relu_op = Relu(input_op)
@@ -597,6 +631,30 @@ Softmax_0                       : Softmax(Input_0, axis=-1)
     expected_output = """\
 Input_0                         : Input((1, 5), dtype=float32)
 Softmax_0                       : Softmax(Input_0, axis=0)
+"""
+    assert captured.out == expected_output
+
+
+def test_Squeeze(capsys):
+    input_op = Input((1, 5), np.dtype(np.float32))
+    squeeze_op = Squeeze(input_op, axes=0)
+    PrintVisitor().visit(squeeze_op)
+    captured = capsys.readouterr()
+    expected_output = """\
+Input_0                         : Input((1, 5), dtype=float32)
+Squeeze_0                       : Squeeze(Input_0, axes=0)
+"""
+    assert captured.out == expected_output
+
+
+def test_Upsample(capsys):
+    input_op = Input((1, 5), np.dtype(np.float32))
+    upsample_op = Upsample(input_op, scales=2, mode="nearest")
+    PrintVisitor().visit(upsample_op)
+    captured = capsys.readouterr()
+    expected_output = """\
+Input_0                         : Input((1, 5), dtype=float32)
+Upsample_0                      : Upsample(Input_0, scales=2)
 """
     assert captured.out == expected_output
 
