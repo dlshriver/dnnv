@@ -29,9 +29,11 @@ class Clip(Operation):
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):
         attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
-        _min = attributes.get("min")
-        _max = attributes.get("max")
-        return cls(*inputs, min=_min, max=_max, name=onnx_node.name)
+        if len(inputs) == 1:
+            _min = attributes.get("min")
+            _max = attributes.get("max")
+            return cls(*inputs, min=_min, max=_max, name=onnx_node.name)
+        return cls(*inputs, name=onnx_node.name)
 
 
 class Concat(Operation):
