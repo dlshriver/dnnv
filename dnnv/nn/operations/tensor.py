@@ -147,8 +147,6 @@ class Resize(Operation):
         name: Optional[str] = None
     ):
         super().__init__(name=name)
-        # assert scales.size != 0 or sizes.size != 0
-        # assert scales.size == 0 or sizes.size == 0
         assert scales.size != 0 or sizes.size != 0
         assert scales.size == 0 or sizes.size == 0
         self.x = x
