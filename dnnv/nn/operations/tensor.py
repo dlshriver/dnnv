@@ -23,8 +23,8 @@ class Clip(Operation):
     def __init__(self, x, min=None, max=None, *, name: Optional[str] = None):
         super().__init__(name=name)
         self.x = x
-        self.min = min if min is not None else -np.inf
-        self.max = max if max is not None else +np.inf
+        self.min = min
+        self.max = max
 
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):
