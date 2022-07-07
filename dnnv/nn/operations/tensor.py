@@ -277,14 +277,7 @@ class ReduceL2(Operation):
     def __init__(self, x, axes, keepdims, *, name: Optional[str] = None):
         super().__init__(name=name)
         self.x = x
-        if axes is None:
-            self.axes = None
-        elif isinstance(axes, int):
-            self.axes = axes
-        elif len(axes) == 1:
-            self.axes = int(axes[0])
-        elif len(axes) > 1:
-            self.axes = tuple(axes)
+        self.axes = axes
         self.keepdims = keepdims
 
     @classmethod
