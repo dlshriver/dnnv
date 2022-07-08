@@ -116,7 +116,11 @@ class Verifier(ABC):
                 tempfile.tempdir = tempdir
                 result = UNSAT
                 for subproperty in self.reduce_property():
-                    subproperty_result, cex = self.check(subproperty)
+                    is_trivial, *trivial_result = subproperty.is_trivial()
+                    if is_trivial:
+                        subproperty_result, cex = trivial_result[0]
+                    else:
+                        subproperty_result, cex = self.check(subproperty)
                     result |= subproperty_result
                     if result == SAT:
                         if cex is not None:
