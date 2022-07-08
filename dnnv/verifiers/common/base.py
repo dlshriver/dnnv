@@ -119,6 +119,9 @@ class Verifier(ABC):
                     is_trivial, *trivial_result = subproperty.is_trivial()
                     if is_trivial:
                         subproperty_result, cex = trivial_result[0]
+                        self.logger.warning(
+                            "Property is trivially %s.", subproperty_result
+                        )
                     else:
                         subproperty_result, cex = self.check(subproperty)
                     result |= subproperty_result
