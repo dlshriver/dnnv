@@ -11,7 +11,7 @@ class ReductionError(DNNVError):
     pass
 
 
-class Property:
+class Property(ABC):
     @abstractmethod
     def is_trivial(
         self,
