@@ -1,11 +1,13 @@
 from __future__ import annotations
 
-from typing import List, Optional, Sequence, Tuple, Union
+from typing import Any, List, Optional, Sequence, Tuple, Union
 
 import numpy as np
+from scipy.optimize import linprog
 
 from .....nn import OperationGraph, OperationTransformer, operations
 from .....properties import Network
+from ...results import SAT, PropertyCheckResult
 from ..base import Property
 from .base import HalfspacePolytope, HyperRectangle
 
@@ -58,6 +60,36 @@ class IOPolytopeProperty(Property):
             "    " + s for s in str(self.output_constraint).split("\n")
         ]
         return "\n".join(strs)
+
+    def is_trivial(
+        self,
+    ) -> Union[Tuple[bool], Tuple[bool, Tuple[PropertyCheckResult, Any]]]:
+        is_trivial = (
+            self.output_constraint.size() == 0 and self.input_constraint.is_consistent
+        )
+        if not is_trivial:
+            return (False,)
+        A, b = self.input_constraint.as_matrix_inequality()
+        obj = np.zeros(A.shape[1])
+        lb, ub = self.input_constraint.as_bounds()
+        if A.size == 0:
+            cex = (lb + ub) / 2
+        else:
+            bounds = list(
+                zip(
+                    (b if b > -1e6 else None for b in lb),
+                    (b if b < 1e6 else None for b in ub),
+                )
+            )
+            result = linprog(
+                obj,
+                A_ub=A,
+                b_ub=b,
+                bounds=bounds,
+                method="highs",
+            )
+            cex = result.x
+        return (is_trivial, (SAT, cex))
 
     def validate_counter_example(
         self, cex: np.ndarray, threshold=1e-6

@@ -11,7 +11,7 @@ from scipy.optimize import linprog
 class Variable:
     _count = 0
 
-    def __init__(self, shape: Tuple[int, ...], name: Optional[str] = None):
+    def __init__(self, shape: Sequence[int], name: Optional[str] = None):
         self.shape = shape
         self.name = name
         if self.name is None:
@@ -19,7 +19,7 @@ class Variable:
         Variable._count += 1
 
     def size(self) -> int:
-        return np.product(self.shape)
+        return int(np.product(self.shape))
 
     def __str__(self):
         return self.name
@@ -58,7 +58,7 @@ class Constraint(ABC):
             self.variables[variable] = self.size()
         return self
 
-    def unravel_index(self, index: int) -> Tuple[Variable, Tuple[np.intp, ...]]:
+    def unravel_index(self, index: int) -> Tuple[Variable, Sequence[np.intp]]:
         c_size = self.size()
         for variable, size in sorted(self.variables.items(), key=lambda kv: -kv[1]):
             if size <= index < c_size:
@@ -75,7 +75,7 @@ class Constraint(ABC):
     def update_constraint(
         self,
         variables: Sequence[Variable],
-        indices: Sequence[Tuple[int, ...]],
+        indices: Sequence[Sequence[int]],
         coefficients: Sequence[float],
         b: float,
         is_open=False,
@@ -148,6 +148,8 @@ class HalfspacePolytope(Constraint):
         A, b = self.as_matrix_inequality()
         obj = np.zeros(A.shape[1])
         lb, ub = self.as_bounds()
+        if A.size == 0:
+            return np.all(lb <= ub)
         # linprog breaks if bounds are too big or too small
         bounds = list(
             zip(
@@ -264,7 +266,7 @@ class HalfspacePolytope(Constraint):
     def update_constraint(
         self,
         variables: Sequence[Variable],
-        indices: Sequence[Tuple[int, ...]],
+        indices: Sequence[Sequence[int]],
         coefficients: Sequence[float],
         b: float,
         is_open=False,
@@ -293,11 +295,13 @@ class HalfspacePolytope(Constraint):
         self._update_bounds(flat_indices, coefficients, b, is_open=is_open)
 
     def validate(self, *x: np.ndarray, threshold: float = 1e-6) -> bool:
+        if self.size() == 0:
+            return True
         if len(x) != len(self.variables):
             return False
         x_flat_ = []
         for x_, v in zip(x, self.variables):
-            if x_.shape != v.shape:
+            if x_.size != v.size():
                 return False
             x_flat_.append(x_.flatten())
         x_flat = np.concatenate(x_flat_)

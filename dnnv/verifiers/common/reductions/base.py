@@ -1,15 +1,23 @@
 from abc import ABC, abstractmethod
-from typing import Any, Iterator, Optional, Tuple, Type
+from typing import Any, Iterator, Optional, Tuple, Type, Union
 
 from dnnv.errors import DNNVError
 from dnnv.properties import Expression
+
+from ..results import PropertyCheckResult
 
 
 class ReductionError(DNNVError):
     pass
 
 
-class Property:
+class Property(ABC):
+    @abstractmethod
+    def is_trivial(
+        self,
+    ) -> Union[Tuple[bool], Tuple[bool, Tuple[PropertyCheckResult, Any]]]:
+        raise NotImplementedError()
+
     @abstractmethod
     def validate_counter_example(self, cex: Any) -> Tuple[bool, Optional[str]]:
         raise NotImplementedError()

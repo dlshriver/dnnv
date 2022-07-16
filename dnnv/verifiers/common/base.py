@@ -4,7 +4,18 @@ import tempfile
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from functools import partial
-from typing import Any, Callable, Dict, Generator, List, Optional, Tuple, Type, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generator,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    Union,
+)
 
 from dnnv.properties import Expression, LogicalExpression
 
@@ -23,7 +34,7 @@ from .results import SAT, UNSAT, PropertyCheckResult
 class Parameter:
     def __init__(
         self,
-        dtype: Type,
+        dtype: Callable[[Any], Any],
         default: Optional[Any] = None,
         choices: Optional[List[Any]] = None,
         help: Optional[str] = None,
@@ -43,7 +54,7 @@ class Parameter:
         self.choices = choices
         self.help = help
 
-    def as_type(self, value):
+    def as_type(self, value: Any):
         return self.type(value) if value is not None else None
 
 
@@ -116,7 +127,14 @@ class Verifier(ABC):
                 tempfile.tempdir = tempdir
                 result = UNSAT
                 for subproperty in self.reduce_property():
-                    subproperty_result, cex = self.check(subproperty)
+                    is_trivial, *trivial_result = subproperty.is_trivial()
+                    if is_trivial:
+                        subproperty_result, cex = trivial_result[0]
+                        self.logger.warning(
+                            "Property is trivially %s.", subproperty_result
+                        )
+                    else:
+                        subproperty_result, cex = self.check(subproperty)
                     result |= subproperty_result
                     if result == SAT:
                         if cex is not None:
@@ -136,13 +154,13 @@ class Verifier(ABC):
         return is_valid
 
     @abstractmethod
-    def build_inputs(self, prop: Property) -> Tuple[Any, ...]:
+    def build_inputs(self, prop: Property) -> Sequence:  # pragma: no cover
         raise NotImplementedError()
 
     @abstractmethod
     def parse_results(
         self, prop: Property, results: Any
-    ) -> Tuple[PropertyCheckResult, Optional[Any]]:
+    ) -> Tuple[PropertyCheckResult, Optional[Any]]:  # pragma: no cover
         raise NotImplementedError()
 
 
