@@ -5,7 +5,18 @@ import time
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from functools import partial
-from typing import Any, Callable, Dict, Iterator, List, Optional, Tuple, Type, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Tuple,
+    Type,
+    Union,
+)
 
 import numpy as np
 
@@ -25,7 +36,7 @@ from .results import SAT, UNKNOWN, UNSAT, PropertyCheckResult, VerificationResul
 class Parameter:
     def __init__(
         self,
-        dtype: Type,
+        dtype: Callable[[Any], Any],
         default: Optional[Any] = None,
         choices: Optional[List[Any]] = None,
         help: Optional[str] = None,
@@ -45,7 +56,7 @@ class Parameter:
         self.choices = choices
         self.help = help
 
-    def as_type(self, value):
+    def as_type(self, value: Any):
         return self.type(value) if value is not None else None
 
 
@@ -140,8 +151,17 @@ class Verifier(ABC):
             with tempfile.TemporaryDirectory() as tempdir:
                 tempfile.tempdir = tempdir
                 for i, subproperty in enumerate(self.reduce_property(), start=1):
-                    subproblem_result = self.check(subproperty)
-                    self.logger.info("Sub-problem result %d: %s", i, subproblem_result)
+                    is_trivial, trivial_result = subproperty.is_trivial()
+                    if is_trivial:
+                        subproblem_result = trivial_result
+                        self.logger.warning(
+                            "Property is trivially %s.", trivial_result.result
+                        )
+                    else:
+                        subproblem_result = self.check(subproperty)
+                        self.logger.info(
+                            "Sub-problem result %d: %s", i, subproblem_result
+                        )
                     result |= subproblem_result
                     if self.eager_exit and result.result == SAT:
                         return result
@@ -164,7 +184,7 @@ class Verifier(ABC):
         return is_valid
 
     @abstractmethod
-    def build_inputs(self, prop: Property) -> Tuple[Any, ...]:
+    def build_inputs(self, prop: Property) -> Sequence:  # pragma: no cover
         raise NotImplementedError()
 
     @abstractmethod

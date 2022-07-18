@@ -4,12 +4,18 @@ from typing import Any, Iterator, Optional, Tuple, Type
 from dnnv.errors import DNNVError
 from dnnv.properties import Expression
 
+from ..results import VerificationResult
+
 
 class ReductionError(DNNVError):
     pass
 
 
-class Property:
+class Property(ABC):
+    @abstractmethod
+    def is_trivial(self) -> Tuple[bool, VerificationResult]:
+        raise NotImplementedError()
+
     @abstractmethod
     def validate_counter_example(self, cex: Any) -> Tuple[bool, Optional[str]]:
         raise NotImplementedError()

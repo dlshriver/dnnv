@@ -176,6 +176,24 @@ class Shape(Operation):
         return cls(*inputs, name=onnx_node.name)
 
 
+class Split(Operation):
+    def __init__(self, x, split=None, *, axis=0, name: Optional[str] = None):
+        super().__init__(name=name)
+        self.x = x
+        self.axis = axis
+        self.split = split
+
+    @classmethod
+    def from_onnx(cls, onnx_node, *inputs):
+        attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
+        axis = attributes.get("axis", 0)
+        if len(inputs) < 2:
+            # TODO: split is an input past version 11 (?)
+            split = attributes.get("split")
+            return cls(*inputs, axis=axis, split=split, name=onnx_node.name)
+        return cls(*inputs, axis=axis, name=onnx_node.name)
+
+
 class Slice(Operation):
     def __init__(
         self, x, starts, ends, axes=None, steps=None, *, name: Optional[str] = None
@@ -228,12 +246,19 @@ class Unsqueeze(Operation):
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):
         attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
-        axes = attributes.get("axes")
         if isinstance(inputs[0], np.ndarray):
-            a = inputs[0]
-            for axis in axes:
-                a = np.expand_dims(a, axis)
-            return a
+            if len(inputs) == 2:
+                axes = inputs[1]
+            else:
+                axes = attributes["axes"]
+            if not isinstance(axes, Operation):
+                a = inputs[0]
+                for axis in axes:
+                    a = np.expand_dims(a, axis)
+                return a
+        if len(inputs) == 2:
+            return cls(*inputs, name=onnx_node.name)
+        axes = attributes["axes"]
         return cls(*inputs, axes=axes, name=onnx_node.name)
 
 
@@ -248,6 +273,7 @@ __all__ = [
     "Reshape",
     "Resize",
     "Shape",
+    "Split",
     "Slice",
     "Tile",
     "Transpose",

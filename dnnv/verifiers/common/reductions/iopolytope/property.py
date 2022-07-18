@@ -3,9 +3,13 @@ from __future__ import annotations
 from typing import List, Optional, Sequence, Tuple, Union
 
 import numpy as np
+from scipy.optimize import linprog
+
+from dnnv.properties.expressions.base import Expression
 
 from .....nn import OperationGraph, OperationTransformer, operations
 from .....properties import Network
+from ...results import SAT, UNKNOWN, UNSAT, VerificationResult
 from ..base import Property
 from .base import HalfspacePolytope, HyperRectangle
 from .utils import OpGraphMerger
@@ -14,7 +18,7 @@ from .utils import OpGraphMerger
 class IOPolytopeProperty(Property):
     def __init__(
         self,
-        networks: List[Network],
+        networks: Sequence[Network],
         input_constraint: HalfspacePolytope,
         output_constraint: HalfspacePolytope,
         require_linear_network: bool = True,
@@ -31,6 +35,13 @@ class IOPolytopeProperty(Property):
 
         if len(self.networks) > 1:
             self.op_graph = OpGraphMerger(*(n.value for n in self.networks)).merge()
+        elif len(self.networks) == 0:
+            self.op_graph = OperationGraph(
+                [
+                    operations.Input(var.shape, np.float32)  # TODO: use correct dtype
+                    for var in self.input_constraint.variables
+                ]
+            )
         else:
             self.op_graph = self.networks[0].value
         if require_linear_network and not self.op_graph.is_linear():
@@ -48,6 +59,34 @@ class IOPolytopeProperty(Property):
             "    " + s for s in str(self.output_constraint).split("\n")
         ]
         return "\n".join(strs)
+
+    def is_trivial(self) -> Tuple[bool, VerificationResult]:
+        is_trivial = (
+            self.output_constraint.size() == 0 and self.input_constraint.is_consistent
+        )
+        if not is_trivial:
+            return (False, VerificationResult(result=UNKNOWN))
+        A, b = self.input_constraint.as_matrix_inequality()
+        obj = np.zeros(A.shape[1])
+        lb, ub = self.input_constraint.as_bounds()
+        if A.size == 0:
+            cex = (lb + ub) / 2
+        else:
+            bounds = list(
+                zip(
+                    (b if b > -1e6 else None for b in lb),
+                    (b if b < 1e6 else None for b in ub),
+                )
+            )
+            result = linprog(
+                obj,
+                A_ub=A,
+                b_ub=b,
+                bounds=bounds,
+                method="highs",
+            )
+            cex = result.x
+        return (is_trivial, VerificationResult(result=SAT, cex=cex))
 
     def validate_counter_example(
         self, *cex: np.ndarray, threshold=1e-6
@@ -195,6 +234,23 @@ class IOPolytopeProperty(Property):
             W_mask[i, 0] = 1
         new_output_op = operations.Gemm(new_output_op, W_mask, np.zeros(1, dtype=dtype))
         return OperationGraph([new_output_op])
+
+
+class TrivialIOPolytopeProperty(IOPolytopeProperty):
+    def __init__(self, result):
+        super().__init__([], HalfspacePolytope(), HalfspacePolytope())
+        self.result = result
+
+    @classmethod
+    def from_concrete_expression(
+        cls, expression: Expression
+    ) -> TrivialIOPolytopeProperty:
+        if expression.value:
+            return cls(VerificationResult(SAT))
+        return cls(VerificationResult(UNSAT))
+
+    def is_trivial(self) -> Tuple[bool, VerificationResult]:
+        return (True, self.result)
 
 
 __all__ = [

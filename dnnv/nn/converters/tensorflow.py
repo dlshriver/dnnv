@@ -249,7 +249,6 @@ class TensorflowConverter(OperationConverter):
             else:
                 bias = np.zeros((weights.shape[0],), dtype=weights.dtype)
             assert np.all(operation.dilations == 1)
-            assert np.all(operation.group == 1)
             num_pads = len(operation.pads)
             pads = tuple(
                 zip(
@@ -316,7 +315,6 @@ class TensorflowConverter(OperationConverter):
                 bias = operation.b
             else:
                 bias = np.zeros((weights.shape[1],), dtype=weights.dtype)
-            assert np.all(operation.group == 1)
 
             num_pads = len(operation.pads)
             pads = tuple(
@@ -879,6 +877,23 @@ class TensorflowConverter(OperationConverter):
             return result
 
         return softmax_func
+
+    def visit_Split(self, operation):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+        split_ = operation.split
+        if isinstance(split_, Operation):
+            split_ = self.visit(split_)
+        axis = operation.axis
+
+        @self._cached
+        def split_func(*inputs):
+            x, split = _concretize([x_, split_], inputs)
+            x = tf.split(x, tf.convert_to_tensor(split), axis=axis)
+            return x
+
+        return split_func
 
     def visit_Sub(self, operation):
         a_ = operation.a
