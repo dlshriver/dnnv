@@ -113,21 +113,16 @@ class TemporalSymbol(LTL):
     def controller(self):
         if "controller" not in self._cache:
             assert self.network.is_concrete
+            op_graph: OperationGraph = self.network.value
             if self.state_map_fn is not None:
                 assert self.state_map_fn.is_concrete
-                op_graph: OperationGraph = self.network.value.compose(
-                    self.state_map_fn.value
-                )
-            else:
-                op_graph = self.network.value
-            if len(op_graph.inputs) > 1:
-                current_state: OperationGraph = OperationGraph(
-                    [operations.Concat(op_graph.inputs, axis=1)]
-                )
-            else:
-                current_state = OperationGraph([op_graph.inputs[0]])
-            op_graph = _concat_op_graphs(current_state, op_graph)
-            op_graph = MLPTransformer().transform(op_graph)
+                op_graph = op_graph.compose(self.state_map_fn.value)
+
+            current_state = operations.Concat(
+                op_graph.inputs + op_graph.outputs, axis=1
+            )
+            op_graph = OperationGraph([current_state])
+            op_graph = MLPTransformer().transform(op_graph, keep_generators=True)
             self._cache["controller"] = op_graph
         return self._cache["controller"]
 
@@ -142,7 +137,7 @@ class TemporalSymbol(LTL):
             output_details = op_graph.output_details
             assert len(input_details) == 1
             assert len(output_details) == 1
-            op_graph = MLPTransformer().transform(op_graph)
+            op_graph = MLPTransformer().transform(op_graph, keep_generators=True)
             self._cache["plant"] = op_graph
         return self._cache["plant"]
 
@@ -183,53 +178,12 @@ class TemporalSymbol(LTL):
             control_signal = control_graph
         state_graph = plant.compose(control_signal)
         state_graph = SqueezeGemms().transform(state_graph)
-        if self.state_slack is not None and not np.allclose(
-            self.state_slack, 0, atol=1e-16
-        ):
-            state_details = state_graph.output_details[0]
-            state = state_graph.outputs[0]
-            state_shape = (1, int(np.product(state_details.shape[1:])))
-            dtype = state_details.dtype
-            slack_lb = self.state_slack[:, 0].astype(dtype)
-            slack_ub = self.state_slack[:, 1].astype(dtype)
-            slack_range = slack_ub - slack_lb
-            low = 0
-            high = 1
-            slack = operations.Gemm(
-                operations.RandomUniform(state_shape, dtype=dtype, low=low, high=high),
-                np.diag(slack_range / (high - low)),
-                slack_lb - low * slack_range / (high - low),
-            )
-            state_graph = OperationGraph([operations.Add(state, slack)])
-        current_state = MLPTransformer().transform(state_graph, _pre_simplified=True)
+        current_state = MLPTransformer().transform(
+            state_graph, keep_generators=True, _pre_simplified=True
+        )
 
         self._cache[("control_signal", self.control_step)] = control_signal
         self._cache[("state", self.control_step, self.plant_step)] = current_state
-
-        if self.state_slack is not None and not np.allclose(
-            self.state_slack, 0, atol=1e-16
-        ):
-            state_details = state_graph.output_details[0]
-            state_size = int(np.product(state_details.shape[1:]))
-            dtype = state_details.dtype
-            current_state = current_state.compose(
-                OperationGraph(
-                    [
-                        operations.Concat(
-                            [
-                                operations.Input((1, state_size), dtype),
-                                operations.RandomUniform(
-                                    (1, state_size * self.control_step),
-                                    dtype=dtype,
-                                    low=low,
-                                    high=high,
-                                ),
-                            ],
-                            axis=1,
-                        )
-                    ]
-                )
-            )
 
         network = Network(self._get_frozen_network_name())
         network.concretize(current_state)

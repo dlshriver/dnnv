@@ -5,6 +5,7 @@ import logging
 from typing import Dict, Iterator, List, Tuple, Type, Union
 
 import numpy as np
+from dnnv.nn.graph import OperationGraph
 
 from dnnv.properties import *
 from dnnv.properties.visitors import DetailsInference
@@ -130,7 +131,8 @@ class IOPolytopeReduction(Reduction):
     def visit_Call(self, expression: Call):
         if isinstance(expression.function, Network):
             self.visit(expression.function)
-            input_details = expression.function.value.input_details
+            op_graph: OperationGraph = expression.function.value
+            input_details = op_graph.input_details
             if len(expression.args) != len(input_details):
                 raise self.reduction_error(
                     "Invalid property:"
@@ -151,10 +153,10 @@ class IOPolytopeReduction(Reduction):
                 [i for i in np.ndindex(*shape)]
             ).reshape(*shape, len(shape))
             self.coefs[expression] = np.ones(shape)
-            for generator in expression.function.value.generators:
+            for generator in op_graph.generators:
                 variable = Variable(generator.shape, generator.name)
                 self.input_constraint.add_variable(variable)
-                for index in np.ndindex(generator.shape):
+                for index in np.ndindex(*generator.shape):
                     self.input_constraint.update_constraint(
                         [variable], [index], [1], generator.high
                     )

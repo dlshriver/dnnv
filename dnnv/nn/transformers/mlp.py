@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import Dict, List, Optional, Sequence, Type
+from typing import Dict, List, Optional, Sequence, Type, Union, cast
 
 import numpy as np
 from scipy.linalg import block_diag
@@ -22,13 +22,16 @@ ActivationOperation = (
 )
 
 GeneratorOperation = (operations.Input, operations.RandomUniform)
+GeneratorOpType = Union[operations.Input, operations.RandomUniform]
 
 
 class MLPTransformer(OperationTransformer):
     def __init__(self):
         super().__init__(recursive=False)
-        self._inputs: Dict[operations.Input, int] = {}
-        self._tensor_details: Optional[Dict[Operation, TensorDetails]] = None
+        self._input_op: Optional[Operation] = None
+        self._tensor_details: Dict[Operation, TensorDetails] = {}
+        self._left_offset: Dict[Operation, int] = {}
+        self._right_offset: Dict[Operation, int] = {}
 
     def generic_visit(self, operation: Operation) -> Operation:
         result = super().generic_visit(operation)
@@ -59,7 +62,7 @@ class MLPTransformer(OperationTransformer):
         )
         self._tensor_details[new_add_op] = TensorDetails((1, size), a_dtype)
 
-        new_add_op = SqueezeGemms().simplify(new_add_op)
+        new_add_op = cast(operations.Gemm, SqueezeGemms().simplify(new_add_op))
         self._tensor_details[new_add_op] = TensorDetails((1, size), a_dtype)
         return new_add_op
 
@@ -69,8 +72,11 @@ class MLPTransformer(OperationTransformer):
             List[Optional[Operation]]
         ] = self._extract_computation_paths(operation)
         output_op_stack = []
+        op: operations.Operation
         while any(len(path) and path[0] is not None for path in computation_paths):
-            input_ops = [path.pop(0) for path in computation_paths]
+            input_ops = cast(
+                List[operations.Operation], [path.pop(0) for path in computation_paths]
+            )
             if len(set(input_ops)) == 1:
                 base_op = input_ops[0]
                 details = self._tensor_details[base_op]
@@ -84,15 +90,22 @@ class MLPTransformer(OperationTransformer):
                 new_op = SqueezeGemms().simplify(gemm_op)
                 self._tensor_details[new_op] = TensorDetails((1, b.shape[1]), b.dtype)
             elif all(isinstance(op, GeneratorOperation) for op in input_ops):
-                size = 0
-                dtype = None
-                for op in input_ops:
-                    self._inputs.pop(op)
-                    size += int(np.product(op.shape[1:]))
-                    assert dtype is None or op.dtype == dtype
-                    dtype = op.dtype
-                new_op = operations.Input((1, size), dtype)
-                self._inputs[new_op] = len(self._inputs)
+                assert self._input_op is not None
+                (_, size), dtype = self._tensor_details[self._input_op]
+                W: List[np.ndarray] = []
+                for op in cast(Sequence[GeneratorOpType], input_ops):
+                    if op not in self._left_offset:
+                        W.append(np.eye(size, dtype=dtype))
+                        continue
+                    l_offset, r_offset = self._left_offset[op], self._right_offset[op]
+                    w = np.zeros((size, r_offset - l_offset), dtype=dtype)
+                    for i, offset in enumerate(range(l_offset, r_offset)):
+                        w[offset, i] = 1
+                    W.append(w)
+                w = np.hstack(W)
+                b = np.zeros(w.shape[1], dtype=dtype)
+                new_op = operations.Gemm(self._input_op, w, b)
+                new_op = cast(operations.Gemm, SqueezeGemms().simplify(new_op))
                 self._tensor_details[new_op] = TensorDetails((1, size), dtype)
             elif all(
                 isinstance(op, (operations.RandomUniform, operations.Relu))
@@ -109,8 +122,16 @@ class MLPTransformer(OperationTransformer):
 
                 output_op_stack.append(build_relu)
             elif all(isinstance(op, operations.Gemm) for op in input_ops):
-                b = block_diag(*(op.b for op in input_ops))
-                c = np.hstack([op.c for op in input_ops])
+                input_gemm_ops = cast(List[operations.Gemm], input_ops)
+                b = block_diag(*(op.b for op in input_gemm_ops))
+                c_list: List[np.ndarray] = []
+                for op in input_gemm_ops:
+                    if op.c is not None:
+                        c_list.append(op.c)
+                        continue
+                    details = self._tensor_details[op]
+                    c_list.append(np.zeros(details.shape[1], dtype=details.dtype))
+                c = np.hstack(c_list)
 
                 def build_gemm(input_op, b=b, c=c):
                     gemm_op = operations.Gemm(input_op, b, c)
@@ -180,7 +201,9 @@ class MLPTransformer(OperationTransformer):
                         z = np.zeros(size, dtype=dtype)
                         z2 = np.zeros(size * 2, dtype=dtype)
                         gemm_op_1 = operations.Gemm(op, np.block([I, -I]), z2)
-                        gemm_op_1 = SqueezeGemms().simplify(gemm_op_1)
+                        gemm_op_1 = cast(
+                            operations.Gemm, SqueezeGemms().simplify(gemm_op_1)
+                        )
                         relu_op = operations.Relu(gemm_op_1)
                         gemm_op_2 = operations.Gemm(
                             relu_op,
@@ -197,7 +220,7 @@ class MLPTransformer(OperationTransformer):
                         computation_paths[i].insert(0, relu_op)
                         computation_paths[i].insert(0, gemm_op_2)
             else:
-                assert 0, f"TODO: {[path[0] for path in computation_paths]}"
+                assert 0, f"TODO: {input_ops}"
         while len(output_op_stack):
             new_op = output_op_stack.pop()(new_op)
         return new_op
@@ -244,7 +267,7 @@ class MLPTransformer(OperationTransformer):
                                 )
                                 gemm_b[in_idx, out_idx] = w[co, ck, hk, wk]
         new_op = operations.Gemm(x, gemm_b, gemm_c)
-        new_op = SqueezeGemms().simplify(new_op)
+        new_op = cast(operations.Gemm, SqueezeGemms().simplify(new_op))
         self._tensor_details[new_op] = TensorDetails((in_b, output_size), dtype)
         return new_op
 
@@ -265,53 +288,8 @@ class MLPTransformer(OperationTransformer):
         assert operation.alpha == 1
         assert operation.beta == 1
         new_op = operations.Gemm(a, b, c)
-        new_op = SqueezeGemms().simplify(new_op)
+        new_op = cast(operations.Gemm, SqueezeGemms().simplify(new_op))
         self._tensor_details[new_op] = self._tensor_details[operation]
-        return new_op
-
-    def visit_Input(self, operation: operations.Input) -> operations.Input:
-        assert abs(operation.shape[0]) == 1
-        if operation in self._inputs:
-            return operation
-        new_op = operations.Input(
-            (1, int(np.product(operation.shape[1:]))), operation.dtype
-        )
-        self._inputs[new_op] = len(self._inputs)
-        self._tensor_details[new_op] = TensorDetails(new_op.shape, new_op.dtype)
-        return new_op
-
-    def visit_RandomUniform(
-        self, operation: operations.RandomUniform
-    ) -> operations.RandomUniform:
-        assert len(self._inputs) > 0
-        assert abs(operation.shape[0]) == 1
-        if operation in self._inputs:
-            return operation
-        low = operation.low
-        high = operation.high
-        if low >= 0 and len(operation.shape) == 1:
-            return operation
-        size = int(np.product(operation.shape[1:]))
-        if low >= 0:
-            rand_op = operations.RandomUniform(
-                (1, size),
-                dtype=operation.dtype,
-                seed=operation.seed,
-                low=low,
-                high=high,
-            )
-            self._inputs[rand_op] = len(self._inputs)
-            self._tensor_details[rand_op] = TensorDetails(rand_op.shape, rand_op.dtype)
-            return rand_op
-        rand_op = operations.RandomUniform(
-            (1, size), dtype=operation.dtype, seed=operation.seed, low=0, high=1
-        )
-        self._inputs[rand_op] = len(self._inputs)
-        self._tensor_details[rand_op] = TensorDetails(rand_op.shape, rand_op.dtype)
-        w = np.diag(np.full(size, high - low, dtype=rand_op.dtype))
-        b = np.full(size, low, dtype=rand_op.dtype)
-        new_op = operations.Gemm(rand_op, w, b)
-        self._tensor_details[new_op] = TensorDetails(rand_op.shape, rand_op.dtype)
         return new_op
 
     def visit_Relu(self, operation):
@@ -321,33 +299,151 @@ class MLPTransformer(OperationTransformer):
         return result
 
     def transform(
-        self, op_graph: OperationGraph, *, _pre_simplified=False
+        self,
+        op_graph: OperationGraph,
+        *,
+        keep_generators=False,
+        _pre_simplified=False,
     ) -> OperationGraph:
         assert len(op_graph.outputs) == 1
-        self._inputs = {}
         simplified_op_graph = op_graph
         if not _pre_simplified:
             simplified_op_graph = op_graph.simplify()
         self._tensor_details = simplified_op_graph.tensor_details
-        mlp_op_graph = super().transform(simplified_op_graph)
-        mlp_op_graph._inputs = tuple(self._inputs)
-        mlp_op_graph._input_details = tuple(
-            self._tensor_details[op] for op in self._inputs
+
+        # combine all inputs and generators
+        input_op_graph = self._build_inputs(
+            simplified_op_graph, keep_generators=keep_generators
         )
+
+        mlp_op_graph = super().transform(simplified_op_graph)
         mlp_op_graph._output_details = tuple(
             self._tensor_details[op] for op in mlp_op_graph.outputs
         )
-        mlp_op_graph._tensor_details = self._tensor_details
-        mlp_op_graph._is_linear = True
+
+        if input_op_graph is not None:
+            mlp_op_graph = mlp_op_graph.compose(input_op_graph)
+        else:
+            mlp_op_graph._is_linear = True
+            mlp_op_graph._tensor_details = self._tensor_details
         mlp_op_graph._simplified = mlp_op_graph
         return mlp_op_graph
+
+    def _build_inputs(self, op_graph: OperationGraph, keep_generators=False):
+        inputs_size = 0
+        generators_size = 0
+        dtype = None
+        op: operations.Operation
+        for op in op_graph.inputs:
+            if abs(op.shape[0]) != 1:
+                raise NotImplementedError(
+                    f"Batch size of {op.shape[0]} is not supported."
+                    " Try -1 or 1 instead."
+                )
+            inputs_size += int(np.product(op.shape[1:]))
+            if dtype is None:
+                dtype = op.dtype
+            elif op.dtype != dtype:
+                raise NotImplementedError(
+                    "Multiple input data types not currently supported"
+                )
+        assert dtype is not None
+        for op in op_graph.generators:
+            generators_size += int(np.product(op.shape))
+            if op.dtype != dtype:
+                raise NotImplementedError(
+                    "Multiple input data types not currently supported"
+                )
+
+        size = inputs_size + generators_size
+        input_op = operations.Input((1, size), dtype)
+        if len(op_graph.inputs) == 1 and len(op_graph.generators) == 0:
+            self._cache[op_graph.inputs[0]] = input_op
+        self._tensor_details[input_op] = TensorDetails((1, size), dtype)
+        weights: List[np.ndarray] = []
+        biases: List[np.ndarray] = []
+        offset = 0
+        for op in op_graph.inputs:
+            input_size = int(np.product(op.shape[1:]))
+            if len(op.shape) != 2:
+                _op = operations.Input((1, input_size), dtype)
+                self._tensor_details[_op] = TensorDetails((1, input_size), dtype)
+                self._cache[op] = _op
+                self._cache[_op] = _op
+                op = _op
+            self._left_offset[op] = offset
+            w = np.block(
+                [
+                    [np.zeros((offset, input_size), dtype=dtype)],
+                    [np.eye(input_size, dtype=dtype)],
+                    [np.zeros((size - offset - input_size, input_size), dtype=dtype)],
+                ]
+            )
+            b = np.zeros(input_size, dtype=dtype)
+            weights.append(w)
+            biases.append(b)
+            offset += input_size
+            self._right_offset[op] = offset
+        for op in op_graph.generators:
+            self._left_offset[op] = offset
+            low = op.low
+            high = op.high
+            generator_size = int(np.product(op.shape))
+            w = np.block(
+                [
+                    [np.zeros((offset, generator_size), dtype=dtype)],
+                    [np.eye(generator_size, dtype=dtype)],
+                    [
+                        np.zeros(
+                            (size - offset - generator_size, generator_size),
+                            dtype=dtype,
+                        )
+                    ],
+                ]
+            ) @ np.diag(np.full(generator_size, high - low, dtype=dtype))
+            b = np.full(generator_size, low, dtype=dtype)
+            weights.append(w)
+            biases.append(b)
+            offset += generator_size
+            self._right_offset[op] = offset
+
+        W = np.hstack(weights)
+        B = np.hstack(biases)
+        assert W.shape[0] == W.shape[1]
+        new_op = operations.Gemm(input_op, W, B)
+        self._tensor_details[new_op] = self._tensor_details[input_op]
+        self._input_op = new_op
+        if keep_generators and generators_size > 0:
+            inputs_op = operations.Input((1, inputs_size), dtype)
+            generators_op = operations.RandomUniform(
+                (1, generators_size), dtype=dtype, low=0.0, high=1.0
+            )
+            input_and_generator_op = operations.Concat(
+                [inputs_op, generators_op], axis=1
+            )
+            self._tensor_details[inputs_op] = TensorDetails((1, inputs_size), dtype)
+            self._tensor_details[generators_op] = TensorDetails(
+                (1, generators_size), dtype
+            )
+            self._tensor_details[input_and_generator_op] = TensorDetails(
+                (1, size), dtype
+            )
+
+            input_op_graph = OperationGraph([input_and_generator_op])
+            input_op_graph._inputs = (inputs_op,)
+            input_op_graph._input_details = (self._tensor_details[inputs_op],)
+            input_op_graph._output_details = (
+                self._tensor_details[input_and_generator_op],
+            )
+            return input_op_graph
+        return None
 
     def _extract_computation_paths(
         self, operation: operations.Concat
     ) -> List[List[Optional[Operation]]]:
         activation: Optional[Type[Operation]] = None
-        num_inputs = len(operation.x)
-        computation_paths: List[List[Operation]] = [
+        num_paths = len(operation.x)
+        computation_paths: List[List[Optional[Operation]]] = [
             [self.visit(op)] for op in operation.x
         ]
         op_to_path_index: List[Dict[Optional[Operation], int]] = [
@@ -356,7 +452,7 @@ class MLPTransformer(OperationTransformer):
         uses: Dict[Optional[Operation], List[Operation]] = defaultdict(list)
         for [op] in computation_paths:
             uses[op].append(operation)
-        while len(max(uses.values(), default=0, key=len)) < num_inputs:
+        while len(max(uses.values(), default=[], key=len)) < num_paths:
             for path_id, path in enumerate(computation_paths):
                 op = path[-1]
                 if op is None:
@@ -370,16 +466,16 @@ class MLPTransformer(OperationTransformer):
                     assert type(op) == activation
                 assert len(op.inputs) <= 1
                 if len(op.inputs) == 0:
-                    input_op = None
+                    input_op: Optional[Operation] = None
                 else:
                     input_op = op.inputs[0]
                 uses[input_op].append(op)
                 path.append(input_op)
                 assert input_op not in op_to_path_index[path_id]
                 op_to_path_index[path_id][input_op] = len(op_to_path_index[path_id])
-                if len(uses[input_op]) == num_inputs:
+                if len(uses[input_op]) == num_paths:
                     break
-        base_op = max(uses.keys(), default=0, key=lambda k: len(uses[k]))
+        base_op = max(uses.keys(), key=lambda k: len(uses[k]))
         computation_paths = [
             path[: op_to_index[base_op] + 1]
             for path, op_to_index in zip(computation_paths, op_to_path_index)

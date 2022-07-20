@@ -211,7 +211,9 @@ class IOPolytopeProperty(Property):
     def suffixed_op_graph(self) -> OperationGraph:
         op_graph = self.op_graph.copy()
         if len(op_graph.outputs) == 1:
-            new_output_op = operations.Flatten(op_graph.outputs[0])
+            new_output_op: operations.Operation = operations.Flatten(
+                op_graph.outputs[0]
+            )
         else:
             output_operations = [operations.Flatten(o) for o in op_graph.outputs]
             new_output_op = operations.Concat(output_operations, axis=1)

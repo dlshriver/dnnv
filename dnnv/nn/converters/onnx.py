@@ -773,7 +773,6 @@ class OnnxConverter(OperationConverter):
         outputs = []
         for i in range(len(operation.split)):
             outputs.append(f"output_{i}")
-        outputs = np.array(outputs)
         x = self._to_onnx_proto(operation.x, f"{opname}.x")
         split = self._to_onnx_proto(operation.split, f"{opname}.split")
         node = onnx.helper.make_node(

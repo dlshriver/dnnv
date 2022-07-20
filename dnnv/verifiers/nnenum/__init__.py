@@ -7,6 +7,7 @@ import numpy as np
 
 from dnnv.verifiers.common.base import Parameter, Verifier
 from dnnv.verifiers.common.reductions import HalfspacePolytope, IOPolytopeReduction
+from dnnv.verifiers.common.reductions.iopolytope.property import IOPolytopeProperty
 from dnnv.verifiers.common.results import SAT, UNKNOWN, UNSAT
 
 from .errors import NnenumError, NnenumTranslatorError
@@ -39,6 +40,7 @@ class Nnenum(Verifier):
                 del os.environ["OMP_NUM_THREADS"]
 
     def build_inputs(self, prop):
+        assert isinstance(prop, IOPolytopeProperty)
         with tempfile.NamedTemporaryFile(
             mode="w+", suffix=".onnx", delete=False
         ) as onnx_model_file:

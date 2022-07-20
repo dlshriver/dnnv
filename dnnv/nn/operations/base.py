@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional, Sequence
+from typing import Any, Dict, Optional, Sequence
 
 import numpy as np
 import onnx
@@ -45,8 +45,8 @@ class Operation(metaclass=Op):
             Operation.__id += 1
         else:
             self.name = name
-        self._inputs = None
-        self._parameters = None
+        self._inputs: Optional[Sequence[Operation]] = None
+        self._parameters: Optional[Dict[str, Any]] = None
 
     def __eq__(self, other):
         if other is self:
@@ -57,6 +57,8 @@ class Operation(metaclass=Op):
             self.__dict__.items(),
             key=lambda kv: kv[1] is not None and isinstance(kv[1], Operation),
         ):
+            if name in {"_parameters", "_inputs"}:
+                continue
             other_value = other.__dict__[name]
             if type(value) != type(other_value):
                 return False
@@ -80,7 +82,7 @@ class Operation(metaclass=Op):
         return type(self).__name__
 
     @property
-    def inputs(self):
+    def inputs(self) -> Sequence[Operation]:
         if self._inputs is None:
             inputs = []
             for value in self.__dict__.values():
@@ -94,7 +96,7 @@ class Operation(metaclass=Op):
         return self._inputs
 
     @property
-    def parameters(self):
+    def parameters(self) -> Dict[str, Any]:
         if self._parameters is None:
             import inspect
 
