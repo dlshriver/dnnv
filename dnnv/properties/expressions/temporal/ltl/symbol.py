@@ -1,51 +1,14 @@
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Union
-
-import numpy as np
+from typing import Any, Dict, Optional, Union
 
 from .....nn import OperationGraph, operations
 from .....nn.transformers.mlp import MLPTransformer, SqueezeGemms
-from .....nn.utils import TensorDetails
 from ...base import Expression
 from ...terms import Network, Symbol
 from .base import LTL, LTLMaxStepReached
 
 IntExpression = Union[int, Expression]
-
-
-def _concat_op_graphs(*op_graphs: OperationGraph):
-    input_set = set()
-    inputs = []
-    outputs: List[operations.Operation] = []
-    input_details = []
-    output_details: List[TensorDetails] = []
-    for graph in op_graphs:
-        for input_op, details in zip(graph.inputs, graph.input_details):
-            if input_op not in input_set:
-                inputs.append(input_op)
-                input_details.append(details)
-                input_set.add(input_op)
-        outputs += graph.outputs
-        output_details += graph.output_details
-    concatenated_op_graph = OperationGraph(
-        [
-            operations.Concat(
-                outputs,
-                axis=1,
-            )
-        ]
-    )
-    concatenated_op_graph._inputs = inputs
-    concatenated_op_graph._input_details = input_details
-    details = output_details[0]
-    shape = list(details.shape)
-    dtype = details.dtype
-    for o in output_details[1:]:
-        assert dtype == o.dtype
-        shape[1] += o.shape[1]
-    concatenated_op_graph._output_details = [TensorDetails(tuple(shape), dtype)]
-    return concatenated_op_graph
 
 
 class TemporalSymbol(LTL):
@@ -60,7 +23,6 @@ class TemporalSymbol(LTL):
         control_step: Optional[IntExpression] = None,
         plant_step: Optional[IntExpression] = None,
         control_period: IntExpression = 1,
-        state_slack: Optional[Any] = None,
         **kwargs,
     ):
         """An expression representing a temporal symbol.
@@ -99,14 +61,6 @@ class TemporalSymbol(LTL):
         if isinstance(control_period, Expression) and control_period.is_concrete:
             control_period = control_period.value
         self.control_period = control_period
-
-        if (
-            state_slack is not None
-            and isinstance(state_slack, Expression)
-            and state_slack.is_concrete
-        ):
-            state_slack = state_slack.value
-        self.state_slack = state_slack
 
         self._cache: Dict[Any, Any] = {}
 
@@ -218,7 +172,6 @@ class TemporalSymbol(LTL):
                 control_step=next_control_step,
                 plant_step=next_plant_step,
                 control_period=self.control_period,
-                state_slack=self.state_slack,
                 ctx=self.ctx,
             )
             next_symbol._cache = self._cache
@@ -248,7 +201,6 @@ class TemporalSymbol(LTL):
                 control_step=prev_control_step,
                 plant_step=prev_plant_step,
                 control_period=self.control_period,
-                state_slack=self.state_slack,
                 ctx=self.ctx,
             )
             prev_symbol._cache = self._cache
