@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 from dnnv.properties.expressions import *
@@ -18,8 +19,9 @@ def test_missing():
 
 
 def test_non_expression():
-    result = DetailsInference().visit(47)
-    assert result is None
+    shape, dtype = DetailsInference().visit(47)
+    assert shape == ()
+    assert isinstance(dtype, np.dtype)
     assert Constant(47) in get_context().shapes
     assert Constant(47) in get_context().types
 

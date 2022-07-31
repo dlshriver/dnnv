@@ -37,7 +37,7 @@ def initialize(name: str, args: argparse.Namespace) -> logging.Logger:
 
     formatter = logging.Formatter("%(levelname)-8s %(asctime)s (%(name)s) %(message)s")
 
-    console_handler = logging.StreamHandler(stream=sys.stdout)
+    console_handler = logging.StreamHandler(stream=sys.stderr)
     console_handler.setLevel(logging.DEBUG)
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)

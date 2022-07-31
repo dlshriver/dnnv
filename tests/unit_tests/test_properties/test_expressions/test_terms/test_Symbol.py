@@ -1,6 +1,8 @@
 import pytest
 
-from dnnv.properties.expressions import *
+from dnnv.properties.errors import NonConcreteExpressionError
+from dnnv.properties.expressions import Constant, Symbol
+from dnnv.properties.expressions.utils import empty_value
 
 
 def test_caching():
@@ -22,9 +24,9 @@ def test_build_identifier():
 
 def test_value():
     x = Symbol("a")
-    with pytest.raises(ValueError) as excinfo:
+    with pytest.raises(NonConcreteExpressionError) as excinfo:
         _ = x.value
-    assert str(excinfo.value) == "Cannot get value of non-concrete symbol."
+    assert str(excinfo.value) == "Cannot get value of non-concrete expression."
 
     x = Symbol("b")
     x.concretize(513)
@@ -43,7 +45,7 @@ def test_is_concrete():
 
 def test_concretize():
     x = Symbol("x")
-    assert x._value is None
+    assert x._value is empty_value
     x.concretize("apples")
     assert x._value == "apples"
 

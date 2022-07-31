@@ -53,8 +53,6 @@ class ExtSlice(AssociativeExpression):
 
     @property
     def value(self):
-        if not self.is_concrete:
-            return super().value
         if len(self.expressions) > 0:
             return tuple(expr.value for expr in self.expressions)
         return ()

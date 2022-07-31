@@ -86,23 +86,33 @@ def test_samysweb_property_3():
     assert new_expr.is_equivalent(
         Or(
             And(
-                LessThan(Multiply(-1, Network("N")(Symbol("x_"))), Constant(0)),
-                LessThan(Multiply(-1, Symbol("x_")[(0, 1)]), Constant(0)),
-                LessThanOrEqual(Multiply(-1, Symbol("x_")[(0, 1)]), Constant(0)),
+                LessThan(
+                    Multiply(Constant(-1), Network("N")(Symbol("x_"))), Constant(0)
+                ),
+                LessThan(Multiply(Constant(-1), Symbol("x_")[(0, 1)]), Constant(0)),
+                LessThanOrEqual(
+                    Multiply(Constant(-1), Symbol("x_")[(0, 1)]), Constant(0)
+                ),
             ),
             And(
-                LessThan(Multiply(-1, Symbol("x_")[(0, 1)]), Constant(0)),
+                LessThan(Multiply(Constant(-1), Symbol("x_")[(0, 1)]), Constant(0)),
                 LessThan(Network("N")(Symbol("x_")), Constant(0)),
-                LessThanOrEqual(Multiply(-1, Symbol("x_")[(0, 1)]), Constant(0)),
+                LessThanOrEqual(
+                    Multiply(Constant(-1), Symbol("x_")[(0, 1)]), Constant(0)
+                ),
             ),
             And(
-                LessThan(Multiply(-1, Symbol("x_")[(0, 1)]), Constant(0)),
+                LessThan(Multiply(Constant(-1), Symbol("x_")[(0, 1)]), Constant(0)),
                 LessThan(Symbol("x_")[(0, 1)], Constant(0)),
-                LessThanOrEqual(Multiply(-1, Symbol("x_")[(0, 1)]), Constant(0)),
+                LessThanOrEqual(
+                    Multiply(Constant(-1), Symbol("x_")[(0, 1)]), Constant(0)
+                ),
             ),
             And(
-                LessThan(Multiply(-1, Symbol("x_")[(0, 1)]), Constant(0)),
-                LessThanOrEqual(Multiply(-1, Symbol("x_")[(0, 1)]), Constant(0)),
+                LessThan(Multiply(Constant(-1), Symbol("x_")[(0, 1)]), Constant(0)),
+                LessThanOrEqual(
+                    Multiply(Constant(-1), Symbol("x_")[(0, 1)]), Constant(0)
+                ),
             ),
         )
     )

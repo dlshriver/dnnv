@@ -1,5 +1,6 @@
 import pytest
 
+from dnnv.properties.errors import NonConcreteExpressionError
 from dnnv.properties.expressions import *
 
 
@@ -41,7 +42,7 @@ def test_step():
 
 def test_value():
     expr = Slice(Symbol("a"), Symbol("b"), Symbol("c"))
-    with pytest.raises(ValueError):
+    with pytest.raises(NonConcreteExpressionError):
         _ = expr.value
 
     expr = Slice(0, -1, 1)
@@ -77,7 +78,7 @@ def test_ExtSlice():
 
 def test_ExtSlice_value():
     expr = ExtSlice(Symbol("a"), Symbol("b"), Symbol("c"))
-    with pytest.raises(ValueError):
+    with pytest.raises(NonConcreteExpressionError):
         _ = expr.value
 
     expr = ExtSlice()
