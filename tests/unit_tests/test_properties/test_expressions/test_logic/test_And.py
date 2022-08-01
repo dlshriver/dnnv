@@ -68,7 +68,7 @@ def test_And_non_expression():
     a = Symbol("x")
     b = Constant(True)
 
-    c_1 = a & 1
+    c_1 = a & True
     c_2 = And(a, b)
 
     assert c_1.is_equivalent(c_2)

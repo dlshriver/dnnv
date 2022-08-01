@@ -1,5 +1,6 @@
 import pytest
 
+from dnnv.properties.errors import NonConcreteExpressionError
 from dnnv.properties.expressions import *
 
 
@@ -30,15 +31,6 @@ def test_Expression___getattr__():
     assert isinstance(a4, Attribute)
     assert a4.expr1 is expr
     assert a4.expr2 is Symbol("a4")
-
-    expr.concretize("string!")
-    a5 = expr.__getattr__(Constant("strip"))
-    assert isinstance(a5, Constant)
-    assert a5 is Constant("string!".strip)
-
-    a6 = expr.strip
-    assert isinstance(a6, Constant)
-    assert a6 is Constant("string!".strip)
 
 
 def test_Expression_concretize():
@@ -85,5 +77,7 @@ def test_Expression_value():
     class MockExpression(Expression):
         pass
 
-    with pytest.raises(ValueError, match="Cannot get value of non-concrete expression"):
+    with pytest.raises(
+        NonConcreteExpressionError, match="Cannot get value of non-concrete expression"
+    ):
         _ = MockExpression().value

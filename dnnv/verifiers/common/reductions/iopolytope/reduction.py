@@ -7,6 +7,7 @@ from typing import Dict, Iterator, List, Tuple, Type, Union
 import numpy as np
 
 from .....properties import *
+from .....properties.visitors.inference import DetailsInference
 from ..base import Property, Reduction, ReductionError
 from .base import Constraint, HalfspacePolytope, HyperRectangle, Variable
 from .errors import IOPolytopeReductionError
@@ -74,6 +75,7 @@ class IOPolytopeReduction(Reduction):
         dnf_expression = expression.canonical()
         self.logger.debug("DNF: %s", dnf_expression)
         assert isinstance(dnf_expression, Or)
+        DetailsInference().visit(dnf_expression)
 
         for conjunction in dnf_expression:
             self.logger.info("CONJUNCTION: %s", conjunction)

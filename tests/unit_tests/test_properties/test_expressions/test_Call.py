@@ -3,6 +3,7 @@ import pytest
 
 import dnnv.nn.operations as operations
 from dnnv.nn.graph import OperationGraph
+from dnnv.properties.errors import NonConcreteExpressionError
 from dnnv.properties.expressions import *
 
 
@@ -17,7 +18,9 @@ def test_value():
     assert np.allclose(func_call.value, np.ones((1, 5), dtype=np.float32))
 
     func_call = Call(Constant(np.argmax), (Symbol("y"),), {})
-    with pytest.raises(ValueError, match="Cannot get value of non-concrete expression"):
+    with pytest.raises(
+        NonConcreteExpressionError, match="Cannot get value of non-concrete expression"
+    ):
         _ = func_call.value
 
     input_op = operations.Input((-1, 5), np.dtype(np.float32))

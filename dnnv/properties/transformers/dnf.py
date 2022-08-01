@@ -11,6 +11,14 @@ from .substitute_calls import SubstituteCalls
 
 
 class DnfTransformer(GenericExpressionTransformer):
+    def __init__(self):
+        super().__init__()
+        self._infer_expression_details = lambda: None
+
+    def _lazy_inference(self):
+        self._infer_expression_details()
+        self._infer_expression_details = lambda: None
+
     def visit(self, expression: Expression) -> Expression:
         if self._top_level:
             expression = expression.propagate_constants()
@@ -24,7 +32,9 @@ class DnfTransformer(GenericExpressionTransformer):
                 expression, Symbol
             ):
                 expression = Or(And(expression))
-            DetailsInference().visit(expression)
+            self._infer_expression_details = (
+                lambda expression=expression: DetailsInference().visit(expression)
+            )
         expression = super().visit(expression)
         return expression
 
@@ -104,6 +114,7 @@ class DnfTransformer(GenericExpressionTransformer):
                 LessThan: GreaterThanOrEqual,
                 LessThanOrEqual: GreaterThan,
             }
+            self._lazy_inference()
             if expr.expr1 in expr.ctx.shapes and expr.expr2 in expr.ctx.shapes:
                 import numpy as np
 

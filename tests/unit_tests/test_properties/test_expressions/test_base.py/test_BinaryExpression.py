@@ -1,5 +1,6 @@
 import pytest
 
+from dnnv.properties.errors import NonConcreteExpressionError
 from dnnv.properties.expressions import *
 
 
@@ -38,5 +39,7 @@ def test_is_equivalent():
 def test_Expression_value():
     expr = BinaryExpression(Symbol("a"), Symbol("b"))
 
-    with pytest.raises(ValueError, match="Cannot get value of non-concrete expression"):
+    with pytest.raises(
+        NonConcreteExpressionError, match="Cannot get value of non-concrete expression"
+    ):
         _ = expr.value
