@@ -6,9 +6,9 @@ authors:
   orcid: "https://orcid.org/0000-0003-0208-6517"
   website: "https://davidshriver.me"
 title: "DNNV"
-version: 0.5.1
-doi: 10.5281/zenodo.4900511
-date-released: 2021-06-04
+version: 0.6.0
+doi: 10.5281/zenodo.4699410
+date-released: 2022-08-02
 url: "https://github.com/dlshriver/dnnv"
 preferred-citation:
   type: conference-paper
