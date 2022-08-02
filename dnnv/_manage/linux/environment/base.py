@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 import os
-
 from pathlib import Path
 from typing import List, Optional, Sequence
 
-from .dependencies import Dependency
 from ...errors import InstallError
+from .dependencies import Dependency
 
 
 class Environment:
@@ -17,7 +16,8 @@ class Environment:
                     os.getenv(
                         "VIRTUAL_ENV",
                         os.path.join(
-                            os.getenv("XDG_DATA_HOME", "~/.local/share"), "dnnv"
+                            os.getenv("XDG_DATA_HOME", "~/.local/share"),
+                            "dnnv",
                         ),
                     )
                 )

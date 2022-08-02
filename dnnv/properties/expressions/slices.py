@@ -2,14 +2,19 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-from .base import Expression, AssociativeExpression, TernaryExpression
+from .base import AssociativeExpression, Expression, TernaryExpression
 from .context import Context
 from .terms import Constant
 
 
 class Slice(TernaryExpression):
     def __init__(
-        self, start: Any, stop: Any, step: Any, *, ctx: Optional[Context] = None
+        self,
+        start: Any,
+        stop: Any,
+        step: Any,
+        *,
+        ctx: Optional[Context] = None,
     ):
         start = start if isinstance(start, Expression) else Constant(start)
         stop = stop if isinstance(stop, Expression) else Constant(stop)
@@ -48,8 +53,6 @@ class ExtSlice(AssociativeExpression):
 
     @property
     def value(self):
-        if not self.is_concrete:
-            return super().value
         if len(self.expressions) > 0:
             return tuple(expr.value for expr in self.expressions)
         return ()

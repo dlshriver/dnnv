@@ -9,7 +9,7 @@ def test_And_empty():
     expr = And()
     new_expr = transformer.visit(expr)
     assert new_expr is not expr
-    assert new_expr is Constant(False)
+    assert new_expr is Constant(True)
 
 
 def test_And_of_and():

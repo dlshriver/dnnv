@@ -1,14 +1,11 @@
 import numpy as np
-from typing import Union
 
-from .base import Simplifier
 from ... import operations
+from .base import Simplifier
 
 
 class ConvertDivToMul(Simplifier):
-    def visit_Div(
-        self, operation: operations.Div
-    ) -> Union[operations.Div, operations.Mul]:
+    def visit_Div(self, operation: operations.Div) -> operations.Operation:
         if isinstance(operation.a, operations.Operation) and isinstance(
             operation.b, operations.Operation
         ):
@@ -22,10 +19,6 @@ class ConvertDivToMul(Simplifier):
             c = operation.a
             if np.all(c == 0):
                 return c
-            return operation
-        else:
-            return operation
-        if isinstance(input_op, operations.Add):
             return operation
         # TODO : this loses a lot of precision, so don't do it
         # return operations.Mul(input_op, 1.0 / c)

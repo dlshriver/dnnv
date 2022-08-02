@@ -1,51 +1,40 @@
-# This is a basic workflow to help you get started with Actions
-
 name: CI
 
-# Controls when the action will run.
 on:
-  # Triggers the workflow on push or pull request events but only for the main branch
   push:
     branches: [main, develop]
     paths:
-    - ".github/**"
-    - "dnnv/**"
-    - "tests/**"
-    - "pyproject.toml"
-    - "requirements.txt"
+      - ".github/**"
+      - "dnnv/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "requirements.txt"
   pull_request:
     branches: [main, develop]
     paths:
-    - ".github/**"
-    - "dnnv/**"
-    - "tests/**"
-    - "pyproject.toml"
-    - "requirements.txt"
-
-  # Allows you to run this workflow manually from the Actions tab
+      - ".github/**"
+      - "dnnv/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "requirements.txt"
   workflow_dispatch:
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "test"
-  test:
-    # The type of runner that the job will run on
+  tests:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: [3.7, 3.8, 3.9]
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
+        test-type: ["unit", "system"]
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
 
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: |
             ~/.cache/dnnv
@@ -59,51 +48,58 @@ jobs:
         run: |
           python -m venv .venv
           . .venv/bin/activate
-          pip install --upgrade pip flit
-          flit install
-
-      - name: "Install Verifier: Reluplex"
-        run: |
-          . .venv/bin/activate
-          dnnv_manage install reluplex
-
-      - name: "Install Verifier: Planet"
-        run: |
-          . .venv/bin/activate
-          dnnv_manage install planet
-
-      - name: "Install Verifier: Neurify"
-        run: |
-          . .venv/bin/activate
-          dnnv_manage install neurify
+          pip install --upgrade pip
+          pip install .[test]
 
       - name: "Install Verifier: ERAN"
+        if: ${{ matrix.test-type  == 'system' }}
         run: |
           . .venv/bin/activate
           dnnv_manage install eran
 
       - name: "Install Verifier: Marabou"
+        if: ${{ matrix.test-type  == 'system' }}
         run: |
           . .venv/bin/activate
           dnnv_manage install marabou
 
+      - name: "Install Verifier: MIPVerify"
+        if: ${{ matrix.test-type  == 'system' }}
+        run: |
+          . .venv/bin/activate
+          dnnv_manage install mipverify
+
+      - name: "Install Verifier: Neurify"
+        if: ${{ matrix.test-type  == 'system' }}
+        run: |
+          . .venv/bin/activate
+          dnnv_manage install neurify
+
       - name: "Install Verifier: nnenum"
+        if: ${{ matrix.test-type  == 'system' }}
         run: |
           . .venv/bin/activate
           dnnv_manage install nnenum
 
-      - name: Prepare Test Artifacts
+      - name: "Install Verifier: Planet"
+        if: ${{ matrix.test-type  == 'system' }}
         run: |
           . .venv/bin/activate
-          python tests/system_tests/artifacts/build_artifacts.py
+          dnnv_manage install planet
 
-      - name: Run DNNV Test Suite
+      - name: "Install Verifier: Reluplex"
+        if: ${{ matrix.test-type  == 'system' }}
+        run: |
+          . .venv/bin/activate
+          dnnv_manage install reluplex
+
+      - name: Run DNNV Unit Tests
         run: |
           export TF_CPP_MIN_LOG_LEVEL=3
           . .venv/bin/activate
-          coverage run
+          coverage run -m pytest tests/${{ matrix.test-type }}_tests
           coverage combine
           coverage xml
 
       - name: Upload Coverage to Codecov
-        uses: codecov/codecov-action@v1
+        uses: codecov/codecov-action@v3

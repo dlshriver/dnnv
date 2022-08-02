@@ -1,9 +1,8 @@
-from dnnv.nn.operations.base import OutputSelect
-import numpy as np
-import onnx
-
 from collections import defaultdict
 from typing import Any, Dict, List, Union
+
+import numpy as np
+import onnx
 
 from .. import operations
 from ..graph import OperationGraph
@@ -68,9 +67,10 @@ class OnnxConverter(OperationVisitor):
         return self.visited[operation]
 
     def generic_visit(self, operation: Operation):
-        if not hasattr(self, "visit_%s" % operation.__class__.__name__):
+        if not hasattr(self, f"visit_{type(operation).__name__}"):
             raise ValueError(
-                f"ONNX converter not implemented for operation type {type(operation).__name__}"
+                "ONNX converter not implemented"
+                f" for operation type {type(operation).__name__}"
             )
         return super().generic_visit(operation)
 
@@ -79,11 +79,15 @@ class OnnxConverter(OperationVisitor):
     ) -> Union[onnx.NodeProto, onnx.TensorProto, onnx.ValueInfoProto]:
         if isinstance(value, Operation):
             return self.visit(value)
-        elif isinstance(value, np.ndarray):
+        if isinstance(value, np.ndarray):
             tensor_proto = onnx.numpy_helper.from_array(value, name=opname)
             self.initializer.append(tensor_proto)
             return tensor_proto
-        elif isinstance(value, (int, float)):
+        if isinstance(value, bool):
+            tensor_proto = onnx.numpy_helper.from_array(np.asarray(value), name=opname)
+            self.initializer.append(tensor_proto)
+            return tensor_proto
+        if isinstance(value, (int, float)):
             tensor_proto = onnx.numpy_helper.from_array(
                 np.array(value, dtype=f"{type(value).__name__}32"), name=opname
             )
@@ -209,7 +213,7 @@ class OnnxConverter(OperationVisitor):
             b = self._to_onnx_proto(operation.b, f"{opname}.b")
             inputs.append(b.name)
         elif self.add_missing_optional_inputs:
-            b_ = np.zeros(w.shape[0], dtype=w.dtype)
+            b_ = np.zeros(operation.w.shape[0], dtype=operation.w.dtype)
             b = self._to_onnx_proto(b_, f"{opname}.b")
             inputs.append(b.name)
 
@@ -289,10 +293,13 @@ class OnnxConverter(OperationVisitor):
 
         x = self._to_onnx_proto(operation.x, f"{opname}.x")
         ratio = self._to_onnx_proto(operation.ratio, f"{opname}.ratio")
+        training_mode = self._to_onnx_proto(
+            operation.training_mode, f"{opname}.training_mode"
+        )
 
         node = onnx.helper.make_node(
             op_type,
-            inputs=[x.name, ratio.name],
+            inputs=[x.name, ratio.name, training_mode.name],
             outputs=[opname],
             name=opname,
         )
@@ -490,16 +497,11 @@ class OnnxConverter(OperationVisitor):
         idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
         opname = f"{op_type}_{idx}"
 
-        if operation.index != 0:
-            raise NotImplementedError(
-                "Support for operations with multiple ouputs is not yet implemented."
-            )
-
         op = self._to_onnx_proto(operation.operation, f"{opname}.operation")
 
         node = onnx.helper.make_node(
             "Identity",
-            inputs=[op.name],
+            inputs=[op.output[operation.index]],
             outputs=[opname],
             name=opname,
         )
@@ -548,6 +550,55 @@ class OnnxConverter(OperationVisitor):
 
         node = onnx.helper.make_node(
             op_type, inputs=[x.name], outputs=[opname], name=opname
+        )
+
+        return node
+
+    def visit_Split(self, operation: operations.Split) -> onnx.NodeProto:
+        op_type = str(operation)
+        # TODO: split attribute is optional. Edits to nn/parser/onnx.py required.
+        assert operation.split is not None
+        idx = self.op_counts["Split"] = self.op_counts["Split"] + 1
+        opname = f"Split_{idx}"
+        outputs = []
+        for i in range(len(operation.split)):
+            outputs.append(f"output_{i}")
+        outputs = np.array(outputs)
+        x = self._to_onnx_proto(operation.x, f"{opname}.x")
+        split = self._to_onnx_proto(operation.split, f"{opname}.split")
+        node = onnx.helper.make_node(
+            op_type,
+            inputs=[x.name, split.name],
+            outputs=outputs,
+            name=opname,
+            axis=operation.axis,
+        )
+
+        return node
+
+    def visit_Slice(self, operation: operations.Slice) -> onnx.NodeProto:
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        x = self._to_onnx_proto(operation.x, f"{opname}.x")
+        starts = self._to_onnx_proto(operation.starts, f"{opname}.starts")
+        ends = self._to_onnx_proto(operation.ends, f"{opname}.ends")
+
+        inputs = [x.name, starts.name, ends.name]
+        if operation.steps is not None:
+            axes = self._to_onnx_proto(operation.axes, f"{opname}.axes")
+            steps = self._to_onnx_proto(operation.steps, f"{opname}.steps")
+            inputs.extend([axes.name, steps.name])
+        elif operation.axes is not None:
+            axes = self._to_onnx_proto(operation.axes, f"{opname}.axes")
+            inputs.append(axes.name)
+
+        node = onnx.helper.make_node(
+            op_type,
+            inputs=inputs,
+            outputs=[opname],
+            name=opname,
         )
 
         return node

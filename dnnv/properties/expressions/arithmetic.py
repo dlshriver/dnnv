@@ -1,15 +1,9 @@
 from __future__ import annotations
 
 import operator
-
 from typing import Type, TypeVar
 
-from .base import (
-    Expression,
-    AssociativeExpression,
-    BinaryExpression,
-    UnaryExpression,
-)
+from .base import AssociativeExpression, BinaryExpression, Expression, UnaryExpression
 
 NonUnaryArithmeticType = TypeVar(
     "NonUnaryArithmeticType", "Add", "Divide", "Multiply", "Subtract"
@@ -96,4 +90,11 @@ class Divide(ArithmeticExpression, BinaryExpression):
     OPERATOR_SYMBOL = "/"
 
 
-__all__ = ["Add", "ArithmeticExpression", "Divide", "Multiply", "Negation", "Subtract"]
+__all__ = [
+    "Add",
+    "ArithmeticExpression",
+    "Divide",
+    "Multiply",
+    "Negation",
+    "Subtract",
+]

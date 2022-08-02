@@ -1,12 +1,25 @@
 from __future__ import annotations
 
-import numpy as np
 import typing
-
 from functools import reduce
-from typing import Any, Callable, Iterator, List, Optional, Set, TypeVar, Union
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Iterator,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    TypeVar,
+    Union,
+)
 
+import numpy as np
+
+from ..errors import NonConcreteExpressionError
 from .context import *
+from .utils import empty_value
 
 if typing.TYPE_CHECKING:  # pragma: no cover
     from .attribute import Attribute
@@ -32,6 +45,11 @@ class Expression:
 
     def __init__(self, ctx: Optional[Context] = None):
         self.ctx: Context = ctx or get_context()
+        self._hash_cache_base: Optional[int] = None
+        self.__FLAG_is_concrete = False
+        self._iter_cache: Dict[
+            Tuple[int, bool], Tuple[List[Expression], Iterator[Expression], bool]
+        ] = {}
 
     def __bool__(self):
         if self.is_concrete:
@@ -39,23 +57,21 @@ class Expression:
         raise ValueError("The truth value of a non-concrete expression is ambiguous")
 
     def __hash__(self) -> int:
-        exprs_hash = 1
-        for expr in self.iter(max_depth=1, include_self=False):
-            exprs_hash *= hash(expr)
-        return hash(self.__class__) * exprs_hash
+        if self._hash_cache_base is None:
+            exprs_hash = 1
+            for expr in self.iter(max_depth=1, include_self=False):
+                exprs_hash *= hash(expr)
+            self._hash_cache_base = hash(self.__class__) * exprs_hash
+        return self._hash_cache_base
 
     def __getattr__(self, name) -> Union[Attribute, Constant]:
         from .attribute import Attribute
         from .terms import Constant
 
+        if isinstance(name, str) and name.startswith("__"):
+            # This case allows access to flags like `__FLAG_is_concrete`
+            return super().__getattribute__(name)
         with self.ctx:
-            if isinstance(name, str) and name.startswith("__"):
-                # This case allows access to flags like `__FLAG_is_concrete`
-                return super().__getattribute__(name)
-            if isinstance(name, str) and self.is_concrete:
-                return Constant(getattr(self.value, name))
-            if isinstance(name, Constant) and self.is_concrete:
-                return Constant(getattr(self.value, name.value))
             if isinstance(name, Expression):
                 return Attribute(self, name)
             return Attribute(self, Constant(name))
@@ -137,11 +153,40 @@ class Expression:
             return NotEqual(self, Constant(other))
 
     def iter(self, max_depth=-1, include_self=True) -> Iterator[Expression]:
+        if (max_depth, include_self) not in self._iter_cache:
+            cached_seq: List[Expression] = []
+            first_run = True
+            self._iter_cache[max_depth, include_self] = (
+                cached_seq,
+                iter(()),
+                first_run,
+            )
+            iterator = self.iter(max_depth=max_depth, include_self=include_self)
+            self._iter_cache[max_depth, include_self] = (
+                cached_seq,
+                iterator,
+                first_run,
+            )
+            for expr in iterator:
+                cached_seq.append(expr)
+                yield expr
+            return
+        elif not self._iter_cache[max_depth, include_self][2]:
+            cached_seq = self._iter_cache[max_depth, include_self][0]
+            yield from cached_seq
+            for expr in self._iter_cache[max_depth, include_self][1]:
+                cached_seq.append(expr)
+                yield expr
+            return
+        cached_seq, iterator, _ = self._iter_cache[max_depth, include_self]
+        self._iter_cache[max_depth, include_self] = (cached_seq, iterator, False)
         if include_self:
             yield self
         if max_depth == 0:
             return
-        for value in self.__dict__.values():
+        for key, value in self.__dict__.items():
+            if key.startswith("_"):
+                continue
             if isinstance(value, Expression):
                 yield from value.iter(max_depth=max_depth - 1)
             elif isinstance(value, (list, tuple, set)):
@@ -161,7 +206,9 @@ class Expression:
         with self.ctx:
             return CanonicalTransformer().visit(self)
 
-    def concretize(self: ExpressionType, *args, **kwargs) -> ExpressionType:
+    def concretize(
+        self: ExpressionType, *args, **kwargs
+    ) -> Union[ExpressionType, Symbol]:
         from .terms import Symbol
 
         nargs = len(args)
@@ -192,26 +239,27 @@ class Expression:
             if name not in symbols:
                 raise ValueError(f"Unknown identifier {name!r} for method 'concretize")
             symbols[name]._value = value
-            setattr(symbols[name], "__FLAG_is_concrete", True)
+            symbols[name].__FLAG_is_concrete = True
         return self
 
     @property
     def is_concrete(self) -> bool:
-        if getattr(self, "__FLAG_is_concrete", False):
+        if self.__FLAG_is_concrete:
             return True
-        child = None
-        for child in self.iter(max_depth=1, include_self=False):
-            if not child.is_concrete:
-                return False
-        setattr(self, "__FLAG_is_concrete", True)
+        try:
+            _ = self.value
+        except NonConcreteExpressionError:
+            return False
+        self.__FLAG_is_concrete = True
         return True
 
-    def is_equivalent(self, other) -> bool:
+    def is_equivalent(self, other: Expression) -> bool:
         if self is other:
             return True
-        if self.is_concrete and other.is_concrete:
+        try:
             return bool(np.all(self.value == other.value))
-        return False
+        except NonConcreteExpressionError:
+            return False
 
     @property
     def networks(self) -> Set[Network]:
@@ -227,7 +275,7 @@ class Expression:
 
     @property
     def value(self) -> Any:
-        raise ValueError("Cannot get value of non-concrete expression")
+        raise NonConcreteExpressionError("Cannot get value of non-concrete expression")
 
     @property
     def variables(self) -> Set[Symbol]:
@@ -254,30 +302,34 @@ class AssociativeExpression(Expression):
                 self.expressions.extend(expression.expressions)
             else:
                 self.expressions.append(expression)
+        self._expression_set = set(self.expressions)
+        self._value = empty_value
 
     def is_equivalent(self, other):
         if super().is_equivalent(other):
             return True
-        if (
-            type(self) == type(other)
-            and not self.is_concrete
-            and not other.is_concrete
-            and len(self.expressions) == len(other.expressions)
-            and all(expr in other.expressions for expr in self.expressions)
-            and all(expr in self.expressions for expr in other.expressions)
-        ):
-            return True
-        return False
+        if type(self) != type(other) or len(self.expressions) != len(other.expressions):
+            return False
+        assert isinstance(other, AssociativeExpression)
+        for e1, e2 in zip(self.expressions, other.expressions):
+            if e1 not in other._expression_set or e2 not in self._expression_set:
+                return False
+        return True
 
     @property
     def value(self):
-        if not self.is_concrete:
-            return super().value
-        if len(self.expressions) > 0:
-            return reduce(self.OPERATOR, (expr.value for expr in self.expressions))
-        return reduce(
-            self.OPERATOR, (expr.value for expr in self.expressions), self.BASE_VALUE
-        )
+        if self._value is empty_value:
+            if len(self.expressions) > 0:
+                self._value = reduce(
+                    self.OPERATOR, (expr.value for expr in self.expressions)
+                )
+            else:
+                self._value = reduce(
+                    self.OPERATOR,
+                    (expr.value for expr in self.expressions),
+                    self.BASE_VALUE,
+                )
+        return self._value
 
     def __repr__(self):
         result_str = f", ".join(
@@ -298,19 +350,22 @@ class AssociativeExpression(Expression):
 
 class BinaryExpression(Expression):
     def __init__(
-        self, expr1: Expression, expr2: Expression, *, ctx: Optional[Context] = None
+        self,
+        expr1: Expression,
+        expr2: Expression,
+        *,
+        ctx: Optional[Context] = None,
     ):
         super().__init__(ctx=ctx)
         self.expr1 = expr1
         self.expr2 = expr2
+        self._value = empty_value
 
     def is_equivalent(self, other):
         if super().is_equivalent(other):
             return True
         if (
             type(self) == type(other)
-            and not self.is_concrete
-            and not other.is_concrete
             and self.expr1.is_equivalent(other.expr1)
             and self.expr2.is_equivalent(other.expr2)
         ):
@@ -319,9 +374,9 @@ class BinaryExpression(Expression):
 
     @property
     def value(self):
-        if not self.is_concrete:
-            return super().value
-        return self.OPERATOR(self.expr1.value, self.expr2.value)
+        if self._value is empty_value:
+            self._value = self.OPERATOR(self.expr1.value, self.expr2.value)
+        return self._value
 
     def __repr__(self):
         return f"{type(self).__name__}({self.expr1!r}, {self.expr2!r})"
@@ -343,14 +398,13 @@ class TernaryExpression(Expression):
         self.expr1 = expr1
         self.expr2 = expr2
         self.expr3 = expr3
+        self._value = empty_value
 
     def is_equivalent(self, other):
         if super().is_equivalent(other):
             return True
         if (
             type(self) == type(other)
-            and not self.is_concrete
-            and not other.is_concrete
             and self.expr1.is_equivalent(other.expr1)
             and self.expr2.is_equivalent(other.expr2)
             and self.expr3.is_equivalent(other.expr3)
@@ -360,9 +414,11 @@ class TernaryExpression(Expression):
 
     @property
     def value(self):
-        if not self.is_concrete:
-            return super().value
-        return self.OPERATOR(self.expr1.value, self.expr2.value, self.expr3.value)
+        if self._value is empty_value:
+            self._value = self.OPERATOR(
+                self.expr1.value, self.expr2.value, self.expr3.value
+            )
+        return self._value
 
     def __repr__(self):
         return f"{type(self).__name__}({self.expr1!r}, {self.expr2!r}, {self.expr3!r})"
@@ -375,24 +431,20 @@ class UnaryExpression(Expression):
     def __init__(self, expr: Expression, *, ctx: Optional[Context] = None):
         super().__init__(ctx=ctx)
         self.expr = expr
+        self._value = empty_value
 
     def is_equivalent(self, other):
         if super().is_equivalent(other):
             return True
-        if (
-            type(self) == type(other)
-            and not self.is_concrete
-            and not other.is_concrete
-            and self.expr.is_equivalent(other.expr)
-        ):
+        if type(self) == type(other) and self.expr.is_equivalent(other.expr):
             return True
         return False
 
     @property
     def value(self):
-        if not self.is_concrete:
-            return super().value
-        return self.OPERATOR(self.expr.value)
+        if self._value is empty_value:
+            self._value = self.OPERATOR(self.expr.value)
+        return self._value
 
     def __repr__(self):
         return f"{type(self).__name__}({self.expr!r})"

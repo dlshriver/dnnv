@@ -1,16 +1,16 @@
 from __future__ import annotations
 
-import lark
-import numpy as np
-
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set
 
+import lark
+import numpy as np
+
 from dnnv.properties.expressions.terms import symbol
 
-from .errors import VNNLIBParserError
-from ..utils import LimitQuantifiers, parse_cli
 from ...expressions import *
+from ..utils import LimitQuantifiers, parse_cli
+from .errors import VNNLIBParserError
 
 # TODO : implement full smt-lib grammar
 # currently enough for vnn-lib spec?
@@ -215,11 +215,15 @@ def parse_str(
         parse_tree = VNNLIBParser.parse(spec_str)
     except lark.exceptions.UnexpectedCharacters as unexpected_char_exc:
         raise VNNLIBParserError(
-            f"line {unexpected_char_exc.line}, column {unexpected_char_exc.column}: unexpected character '{unexpected_char_exc.char}'"
+            f"unexpected character '{unexpected_char_exc.char}'",
+            lineno=unexpected_char_exc.line,
+            col_offset=unexpected_char_exc.column,
         )
     except lark.exceptions.UnexpectedToken as unexpected_token_exc:
         raise VNNLIBParserError(
-            f"line {unexpected_token_exc.line}, column {unexpected_token_exc.column}: unexpected token '{unexpected_token_exc.token.value}'"
+            f"unexpected token '{unexpected_token_exc.token}'",
+            lineno=unexpected_token_exc.line,
+            col_offset=unexpected_token_exc.column,
         )
     with Context():
         try:

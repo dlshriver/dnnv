@@ -1,11 +1,10 @@
 import logging
 import select
 import subprocess as sp
+from typing import List, Type
 
-from typing import List, Tuple, Type
-
-from .base import VerifierExecutor
 from ..errors import VerifierError
+from .base import VerifierExecutor
 
 
 class CommandLineExecutor(VerifierExecutor):
@@ -19,7 +18,7 @@ class CommandLineExecutor(VerifierExecutor):
     def run(self):
         logger = logging.getLogger(__name__)
         arg_string = " ".join(self.args)
-        logger.info(f"EXECUTING: {arg_string}")
+        logger.info("EXECUTING: %s", arg_string)
         proc = None
         try:
             proc = sp.Popen(self.args, stdout=sp.PIPE, stderr=sp.PIPE, encoding="utf8")
@@ -39,14 +38,14 @@ class CommandLineExecutor(VerifierExecutor):
                         continue
                     line = line.strip()
                     lines.append(line)
-                    logger.debug(f"[{name}]:{line}")
+                    logger.debug("[%s]:%s", name, line)
             for line in proc.stdout.readlines():
                 line = line.strip()
-                logger.debug(f"[STDOUT]:{line}")
+                logger.debug("[STDOUT]:%s", line)
                 self.output_lines.append(line)
             for line in proc.stderr.readlines():
                 line = line.strip()
-                logger.debug(f"[STDERR]:{line}")
+                logger.debug("[STDERR]:%s", line)
                 self.error_lines.append(line)
             if proc.returncode != 0:
                 raise self.verifier_error(f"Return code: {proc.returncode}")

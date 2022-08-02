@@ -1,5 +1,7 @@
+import numpy as np
 import pytest
 
+from dnnv.nn.utils import TensorDetails
 from dnnv.properties.expressions import *
 from dnnv.properties.transformers import LiftIfThenElse
 
@@ -168,3 +170,55 @@ def test_Unary_ite():
     assert new_expr.t_expr.expr is Symbol("T")
     assert isinstance(new_expr.f_expr, Negation)
     assert new_expr.f_expr.expr is Symbol("F")
+
+
+def test_samysweb_property_1():
+    # based on property 1 of issue https://github.com/dlshriver/dnnv/issues/75
+
+    N = Network("N")
+    fake_network = lambda x: np.array([[0]])
+    fake_network.input_details = (TensorDetails((1, 5), np.float32),)
+    fake_network.input_shape = ((1, 5),)
+    fake_network.output_details = (TensorDetails((1, 3), np.float32),)
+    fake_network.output_shape = ((1, 3),)
+    N.concretize(fake_network)
+
+    x_ = Symbol("x_")
+    x_min = np.array([[0, -200]])
+    x_max = np.array([[100, 100]])
+    expr = Constant(2.0) * IfThenElse(
+        Constant(0.0)
+        > IfThenElse(
+            (Constant(0.1) * (x_[0, 1] - Constant(-210.0)))
+            <= (Constant(-0.2) * (x_[0, 1] - Constant(100))),
+            (Constant(0.1) * (x_[0, 1] - Constant(-210.0))),
+            (Constant(-0.2) * (x_[0, 1] - Constant(100))),
+        ),
+        Constant(0.0),
+        IfThenElse(
+            (Constant(0.1) * (x_[0, 1] - Constant(-210.0)))
+            <= (Constant(-0.2) * (x_[0, 1] - Constant(100))),
+            (Constant(0.1) * (x_[0, 1] - Constant(-210.0))),
+            (Constant(-0.2) * (x_[0, 1] - Constant(100))),
+        ),
+    )
+    expected_expr = IfThenElse(
+        IfThenElse(
+            (Constant(0.1) * (x_[0, 1] - Constant(-210.0)))
+            <= (Constant(-0.2) * (x_[0, 1] - Constant(100))),
+            Constant(0.0) > (Constant(0.1) * (x_[0, 1] - Constant(-210.0))),
+            Constant(0.0) > (Constant(-0.2) * (x_[0, 1] - Constant(100))),
+        ),
+        Constant(0.0),
+        IfThenElse(
+            (Constant(0.1) * (x_[0, 1] - Constant(-210.0)))
+            <= (Constant(-0.2) * (x_[0, 1] - Constant(100))),
+            (Constant(2.0) * Constant(0.1) * (x_[0, 1] - Constant(-210.0))),
+            (Constant(2.0) * Constant(-0.2) * (x_[0, 1] - Constant(100))),
+        ),
+    ).propagate_constants()
+
+    transformer = LiftIfThenElse()
+    new_expr = transformer.visit(expr).propagate_constants()
+    assert isinstance(new_expr, Expression)
+    assert new_expr.is_equivalent(expected_expr)

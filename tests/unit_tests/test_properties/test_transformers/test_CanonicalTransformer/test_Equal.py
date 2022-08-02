@@ -33,11 +33,4 @@ def test_Equal_constants():
 
     expr = Equal(Constant(302), Constant(120))
     new_expr = transformer.visit(expr)
-    assert new_expr is not expr
-    assert isinstance(new_expr, Or)
-    new_expr_add = new_expr
-    assert len(new_expr_add.expressions) == 1
-    assert isinstance(new_expr.expressions[0], And)
-    assert len(new_expr.expressions[0].expressions) == 2
-    assert LessThanOrEqual(Add(), Constant(-182)) in new_expr.expressions[0].expressions
-    assert LessThanOrEqual(Add(), Constant(182)) in new_expr.expressions[0].expressions
+    assert new_expr is Constant(False)

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-import numpy as np
 import operator
 import typing
-
 from typing import Optional, Type, TypeVar
 
-from .base import Expression, AssociativeExpression, BinaryExpression, UnaryExpression
+import numpy as np
+
+from ..errors import DNNVExpressionError, NonConcreteExpressionError
+from .base import AssociativeExpression, BinaryExpression, Expression, UnaryExpression
 from .context import Context
 
 if typing.TYPE_CHECKING:  # pragma: no cover
@@ -123,6 +124,11 @@ class Quantifier(LogicalExpression):
         ctx: Optional[Context] = None,
     ):
         super().__init__(ctx=ctx)
+        if variable.is_concrete:
+            raise DNNVExpressionError(
+                "Quantifier variable should be symbolic, not concrete."
+                f" Got '{variable}={variable.value}'."
+            )
         self.variable = variable
         self.expression = formula
 
@@ -137,8 +143,6 @@ class Quantifier(LogicalExpression):
             return True
         if (
             type(self) == type(other)
-            and not self.is_concrete
-            and not other.is_concrete
             and self.variable.is_equivalent(other.variable)
             and self.expression.is_equivalent(other.expression)
         ):
@@ -163,20 +167,23 @@ class Equal(LogicalExpression, BinaryExpression):
     OPERATOR = operator.eq
     OPERATOR_SYMBOL = "=="
 
-    def __invert__(self) -> NotEqual:
+    def __invert__(self) -> Not:
         return Not(self, ctx=self.ctx)
 
     def __bool__(self):
-        if self.expr1.is_concrete and self.expr2.is_concrete:
+        if self.expr1 is self.expr2:
+            return True
+        try:
             return bool(np.all(self.expr1.value == self.expr2.value))
-        return self.expr1.is_equivalent(self.expr2)
+        except NonConcreteExpressionError:
+            return self.expr1.is_equivalent(self.expr2)
 
 
 class GreaterThan(LogicalExpression, BinaryExpression):
     OPERATOR = operator.gt
     OPERATOR_SYMBOL = ">"
 
-    def __invert__(self) -> LessThanOrEqual:
+    def __invert__(self) -> Not:
         return Not(self, ctx=self.ctx)
 
 
@@ -184,7 +191,7 @@ class GreaterThanOrEqual(LogicalExpression, BinaryExpression):
     OPERATOR = operator.ge
     OPERATOR_SYMBOL = ">="
 
-    def __invert__(self) -> LessThan:
+    def __invert__(self) -> Not:
         return Not(self, ctx=self.ctx)
 
 
@@ -192,7 +199,7 @@ class LessThan(LogicalExpression, BinaryExpression):
     OPERATOR = operator.lt
     OPERATOR_SYMBOL = "<"
 
-    def __invert__(self) -> GreaterThanOrEqual:
+    def __invert__(self) -> Not:
         return Not(self, ctx=self.ctx)
 
 
@@ -200,7 +207,7 @@ class LessThanOrEqual(LogicalExpression, BinaryExpression):
     OPERATOR = operator.le
     OPERATOR_SYMBOL = "<="
 
-    def __invert__(self) -> GreaterThan:
+    def __invert__(self) -> Not:
         return Not(self, ctx=self.ctx)
 
 
@@ -208,13 +215,14 @@ class NotEqual(LogicalExpression, BinaryExpression):
     OPERATOR = operator.ne
     OPERATOR_SYMBOL = "!="
 
-    def __invert__(self) -> Equal:
+    def __invert__(self) -> Not:
         return Not(self, ctx=self.ctx)
 
     def __bool__(self):
-        if self.expr1.is_concrete and self.expr2.is_concrete:
+        try:
             return bool(np.any(self.expr1.value != self.expr2.value))
-        return not self.expr1.is_equivalent(self.expr2)
+        except NonConcreteExpressionError:
+            return not self.expr1.is_equivalent(self.expr2)
 
 
 __all__ = [

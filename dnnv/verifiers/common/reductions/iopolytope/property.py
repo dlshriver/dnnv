@@ -1,13 +1,15 @@
 from __future__ import annotations
 
+from typing import Any, List, Optional, Sequence, Tuple, Union
+
 import numpy as np
+from scipy.optimize import linprog
 
-from typing import List, Optional, Tuple, Union
-
-from .base import HalfspacePolytope, HyperRectangle
-from ..base import Property
 from .....nn import OperationGraph, OperationTransformer, operations
 from .....properties import Network
+from ...results import SAT, PropertyCheckResult
+from ..base import Property
+from .base import HalfspacePolytope, HyperRectangle
 
 
 class IOPolytopeProperty(Property):
@@ -59,16 +61,52 @@ class IOPolytopeProperty(Property):
         ]
         return "\n".join(strs)
 
+    def is_trivial(
+        self,
+    ) -> Union[Tuple[bool], Tuple[bool, Tuple[PropertyCheckResult, Any]]]:
+        is_trivial = (
+            self.output_constraint.size() == 0 and self.input_constraint.is_consistent
+        )
+        if not is_trivial:
+            return (False,)
+        A, b = self.input_constraint.as_matrix_inequality()
+        obj = np.zeros(A.shape[1])
+        lb, ub = self.input_constraint.as_bounds()
+        if A.size == 0:
+            cex = (lb + ub) / 2
+        else:
+            bounds = list(
+                zip(
+                    (b if b > -1e6 else None for b in lb),
+                    (b if b < 1e6 else None for b in ub),
+                )
+            )
+            result = linprog(
+                obj,
+                A_ub=A,
+                b_ub=b,
+                bounds=bounds,
+                method="highs",
+            )
+            cex = result.x
+        return (is_trivial, (SAT, cex))
+
     def validate_counter_example(
         self, cex: np.ndarray, threshold=1e-6
     ) -> Tuple[bool, Optional[str]]:
         if np.any(np.isnan(cex)):
             return False, "NaN values in input."
         if not self.input_constraint.validate(cex, threshold=threshold):
-            return False, "Invalid counter example found: input outside bounds."
+            return (
+                False,
+                "Invalid counter example found: input outside bounds.",
+            )
         output = self.op_graph(cex)
         if not self.output_constraint.validate(output, threshold=threshold):
-            return False, "Invalid counter example found: output outside bounds."
+            return (
+                False,
+                "Invalid counter example found: output outside bounds.",
+            )
         return True, None
 
     def prefixed_and_suffixed_op_graph(
@@ -78,25 +116,28 @@ class IOPolytopeProperty(Property):
         Tuple[OperationGraph, Tuple[np.ndarray, np.ndarray]],
         Tuple[OperationGraph, Tuple[OperationGraph, ...]],
         Tuple[
-            OperationGraph, Tuple[np.ndarray, np.ndarray], Tuple[OperationGraph, ...]
+            OperationGraph,
+            Tuple[np.ndarray, np.ndarray],
+            Tuple[OperationGraph, ...],
         ],
     ]:
         if not isinstance(self.input_constraint, HyperRectangle):
             raise ValueError(
-                f"{type(self.input_constraint).__name__} input constraints are not yet supported"
+                f"{type(self.input_constraint).__name__} input constraints"
+                " are not yet supported"
             )
 
         suffixed_op_graph = self.suffixed_op_graph()
 
         class PrefixTransformer(OperationTransformer):
-            def __init__(self, lbs, ubs):
+            def __init__(self, lbs: Sequence[np.ndarray], ubs: Sequence[np.ndarray]):
                 super().__init__()
                 self.lbs = lbs
                 self.ubs = ubs
                 self._input_count = 0
-                self.final_lbs = []
-                self.final_ubs = []
-                self.prefix_ops = []
+                self.final_lbs: List[np.ndarray] = []
+                self.final_ubs: List[np.ndarray] = []
+                self.prefix_ops: List[operations.Operation] = []
 
             def visit_Input(
                 self, operation: operations.Input
@@ -105,7 +146,9 @@ class IOPolytopeProperty(Property):
                 new_op: Union[operations.Conv, operations.Gemm]
                 input_shape = self.lbs[self._input_count].shape
                 if len(input_shape) == 2:
-                    ranges = self.ubs[self._input_count] - self.lbs[self._input_count]
+                    ranges: np.ndarray = (
+                        self.ubs[self._input_count] - self.lbs[self._input_count]
+                    )
                     mins = self.lbs[self._input_count]
                     new_op = operations.Gemm(
                         operation,
@@ -115,26 +158,32 @@ class IOPolytopeProperty(Property):
                     self.final_lbs.append(np.zeros_like(mins))
                     self.final_ubs.append(np.ones_like(mins))
                 elif len(input_shape) == 4:
-                    b = self.lbs[self._input_count].min(axis=(0, 2, 3))
-                    r = self.ubs[self._input_count].max(axis=(0, 2, 3)) - b
-                    c = len(r)
-                    w = np.zeros((c, c, 1, 1))
-                    for i in range(c):
-                        w[i, i, 0, 0] = 1
-                    w = w * r.reshape((c, 1, 1, 1))
+                    ranges = (
+                        self.ubs[self._input_count] - self.lbs[self._input_count]
+                    ).astype(dtype)
+                    mins = self.lbs[self._input_count].astype(dtype)
+
+                    _, nc, nh, nw = input_shape
+                    n = nc * nh * nw
+                    w1 = np.zeros((n, nc, nh, nw), dtype=dtype)
+                    b1 = mins.flatten()
+                    for idx, (c, h, w) in enumerate(np.ndindex(nc, nh, nw)):
+                        w1[idx, c, h, w] = ranges[0, c, h, w]
+                    conv_1 = operations.Conv(operation, w1, b1)
+
+                    w2 = np.zeros((nc, n, nh, nw), dtype=dtype)
+                    b2 = np.zeros(nc, dtype=dtype)
+                    for idx, (c, h, w) in enumerate(np.ndindex(nc, nh, nw)):
+                        w2[c, idx, nh - h - 1, nw - w - 1] = 1
                     new_op = operations.Conv(
-                        operation, w.astype(dtype), b.astype(dtype)
+                        conv_1,
+                        w2,
+                        b2,
+                        pads=np.array([nh - 1, nw - 1, nh - 1, nw - 1]),
                     )
-                    tile_shape = list(self.lbs[self._input_count].shape)
-                    tile_shape[1] = 1
-                    tiled_b = np.tile(b.reshape((1, -1, 1, 1)), tile_shape)
-                    tiled_r = np.tile(r.reshape((1, -1, 1, 1)), tile_shape)
-                    self.final_lbs.append(
-                        (self.lbs[self._input_count] - tiled_b) / tiled_r
-                    )
-                    self.final_ubs.append(
-                        (self.ubs[self._input_count] - tiled_b) / tiled_r
-                    )
+
+                    self.final_lbs.append(np.zeros_like(mins))
+                    self.final_ubs.append(np.ones_like(mins))
                 else:
                     raise NotImplementedError(
                         f"Cannot prefix network with input shape {input_shape}"

@@ -1,5 +1,6 @@
 import pytest
 
+from dnnv.properties.errors import NonConcreteExpressionError
 from dnnv.properties.expressions import *
 
 
@@ -24,7 +25,9 @@ def test_value():
     assert expr.value == "test".lower
 
     expr = Attribute(Symbol("a"), Symbol("b"))
-    with pytest.raises(ValueError, match="Cannot get value of non-concrete expression"):
+    with pytest.raises(
+        NonConcreteExpressionError, match="Cannot get value of non-concrete expression"
+    ):
         _ = expr.value
 
     expr = Attribute(Constant("test_string"), Constant("fake_attribute"))

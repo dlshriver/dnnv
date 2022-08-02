@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 import skimage.io as sio
 
+from dnnv.properties.errors import NonConcreteExpressionError
 from dnnv.properties.expressions import *
 
 
@@ -42,7 +43,7 @@ def test_value(tmp_path):
     assert np.allclose(img_val, img_arr[None])
 
     img = Image(Symbol("x"))
-    with pytest.raises(ValueError):
+    with pytest.raises(NonConcreteExpressionError):
         img_val = img.value
 
 

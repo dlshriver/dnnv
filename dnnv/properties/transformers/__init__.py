@@ -2,6 +2,7 @@ from .base import *
 from .canonical import *
 from .cnf import *
 from .dnf import *
+from .errors import *
 from .lift_ifthenelse import *
 from .propagate_constants import *
 from .remove_ifthenelse import *

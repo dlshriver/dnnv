@@ -1,8 +1,8 @@
 import unittest
 
-from dnnv.verifiers.eran import ERAN
-
 from system_tests.test_verifiers.utils import VerifierTests
+
+from dnnv.verifiers.eran import ERAN
 
 
 @unittest.skipIf(not ERAN.is_installed(), "ERAN is not installed")

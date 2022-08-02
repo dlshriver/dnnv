@@ -1,8 +1,8 @@
+from collections import namedtuple
+
 import numpy as np
 import onnx
 import tensorflow as tf
-
-from collections import namedtuple
 from onnx import numpy_helper
 
 TensorDetails = namedtuple("TensorDetails", ["shape", "dtype"])
@@ -33,17 +33,16 @@ ONNX_TO_TENSORFLOW_DTYPE = {
 def as_numpy(node):
     if isinstance(node, onnx.TensorProto):
         return numpy_helper.to_array(node)
-    elif isinstance(node, onnx.NodeProto):
+    if isinstance(node, onnx.NodeProto):
         return numpy_helper.to_array(node.attribute[0].t)
-    elif isinstance(node, onnx.AttributeProto):
+    if isinstance(node, onnx.AttributeProto):
         if node.type == onnx.AttributeProto.FLOAT:
             return float(node.f)
-        elif node.type == onnx.AttributeProto.INT:
+        if node.type == onnx.AttributeProto.INT:
             return int(node.i)
-        elif node.type == onnx.AttributeProto.INTS:
+        if node.type == onnx.AttributeProto.INTS:
             return np.asarray(node.ints)
-        elif node.type == onnx.AttributeProto.STRING:
+        if node.type == onnx.AttributeProto.STRING:
             return node.s.decode("utf-8")
-        raise ValueError("Unknown attribute type: %s" % (node,))
-    else:
-        raise ValueError("Unknown node type: %s" % type(node))
+        raise ValueError(f"Unknown attribute type: {node}")
+    raise ValueError(f"Unknown node type: {type(node)}")

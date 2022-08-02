@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 
+from .. import operations
 from ..graph import OperationGraph
 from ..operations import Operation
 from ..utils import ONNX_TO_TENSORFLOW_DTYPE
@@ -18,7 +19,7 @@ def convert(op_graph: OperationGraph):
         output_funcs.append(converter.visit(op))
 
     def func(*inputs, squeeze=True):
-        converter._cache.clear()
+        converter.clear_cache()
         outputs = []
         for output_func in output_funcs:
             output = output_func(*inputs)
@@ -70,6 +71,9 @@ class TensorflowConverter(OperationVisitor):
 
         return wrapped_func
 
+    def clear_cache(self):
+        self._cache.clear()
+
     def visit(self, operation):
         if operation not in self.results:
             result = super().visit(operation)
@@ -77,10 +81,10 @@ class TensorflowConverter(OperationVisitor):
         return self.results[operation]
 
     def generic_visit(self, operation):
-        if not hasattr(self, "visit_%s" % operation.__class__.__name__):
+        if not hasattr(self, f"visit_{type(operation).__name__}"):
             raise ValueError(
-                "Tensorflow converter not implemented for operation type %s"
-                % operation.__class__.__name__
+                "Tensorflow converter not implemented"
+                f" for operation type {type(operation).__name__}"
             )
         return super().generic_visit(operation)
 
@@ -135,7 +139,10 @@ class TensorflowConverter(OperationVisitor):
             strides = operation.strides
             num_pads = len(operation.pads)
             pads = tuple(
-                zip(operation.pads[: num_pads // 2], operation.pads[num_pads // 2 :])
+                zip(
+                    operation.pads[: num_pads // 2],
+                    operation.pads[num_pads // 2 :],
+                )
             )
 
             x_ndim = int(tf.rank(x))
@@ -210,7 +217,7 @@ class TensorflowConverter(OperationVisitor):
 
         @self._cached
         def concat_func(*inputs):
-            tensors = x = _concretize(tensors_, inputs)
+            tensors = _concretize(tensors_, inputs)
             result = tf.concat(tensors, axis=operation.axis)
             return result
 
@@ -234,10 +241,12 @@ class TensorflowConverter(OperationVisitor):
             else:
                 bias = np.zeros((weights.shape[0],), dtype=weights.dtype)
             assert np.all(operation.dilations == 1)
-            assert np.all(operation.group == 1)
             num_pads = len(operation.pads)
             pads = tuple(
-                zip(operation.pads[: num_pads // 2], operation.pads[num_pads // 2 :])
+                zip(
+                    operation.pads[: num_pads // 2],
+                    operation.pads[num_pads // 2 :],
+                )
             )
 
             x_ndim = int(tf.rank(x))
@@ -277,7 +286,8 @@ class TensorflowConverter(OperationVisitor):
                 conv_transpose = tf.nn.conv3d_transpose
             else:
                 raise NotImplementedError(
-                    f"{len(operation.kernel_shape)}d ConvTranspose operations are not currently supported."
+                    f"{len(operation.kernel_shape)}d ConvTranspose"
+                    " operations are not currently supported."
                 )
             if (
                 operation.auto_pad != "NOTSET"
@@ -297,11 +307,13 @@ class TensorflowConverter(OperationVisitor):
                 bias = operation.b
             else:
                 bias = np.zeros((weights.shape[1],), dtype=weights.dtype)
-            assert np.all(operation.group == 1)
 
             num_pads = len(operation.pads)
             pads = tuple(
-                zip(operation.pads[: num_pads // 2], operation.pads[num_pads // 2 :])
+                zip(
+                    operation.pads[: num_pads // 2],
+                    operation.pads[num_pads // 2 :],
+                )
             )
             if any(p != 0 for p in operation.pads):
                 raise NotImplementedError(
@@ -378,7 +390,8 @@ class TensorflowConverter(OperationVisitor):
         @self._cached
         def dropout_func(*inputs):
             x = _concretize([x_], inputs)
-            return x, None
+            assert not operation.training_mode
+            return x
 
         return dropout_func
 
@@ -391,7 +404,8 @@ class TensorflowConverter(OperationVisitor):
         def elu_func(*inputs):
             if operation.alpha != 1.0:
                 raise NotImplementedError(
-                    "The tensorflow converter currently does not support ELU activations with alpha other than 1.0"
+                    "Elu operations with alpha other than 1.0"
+                    " are not currently supported."
                 )
             x = _concretize([x_], inputs)
             result = tf.nn.elu(x)
@@ -481,7 +495,11 @@ class TensorflowConverter(OperationVisitor):
 
             x = tf.transpose(x, (0, 2, 3, 1))
             result = tf.nn.pool(
-                x, x.shape[1:3], pooling_type="AVG", strides=(1, 1), padding="VALID"
+                x,
+                x.shape[1:3],
+                pooling_type="AVG",
+                strides=(1, 1),
+                padding="VALID",
             )
             result = tf.transpose(result, (0, 3, 1, 2))
             return result
@@ -511,12 +529,12 @@ class TensorflowConverter(OperationVisitor):
                 for d1, d2 in zip(operation.shape[1:], x.shape[1:])
             ):
                 raise ValueError(
-                    "Incorrect input shape: %s != %s" % (operation.shape, x.shape)
+                    f"Incorrect input shape: {operation.shape} != {x.shape}"
                 )
             if x.dtype != operation.dtype:
                 raise TypeError(
-                    "Incorrect type, %s, for input %d. Expected type %s."
-                    % (x.dtype, input_idx, operation.dtype)
+                    f"Incorrect type, {x.dtype}, for input {input_idx}."
+                    f" Expected type {operation.dtype}."
                 )
             return tf.convert_to_tensor(x)
 
@@ -591,7 +609,10 @@ class TensorflowConverter(OperationVisitor):
             strides = operation.strides
             num_pads = len(operation.pads)
             pads = tuple(
-                zip(operation.pads[: num_pads // 2], operation.pads[num_pads // 2 :])
+                zip(
+                    operation.pads[: num_pads // 2],
+                    operation.pads[num_pads // 2 :],
+                )
             )
 
             x_ndim = int(tf.rank(x))
@@ -654,7 +675,10 @@ class TensorflowConverter(OperationVisitor):
                 raise ValueError(f"{mode} padding is not currently supported")
             num_pads = len(operation.pads)
             pads = tuple(
-                zip(operation.pads[: num_pads // 2], operation.pads[num_pads // 2 :])
+                zip(
+                    operation.pads[: num_pads // 2],
+                    operation.pads[num_pads // 2 :],
+                )
             )
             result = tf.pad(x, pads, mode=mode, constant_values=operation.value)
             return result
@@ -784,6 +808,41 @@ class TensorflowConverter(OperationVisitor):
 
         return sign_func
 
+    def visit_Slice(self, operation: operations.Slice):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+        starts_ = operation.starts
+        if isinstance(starts_, Operation):
+            starts_ = self.visit(starts_)
+        ends_ = operation.ends
+        if isinstance(ends_, Operation):
+            ends_ = self.visit(ends_)
+        axes_ = operation.axes
+        if isinstance(axes_, Operation):
+            axes_ = self.visit(axes_)
+        steps_ = operation.steps
+        if isinstance(steps_, Operation):
+            steps_ = self.visit(steps_)
+
+        @self._cached
+        def slice_func(*inputs):
+            x, starts, ends, axes, steps = _concretize(
+                [x_, starts_, ends_, axes_, steps_], inputs
+            )
+            n = x.ndim
+            slices = [slice(None) for _ in range(n)]
+            if axes is None:
+                axes = range(n)
+            if steps is None:
+                steps = [1 for _ in range(n)]
+            for i, axis in enumerate(axes):
+                slices[axis] = slice(starts[i], ends[i], steps[i])
+            result = x[tuple(slices)]
+            return result
+
+        return slice_func
+
     def visit_Softmax(self, operation):
         x_ = operation.x
         if isinstance(x_, Operation):
@@ -796,6 +855,23 @@ class TensorflowConverter(OperationVisitor):
             return result
 
         return softmax_func
+
+    def visit_Split(self, operation):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+        split_ = operation.split
+        if isinstance(split_, Operation):
+            split_ = self.visit(split_)
+        axis = operation.axis
+
+        @self._cached
+        def split_func(*inputs):
+            x, split = _concretize([x_, split_], inputs)
+            x = tf.split(x, tf.convert_to_tensor(split), axis=axis)
+            return x
+
+        return split_func
 
     def visit_Sub(self, operation):
         a_ = operation.a

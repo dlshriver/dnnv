@@ -1,6 +1,13 @@
-from .base import Simplifier
 from ... import operations
 from ...graph import OperationGraph
+from .base import Simplifier
+
+
+class DropDropout(Simplifier):
+    def visit_Dropout(self, operation: operations.Dropout):
+        if operation.training_mode:
+            return operation
+        return operation.x
 
 
 class DropIdentity(Simplifier):
@@ -23,3 +30,22 @@ class DropUnnecessaryFlatten(Simplifier):
         ):
             return operation.x
         return operation
+
+
+class DropUnnecessaryRelu(Simplifier):
+    def visit_Relu(self, operation: operations.Relu):
+        input_op = operation.x
+        if isinstance(
+            input_op, (operations.Relu, operations.Sigmoid, operations.Softmax)
+        ):
+            return input_op
+        return operation
+
+
+__all__ = [
+    "DropDropout",
+    "DropIdentity",
+    "DropUnnecessaryConcat",
+    "DropUnnecessaryFlatten",
+    "DropUnnecessaryRelu",
+]

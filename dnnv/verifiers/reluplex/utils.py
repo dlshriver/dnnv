@@ -1,7 +1,7 @@
-import numpy as np
 import tempfile
-
 from typing import Iterable, List, Optional, Type
+
+import numpy as np
 
 from dnnv.nn.layers import FullyConnected, InputLayer, Layer
 from dnnv.verifiers.common import HyperRectangle, VerifierTranslatorError
@@ -41,7 +41,12 @@ def as_reluplex_nnet(
     output_size = fc_layers[-1].bias.shape[0]
     layer_sizes = [input_size] + list(l.bias.shape[0] for l in fc_layers)
     max_layer_size = max(layer_sizes)
-    yield "%d,%d,%d,%d," % (num_layers, input_size, output_size, max_layer_size)
+    yield "%d,%d,%d,%d," % (
+        num_layers,
+        input_size,
+        output_size,
+        max_layer_size,
+    )
     yield ",".join([str(size) for size in layer_sizes]) + ","
     yield "0,"
     yield ",".join(

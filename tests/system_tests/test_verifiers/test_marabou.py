@@ -1,8 +1,8 @@
 import unittest
 
-from dnnv.verifiers.marabou import Marabou
-
 from system_tests.test_verifiers.utils import VerifierTests
+
+from dnnv.verifiers.marabou import Marabou
 
 
 @unittest.skipIf(not Marabou.is_installed(), "Marabou is not installed")

@@ -3,9 +3,9 @@ from __future__ import annotations
 from dnnv.properties.expressions.base import Expression
 
 from ...expressions import BinaryExpression, Call
+from ...visitors import DetailsInference
 from ..base import GenericExpressionTransformer
 from ._calls import FunctionSubstitutor
-from ...visitors import DetailsInference
 
 
 class SubstituteCalls(GenericExpressionTransformer):
@@ -14,10 +14,17 @@ class SubstituteCalls(GenericExpressionTransformer):
         # `form` provides a hint to the substitutor on how to efficiently
         # format the substitution expression
         self.form = form
+        self._infer_expression_details = lambda: None
+
+    def _lazy_inference(self):
+        self._infer_expression_details()
+        self._infer_expression_details = lambda: None
 
     def visit(self, expression):
         if self._top_level:
-            DetailsInference().visit(expression)
+            self._infer_expression_details = lambda: DetailsInference().visit(
+                expression
+            )
         return super().visit(expression)
 
     def visit_BinaryExpression(self, expression: BinaryExpression) -> BinaryExpression:
@@ -30,6 +37,7 @@ class SubstituteCalls(GenericExpressionTransformer):
             if substitutor is not None and hasattr(
                 substitutor, binexpr_substitute_method
             ):
+                self._lazy_inference()
                 result = getattr(substitutor, binexpr_substitute_method)(
                     expr1, expr2, form=self.form
                 )
@@ -41,6 +49,7 @@ class SubstituteCalls(GenericExpressionTransformer):
             if substitutor is not None and hasattr(
                 substitutor, binexpr_substitute_method
             ):
+                self._lazy_inference()
                 result = getattr(substitutor, binexpr_substitute_method)(
                     expr1, expr2, form=self.form
                 )
@@ -55,6 +64,7 @@ class SubstituteCalls(GenericExpressionTransformer):
         if function.is_concrete:
             substitutor = FunctionSubstitutor.lookup(function.value)
             if substitutor is not None:
+                self._lazy_inference()
                 result = substitutor(function, *args, **kwargs)
                 if result is not NotImplemented:
                     return result

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import numpy as np
-
 from typing import List, Type
+
+import numpy as np
 
 from . import operations
 from .operations import Operation
@@ -11,7 +11,7 @@ from .utils import TensorDetails
 
 class OperationVisitor:
     def visit(self, operation: Operation):
-        method_name = "visit_%s" % operation.__class__.__name__
+        method_name = f"visit_{type(operation).__name__}"
         visitor = getattr(self, method_name, self.generic_visit)
         return visitor(operation)
 
@@ -79,10 +79,10 @@ class PrintVisitor(OperationVisitor):
         if operation in self.visited:
             return
         self.visited.add(operation)
-        return super().visit(operation)
+        super().visit(operation)
 
     def generic_visit(self, operation: Operation):
-        if not hasattr(self, "visit_%s" % operation.__class__.__name__):
+        if not hasattr(self, f"visit_{type(operation).__name__}"):
             raise ValueError(
                 f"Operation not currently supported by PrintVisitor: {operation}"
             )
@@ -99,205 +99,185 @@ class PrintVisitor(OperationVisitor):
             self.identifiers["count"][op_type] = idx + 1
             self.identifiers["op"][operation] = idx
         idx = self.identifiers["op"][operation]
-        return "%s_%s" % (op_type, idx)
+        return f"{op_type}_{idx}"
 
     def print_op_id(self, operation: Operation) -> None:
         op_id = self.get_op_id(operation)
-        print("%-32s" % op_id, end=": ")
+        print(f"{op_id:32s}", end=": ")
 
     def visit_Add(self, operation: operations.Add) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print(
-            "Add(%s, %s)" % (self.get_op_id(operation.a), self.get_op_id(operation.b))
-        )
+        print(f"Add({self.get_op_id(operation.a)}, {self.get_op_id(operation.b)})")
 
     def visit_Atan(self, operation: operations.Atan) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print("Atan(%s)" % self.get_op_id(operation.x))
+        print(f"Atan({self.get_op_id(operation.x)})")
 
     def visit_AveragePool(self, operation: operations.AveragePool) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print(
-            "AveragePool(%s, %s)"
-            % (self.get_op_id(operation.x), operation.kernel_shape)
-        )
+        print(f"AveragePool({self.get_op_id(operation.x)}, {operation.kernel_shape})")
 
     def visit_BatchNormalization(
         self, operation: operations.BatchNormalization
     ) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print("BatchNormalization(%s)" % self.get_op_id(operation.x))
+        print(f"BatchNormalization({self.get_op_id(operation.x)})")
 
     def visit_Cast(self, operation: operations.Cast) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print("Cast(%s, to=%s)" % (self.get_op_id(operation.x), operation.to))
+        print(f"Cast({self.get_op_id(operation.x)}, to={operation.to})")
 
     def visit_Concat(self, operation: operations.Concat) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print("Concat(%s)" % ([self.get_op_id(x) for x in operation.x],))
+        print(f"Concat({[self.get_op_id(x) for x in operation.x]})")
 
     def visit_Conv(self, operation: operations.Conv) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
         print(
-            "Conv(%s, kernel_shape=%s, strides=%s, pads=%s)"
-            % (
-                self.get_op_id(operation.x),
-                operation.kernel_shape.tolist(),
-                operation.strides.tolist(),
-                operation.pads.tolist(),
-            )
+            "Conv("
+            f"{self.get_op_id(operation.x)}, "
+            f"out_channels={operation.w.shape[0]}, "
+            f"kernel_shape={operation.kernel_shape.tolist()}, "
+            f"strides={operation.strides.tolist()}, "
+            f"pads={operation.pads.tolist()}, "
+            f"group={operation.group}, "
+            f"dilations={operation.dilations.tolist()}"
+            ")",
         )
 
     def visit_ConvTranspose(self, operation: operations.ConvTranspose) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
         print(
-            "ConvTranspose(%s, kernel_shape=%s, strides=%s, pads=%s, output_padding=%s)"
-            % (
-                self.get_op_id(operation.x),
-                operation.kernel_shape.tolist(),
-                operation.strides.tolist(),
-                operation.pads.tolist(),
-                operation.output_padding.tolist(),
-            )
+            "ConvTranspose("
+            f"{self.get_op_id(operation.x)}, "
+            f"out_channels={operation.w.shape[1]*operation.group}, "
+            f"kernel_shape={operation.kernel_shape.tolist()}, "
+            f"strides={operation.strides.tolist()}, "
+            f"pads={operation.pads.tolist()}, "
+            f"output_padding={operation.output_padding.tolist()}, "
+            f"group={operation.group}, "
+            f"dilations={operation.dilations.tolist()}"
+            ")",
         )
 
     def visit_Div(self, operation: operations.Div) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print(
-            "Div(%s, %s)" % (self.get_op_id(operation.a), self.get_op_id(operation.b))
-        )
+        print(f"Div({self.get_op_id(operation.a)}, {self.get_op_id(operation.b)})")
 
     def visit_Dropout(self, operation: operations.Dropout) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print("Dropout(%s, ratio=%s)" % (self.get_op_id(operation.x), operation.ratio))
+        print(f"Dropout({self.get_op_id(operation.x)}, ratio={operation.ratio})")
 
     def visit_Elu(self, operation: operations.Elu) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print("Elu(%s, alpha=%s)" % (self.get_op_id(operation.x), operation.alpha))
+        print(f"Elu({self.get_op_id(operation.x)}, alpha={operation.alpha})")
 
     def visit_Expand(self, operation: operations.Expand) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
         print(
-            "Expand(%s, %s)"
-            % (self.get_op_id(operation.x), self.get_op_id(operation.shape))
+            f"Expand({self.get_op_id(operation.x)}, {self.get_op_id(operation.shape)})"
         )
 
     def visit_Flatten(self, operation: operations.Flatten) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print("Flatten(%s, axis=%s)" % (self.get_op_id(operation.x), operation.axis))
+        print(f"Flatten({self.get_op_id(operation.x)}, axis={operation.axis})")
 
     def visit_Gather(self, operation: operations.Gather) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
         print(
-            "Gather(%s, %s, axis=%s)"
-            % (
-                self.get_op_id(operation.x),
-                self.get_op_id(operation.indices),
-                operation.axis,
-            )
+            f"Gather({self.get_op_id(operation.x)},"
+            f" {self.get_op_id(operation.indices)}, axis={operation.axis})"
         )
 
     def visit_Gemm(self, operation: operations.Gemm) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
         print(
-            "Gemm(%s, %s, %s, transpose_a=%d, transpose_b=%d, alpha=%f, beta=%f)"
-            % (
-                self.get_op_id(operation.a),
-                self.get_op_id(operation.b),
-                self.get_op_id(operation.c),
-                operation.transpose_a,
-                operation.transpose_b,
-                operation.alpha,
-                operation.beta,
-            )
+            "Gemm("
+            f"{self.get_op_id(operation.a)}, "
+            f"{self.get_op_id(operation.b)}, "
+            f"{self.get_op_id(operation.c)}, "
+            f"transpose_a={operation.transpose_a:d}, "
+            f"transpose_b={operation.transpose_b:d}, "
+            f"alpha={operation.alpha:f}, "
+            f"beta={operation.beta:f}"
+            ")"
         )
 
     def visit_GlobalAveragePool(self, operation: operations.GlobalAveragePool) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print("GlobalAveragePool(%s)" % self.get_op_id(operation.x))
+        print(f"GlobalAveragePool({self.get_op_id(operation.x)})")
 
     def visit_Identity(self, operation: operations.Identity) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print("Identity(%s)" % self.get_op_id(operation.x))
+        print(f"Identity({self.get_op_id(operation.x)})")
 
     def visit_Input(self, operation: operations.Input) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print("Input(%s, dtype=%s)" % (operation.shape, operation.dtype.name))
+        print(f"Input({operation.shape}, dtype={operation.dtype})")
 
     def visit_LeakyRelu(self, operation: operations.LeakyRelu) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print(
-            "LeakyRelu(%s, alpha=%f)" % (self.get_op_id(operation.x), operation.alpha)
-        )
+        print(f"LeakyRelu({self.get_op_id(operation.x)}, alpha={operation.alpha:f})")
 
     def visit_LogSoftmax(self, operation: operations.LogSoftmax) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print("LogSoftmax(%s, axis=%s)" % (self.get_op_id(operation.x), operation.axis))
+        print(f"LogSoftmax({self.get_op_id(operation.x)}, axis={operation.axis})")
 
     def visit_MatMul(self, operation: operations.MatMul) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print(
-            "MatMul(%s, %s)"
-            % (self.get_op_id(operation.a), self.get_op_id(operation.b))
-        )
+        print(f"MatMul({self.get_op_id(operation.a)}, {self.get_op_id(operation.b)})")
 
     def visit_MaxPool(self, operation: operations.MaxPool) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print("MaxPool(%s)" % self.get_op_id(operation.x))
+        print(f"MaxPool({self.get_op_id(operation.x)})")
 
     def visit_Mul(self, operation: operations.Mul) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print(
-            "Mul(%s, %s)" % (self.get_op_id(operation.a), self.get_op_id(operation.b))
-        )
+        print(f"Mul({self.get_op_id(operation.a)}, {self.get_op_id(operation.b)})")
 
     def visit_OutputSelect(self, operation: operations.OutputSelect) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print(
-            "OutputSelect(%s, %s)"
-            % (self.get_op_id(operation.operation), operation.index)
-        )
+        print(f"OutputSelect({self.get_op_id(operation.operation)}, {operation.index})")
 
     def visit_Pad(self, operation: operations.Pad) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print("Pad(%s, pads=%s)" % (self.get_op_id(operation.x), operation.pads))
+        print(f"Pad({self.get_op_id(operation.x)}, pads={operation.pads})")
 
     def visit_Relu(self, operation: operations.Relu) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print("Relu(%s)" % self.get_op_id(operation.x))
+        print(f"Relu({self.get_op_id(operation.x)})")
 
     def visit_Reshape(self, operation: operations.Reshape) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
         print(
-            "Reshape(%s, %s)"
-            % (self.get_op_id(operation.x), self.get_op_id(operation.shape))
+            f"Reshape({self.get_op_id(operation.x)}, {self.get_op_id(operation.shape)})"
         )
 
     def visit_Resize(self, operation: operations.Resize) -> None:
@@ -311,69 +291,99 @@ class PrintVisitor(OperationVisitor):
         if operation.sizes.size > 0:
             inputs.append(f"sizes={operation.sizes.tolist()}")
         inputs_str = ", ".join(inputs)
+        coord_transform_mode = operation.coordinate_transformation_mode
         print(
-            "Resize(%s, %s, coordinate_transformation_mode=%s, cubic_coeff_a=%f, exclude_outside=%d, extrapolation_value=%f, mode=%s, nearest_mode=%s)"
-            % (
-                self.get_op_id(operation.x),
-                inputs_str,
-                operation.coordinate_transformation_mode,
-                operation.cubic_coeff_a,
-                operation.exclude_outside,
-                operation.extrapolation_value,
-                operation.mode,
-                operation.nearest_mode,
+            (
+                "Resize("
+                f"{self.get_op_id(operation.x)}, "
+                f"{inputs_str}, "
+                f"coordinate_transformation_mode={coord_transform_mode}, "
+                f"cubic_coeff_a={operation.cubic_coeff_a:f}, "
+                f"exclude_outside={operation.exclude_outside:d}, "
+                f"extrapolation_value={operation.extrapolation_value:f}, "
+                f"mode={operation.mode}, "
+                f"nearest_mode={operation.nearest_mode}"
+                ")"
             )
         )
 
     def visit_Shape(self, operation: operations.Shape) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print("Shape(%s)" % self.get_op_id(operation.x))
+        print(f"Shape({self.get_op_id(operation.x)})")
 
     def visit_Sigmoid(self, operation: operations.Sigmoid) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print("Sigmoid(%s)" % self.get_op_id(operation.x))
+        print(f"Sigmoid({self.get_op_id(operation.x)})")
+
+    def visit_Slice(self, operation: operations.Slice) -> None:
+        self.generic_visit(operation)
+        self.print_op_id(operation)
+        axes = (
+            f", axes={self.get_op_id(operation.axes)}"
+            if operation.axes is not None
+            else ""
+        )
+        steps = (
+            f", steps={self.get_op_id(operation.steps)}"
+            if operation.steps is not None
+            else ""
+        )
+        print(
+            "Slice("
+            f"{self.get_op_id(operation.x)}, "
+            f"{self.get_op_id(operation.starts)}, "
+            f"{self.get_op_id(operation.ends)}"
+            f"{axes}{steps}"
+            ")"
+        )
 
     def visit_Sign(self, operation: operations.Sign) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print("Sign(%s)" % self.get_op_id(operation.x))
+        print(f"Sign({self.get_op_id(operation.x)})")
 
     def visit_Softmax(self, operation: operations.Softmax) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print("Softmax(%s, axis=%s)" % (self.get_op_id(operation.x), operation.axis))
+        print(f"Softmax({self.get_op_id(operation.x)}, axis={operation.axis})")
+
+    def visit_Split(self, operation: operations.Sub) -> None:
+        self.generic_visit(operation)
+        self.print_op_id(operation)
+        print(
+            "Split(%s, axis=%s, split=%s)"
+            % (self.get_op_id(operation.x), operation.axis, operation.split)
+        )
 
     def visit_Sub(self, operation: operations.Sub) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print(
-            "Sub(%s, %s)" % (self.get_op_id(operation.a), self.get_op_id(operation.b))
-        )
+        print(f"Sub({self.get_op_id(operation.a)}, {self.get_op_id(operation.b)})")
 
     def visit_Tanh(self, operation: operations.Tanh) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print("Tanh(%s)" % self.get_op_id(operation.x))
+        print(f"Tanh({self.get_op_id(operation.x)})")
 
     def visit_Tile(self, operation: operations.Tile) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print("Tile(%s, %s)" % (self.get_op_id(operation.x), operation.repeats))
+        print(f"Tile({self.get_op_id(operation.x)}, {operation.repeats})")
 
     def visit_Transpose(self, operation: operations.Transpose) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
         print(
-            "Transpose(%s, permutation=%s)"
-            % (self.get_op_id(operation.x), operation.permutation)
+            f"Transpose({self.get_op_id(operation.x)},"
+            f" permutation={operation.permutation})"
         )
 
     def visit_Unsqueeze(self, operation: operations.Unsqueeze) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
-        print("Unsqueeze(%s, axes=%s)" % (self.get_op_id(operation.x), operation.axes))
+        print(f"Unsqueeze({self.get_op_id(operation.x)}, axes={operation.axes})")
 
 
 __all__ = [

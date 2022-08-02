@@ -1,10 +1,10 @@
+from pathlib import Path
+
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
-
-from pathlib import Path
 
 
 def build_known_behavior_artifacts():
@@ -85,6 +85,48 @@ def build_known_behavior_artifacts():
             a_gt_b,
             dummy_input,
             a_gt_b_path,
+            input_names=["input"],
+            dynamic_axes={"input": [0]},
+        )
+
+    max_positive_path = artifact_dir / "max_positive.onnx"
+    if not max_positive_path.exists():
+        dummy_input = torch.ones((1, 3, 4, 4))
+        conv1 = nn.Conv2d(3, 3, 1)
+        conv1.weight.data = torch.eye(3)[..., None, None]
+        conv1.bias.data = torch.zeros(3)
+        max1 = nn.MaxPool2d((2, 2), (2, 2))
+        conv2 = nn.Conv2d(3, 3, 1)
+        conv2.weight.data = torch.eye(3)[..., None, None]
+        conv2.bias.data = torch.zeros(3)
+        max2 = nn.MaxPool2d((2, 2), (2, 2))
+        fc1 = nn.Linear(3, 1)
+        fc1.weight.data = torch.ones((1, 3))
+        fc1.bias.data = torch.zeros(1)
+        max_positive = nn.Sequential(
+            conv1, nn.ReLU(), max1, conv2, nn.ReLU(), max2, nn.Flatten(1), fc1
+        ).eval()
+        torch.onnx.export(
+            max_positive,
+            dummy_input,
+            max_positive_path,
+            input_names=["input"],
+            dynamic_axes={"input": [0]},
+        )
+
+    max_positive_path = artifact_dir / "max_positive_nonstandard.onnx"
+    if not max_positive_path.exists():
+        dummy_input = torch.ones((1, 3, 4, 4))
+        max1 = nn.MaxPool2d((2, 2), (2, 2))
+        max2 = nn.MaxPool2d((2, 2), (2, 2))
+        fc1 = nn.Linear(3, 1)
+        fc1.weight.data = torch.ones((1, 3))
+        fc1.bias.data = torch.zeros(1)
+        max_positive = nn.Sequential(nn.ReLU(), max1, max2, nn.Flatten(1), fc1).eval()
+        torch.onnx.export(
+            max_positive,
+            dummy_input,
+            max_positive_path,
             input_names=["input"],
             dynamic_axes={"input": [0]},
         )

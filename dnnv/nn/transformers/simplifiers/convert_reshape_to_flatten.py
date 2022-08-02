@@ -1,5 +1,5 @@
-from .base import Simplifier
 from ... import operations
+from .base import Simplifier
 
 
 class ConvertReshapeToFlatten(Simplifier):
@@ -25,3 +25,6 @@ class ConvertReshapeToFlatten(Simplifier):
             return operation
         shape: operations.Shape = gather.x
         return operations.Flatten(shape.x, axis=1)
+
+
+__all__ = ["ConvertReshapeToFlatten"]

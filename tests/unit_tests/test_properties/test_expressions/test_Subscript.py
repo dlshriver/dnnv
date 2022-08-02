@@ -1,5 +1,6 @@
 import pytest
 
+from dnnv.properties.errors import NonConcreteExpressionError
 from dnnv.properties.expressions import *
 
 
@@ -31,7 +32,7 @@ def test_index():
 
 def test_value():
     expr = Subscript(Symbol("a"), Symbol("b"))
-    with pytest.raises(ValueError):
+    with pytest.raises(NonConcreteExpressionError):
         _ = expr.value
 
     expr = Subscript(Constant((1, 2)), Constant(0))

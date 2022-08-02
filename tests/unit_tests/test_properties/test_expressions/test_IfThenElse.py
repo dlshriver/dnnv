@@ -1,5 +1,6 @@
 import pytest
 
+from dnnv.properties.errors import NonConcreteExpressionError
 from dnnv.properties.expressions import *
 
 
@@ -41,7 +42,7 @@ def test_f_expr():
 
 def test_value():
     expr = IfThenElse(Symbol("a"), Symbol("b"), Symbol("c"))
-    with pytest.raises(ValueError):
+    with pytest.raises(NonConcreteExpressionError):
         _ = expr.value
 
     expr = IfThenElse(Constant(True), Constant(1), Constant(-1))

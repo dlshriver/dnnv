@@ -2,15 +2,16 @@ from __future__ import annotations
 
 import copy
 import logging
-import numpy as np
-
 from typing import Dict, Iterator, List, Tuple, Type, Union
 
+import numpy as np
+
+from .....properties import *
+from .....properties.visitors.inference import DetailsInference
+from ..base import Property, Reduction, ReductionError
 from .base import Constraint, HalfspacePolytope, HyperRectangle, Variable
 from .errors import IOPolytopeReductionError
 from .property import IOPolytopeProperty
-from ..base import Property, Reduction, ReductionError
-from .....properties import *
 
 
 class IOPolytopeReduction(Reduction):
@@ -25,15 +26,13 @@ class IOPolytopeReduction(Reduction):
         self.output_constraint_type = output_constraint_type
         self.logger = logging.getLogger(__name__)
         self._stack: List[Expression] = []
-        self._network_input_shapes: Dict[Expression, Tuple[int, ...]] = {}
-        self._network_output_shapes: Dict[Network, Tuple[int, ...]] = {}
         self.initialize()
 
     def initialize(self):
         self.input = None
         self.networks = []
-        self.input_constraint = None
-        self.output_constraint = None
+        self.input_constraint = self.input_constraint_type()
+        self.output_constraint = self.output_constraint_type()
         self.variables: Dict[Expression, Variable] = {}
         self.indices: Dict[Expression, np.ndarray] = {}
         self.coefs: Dict[Expression, np.ndarray] = {}
@@ -42,7 +41,8 @@ class IOPolytopeReduction(Reduction):
         input_lb, input_ub = self.input_constraint.as_bounds()
         if np.any(np.isinf(input_lb) | np.isinf(input_ub)):
             raise self.reduction_error(
-                "Unbounded inputs detected! All inputs must have upper and lower bounds."
+                "Unbounded inputs detected!"
+                " All inputs must have upper and lower bounds."
             )
         return IOPolytopeProperty(
             self.networks, self.input_constraint, self.output_constraint
@@ -51,15 +51,18 @@ class IOPolytopeReduction(Reduction):
     def _reduce(self, expression: And) -> Iterator[Property]:
         self.initialize()
         if len(expression.variables) != 1:
-            raise self.reduction_error("Exactly one network input is required")
+            raise self.reduction_error(
+                "At most one symbolic variable is allowed."
+                f" Received: {tuple(str(v) for v in expression.variables)}"
+            )
         self.visit(expression)
         prop = self.build_property()
-        if prop.input_constraint.is_consistent == False:
+        if not prop.input_constraint.is_consistent:
             self.logger.warning(
                 "Skipping conjunction with inconsistent input constraints."
             )
             return
-        if prop.output_constraint.is_consistent == False:
+        if not prop.output_constraint.is_consistent:
             self.logger.warning(
                 "Skipping conjunction with inconsistent output constraints."
             )
@@ -72,6 +75,7 @@ class IOPolytopeReduction(Reduction):
         dnf_expression = expression.canonical()
         self.logger.debug("DNF: %s", dnf_expression)
         assert isinstance(dnf_expression, Or)
+        DetailsInference().visit(dnf_expression)
 
         for conjunction in dnf_expression:
             self.logger.info("CONJUNCTION: %s", conjunction)
@@ -79,12 +83,12 @@ class IOPolytopeReduction(Reduction):
 
     def visit(self, expression):
         self._stack.append(type(expression))
-        method_name = "visit_%s" % expression.__class__.__name__
+        method_name = f"visit_{type(expression).__name__}"
         visitor = getattr(self, method_name, None)
         if visitor is None:
             raise self.reduction_error(
-                "Unsupported property:"
-                f" expression type {type(expression).__name__!r} is not currently supported"
+                f"Unsupported property: expression type {type(expression).__name__!r}"
+                " is not currently supported"
             )
         result = visitor(expression)
         self._stack.pop()
@@ -124,29 +128,18 @@ class IOPolytopeReduction(Reduction):
                 )
             if len(expression.kwargs) > 0:
                 raise self.reduction_error(
-                    "Unsupported property:"
-                    f" Executing networks with keyword arguments is not currently supported"
+                    "Unsupported property: Executing networks with keyword arguments"
+                    " is not currently supported"
                 )
-            for arg, d in zip(expression.args, input_details):
-                if arg in self._network_input_shapes:
-                    if any(
-                        i1 != i2 and i2 > 0
-                        for i1, i2 in zip(
-                            self._network_input_shapes[arg], tuple(d.shape)
-                        )
-                    ):
-                        raise self.reduction_error(
-                            f"Invalid property: variable with multiple shapes: '{arg}'"
-                        )
-                self._network_input_shapes[arg] = tuple(
-                    i if i > 0 else 1 for i in d.shape
-                )
+            for arg in expression.args:
                 self.visit(arg)
-            shape = self._network_output_shapes[expression.function]
-            self.variables[expression] = self.variables[expression.function]
-            self.indices[expression] = np.array([i for i in np.ndindex(shape)]).reshape(
-                shape + (len(shape),)
-            )
+            shape = expression.ctx.shapes[expression]
+            variable = Variable(shape, str(expression.function))
+            self.output_constraint.add_variable(variable)
+            self.variables[expression] = variable
+            self.indices[expression] = np.array(
+                [i for i in np.ndindex(*shape)]
+            ).reshape(*shape, len(shape))
             self.coefs[expression] = np.ones(shape)
         else:
             raise self.reduction_error(
@@ -160,7 +153,8 @@ class IOPolytopeReduction(Reduction):
     def _add_constraint(self, expression: Union[LessThan, LessThanOrEqual]):
         if len(self._stack) > 2:
             raise self.reduction_error(
-                f"Not Canonical: {type(expression).__name__!r} expression below expected level"
+                "Not Canonical: "
+                f"{type(expression).__name__!r} expression below expected level"
             )
         if not isinstance(expression.expr1, Add):
             raise self.reduction_error(
@@ -187,14 +181,16 @@ class IOPolytopeReduction(Reduction):
         c_shapes = set(c.shape for c in self.coefs.values())
         if len(c_shapes) > 1:
             raise self.reduction_error(
-                "Invalid property: Adding expressions with different shapes is not supported"
+                "Invalid property:"
+                " Adding expressions with different shapes is not supported"
             )
         c_shape = c_shapes.pop()
         if rhs.shape != c_shape:
             rhs = np.zeros(c_shape) + rhs
         if rhs.shape != c_shape:
             raise self.reduction_error(
-                "Invalid property: Comparing expressions with different shapes is not supported"
+                "Invalid property:"
+                " Comparing expressions with different shapes is not supported"
             )
 
         constraints: List[
@@ -206,7 +202,7 @@ class IOPolytopeReduction(Reduction):
             if len(idx.shape) == 1:
                 idx = tuple(idx)
                 if len(constraints) == 0:
-                    constraints.append(([(var, idx)], [coef], rhs))
+                    constraints.append(([(var, idx)], [coef], rhs.item()))
                 else:
                     for c in constraints:
                         var_idx = (var, idx)
@@ -219,12 +215,13 @@ class IOPolytopeReduction(Reduction):
                 shape = coef.shape
                 if c_shape is not None and c_shape != shape:
                     raise self.reduction_error(
-                        "Invalid property: Adding expressions with different shapes is not supported"
+                        "Invalid property:"
+                        " Adding expressions with different shapes is not supported"
                     )
                 c_shape = shape
                 num_constraints = np.product(shape)
                 if len(constraints) == 0:
-                    constraints = [([], [], rhs[i]) for i in np.ndindex(rhs.shape)]
+                    constraints = [([], [], rhs[i]) for i in np.ndindex(*rhs.shape)]
                 elif len(constraints) == 1:
                     constraints = [
                         (
@@ -232,11 +229,12 @@ class IOPolytopeReduction(Reduction):
                             copy.deepcopy(constraints[0][1]),
                             rhs[i],
                         )
-                        for i in np.ndindex(rhs.shape)
+                        for i in np.ndindex(*rhs.shape)
                     ]
                 if not len(constraints) == num_constraints:
                     raise self.reduction_error(
-                        "Invalid property: Adding expressions with different shapes is not supported"
+                        "Invalid property:"
+                        " Adding expressions with different shapes is not supported"
                     )
                 for c, idx_, coef_ in zip(
                     constraints,
@@ -290,28 +288,9 @@ class IOPolytopeReduction(Reduction):
             self.networks.append(expression)
             if len(expression.value.output_operations) > 1:
                 raise NotImplementedError(
-                    "Networks with multiple output operations are not currently supported"
+                    "Networks with multiple output operations"
+                    " are not currently supported"
                 )
-            if expression not in self._network_output_shapes:
-                self._network_output_shapes[expression] = expression.value.output_shape[
-                    0
-                ]
-            elif (
-                self._network_output_shapes[expression]
-                != expression.value.output_shape[0]
-            ):
-                raise self.reduction_error(
-                    f"Invalid property: network with multiple shapes: '{expression}'"
-                )
-            variable = Variable(
-                self._network_output_shapes[expression], str(expression)
-            )
-            if self.output_constraint is None:
-                self.output_constraint = self.output_constraint_type(variable)
-            else:
-                self.output_constraint = self.output_constraint.add_variable(variable)
-        variable = Variable(self._network_output_shapes[expression], str(expression))
-        self.variables[expression] = variable
         return expression
 
     def visit_Subscript(self, expression: Subscript):
@@ -326,18 +305,18 @@ class IOPolytopeReduction(Reduction):
     def visit_Symbol(self, expression: Symbol):
         if self.input is None:
             self.input = expression
-            if expression not in self._network_input_shapes:
+            if expression not in expression.ctx.shapes:
                 raise self.reduction_error(f"Unknown shape for variable {expression}")
-            variable = Variable(self._network_input_shapes[expression], str(expression))
-            self.input_constraint = self.input_constraint_type(variable)
+            variable = Variable(expression.ctx.shapes[expression], str(expression))
+            self.input_constraint.add_variable(variable)
         elif self.input is not expression:
             raise self.reduction_error("Multiple inputs detected in property")
-        shape = self._network_input_shapes[expression]
+        shape = expression.ctx.shapes[expression]
         self.variables[expression] = Variable(
-            self._network_input_shapes[expression], str(expression)
+            expression.ctx.shapes[expression], str(expression)
         )
-        self.indices[expression] = np.array([i for i in np.ndindex(shape)]).reshape(
-            shape + (len(shape),)
+        self.indices[expression] = np.array(list(np.ndindex(*shape))).reshape(
+            *shape, len(shape)
         )
         self.coefs[expression] = np.ones(shape)
 

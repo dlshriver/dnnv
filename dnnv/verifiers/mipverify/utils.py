@@ -1,13 +1,12 @@
-import numpy as np
-import scipy.io
 import tempfile
-
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Type
+from typing import IO, Dict, Optional, Set, Type
 
-from dnnv import logging_utils as logging
-from dnnv.nn import operations, Operation, OperationGraph, OperationVisitor
+import numpy as np
+import scipy.io
+
+from dnnv.nn import Operation, OperationGraph, OperationVisitor, operations
 from dnnv.verifiers.common import VerifierTranslatorError
 
 
@@ -23,38 +22,43 @@ class MIPVerifyInputBuilder(OperationVisitor):
 
     def build(
         self,
-        julia_file: tempfile.NamedTemporaryFile,
-        weights_file: tempfile.NamedTemporaryFile,
-        cex_file: tempfile.NamedTemporaryFile,
+        julia_file: IO,
+        weights_file_path: Path,
+        cex_file_path: Path,
         center: np.ndarray,
         linf_ub: float,
         tightening_algorithm: str = "mip",
+        optimizer: str = "Gurobi",
     ):
         self.params["input"] = center
         input_shape = tuple(center.shape)
 
-        scipy.io.savemat(weights_file.name, self.params)
+        scipy.io.savemat(weights_file_path, self.params)
 
-        weights_file_name = Path(weights_file.name).stem
         lines = (
             [
-                "using MIPVerify, Gurobi, JuMP, MAT, MathOptInterface",
-                f'param_dict = matread("{weights_file.name}")',
+                f"using MIPVerify, {optimizer}, JuMP, MAT, MathOptInterface",
+                f'param_dict = matread("{weights_file_path}")',
             ]
             + self.lines
             + [
                 "nn = Sequential([",
                 ",\n".join(self.layers),
-                f'], "{weights_file_name}")',
+                f'], "{weights_file_path.stem}")',
                 f'input = reshape(collect(param_dict["input"]), {input_shape})',
                 # 'print(nn(input), "\\n")',
                 # class 1 (1-indexed) if property is FALSE
-                f"d = MIPVerify.find_adversarial_example(nn, input, 1, Gurobi.Optimizer, Dict(), pp=MIPVerify.LInfNormBoundedPerturbationFamily({linf_ub}),tightening_algorithm={tightening_algorithm}, norm_order=Inf, solve_if_predicted_in_targeted=false)",
+                "d = MIPVerify.find_adversarial_example("
+                f"nn, input, 1, {optimizer}.Optimizer, Dict(),"
+                f" pp=MIPVerify.LInfNormBoundedPerturbationFamily({linf_ub}),"
+                f" tightening_algorithm={tightening_algorithm}, norm_order=Inf,"
+                " solve_if_predicted_in_targeted=false)",
                 "if (d[:PredictedIndex] == 1)",
-                f'    MAT.matwrite("{cex_file.name}", Dict("cex" => input))',
+                f'    MAT.matwrite("{cex_file_path}", Dict("cex" => input))',
                 '    print("TRIVIAL\\n")',
                 "elseif (d[:SolveStatus] == MathOptInterface.OPTIMAL)",
-                f'    MAT.matwrite("{cex_file.name}", Dict("cex" => JuMP.value.(d[:PerturbedInput])))',
+                f'    MAT.matwrite("{cex_file_path}", Dict("cex" => JuMP.value.(d[:PerturbedInput])))',
+                # '    print(JuMP.value.(d[:PerturbedInput]), "\\n")',
                 '    print(nn(JuMP.value.(d[:PerturbedInput])), "\\n")',
                 '    print(d[:SolveStatus], "\\n")',
                 "else",
@@ -166,6 +170,8 @@ class MIPVerifyInputBuilder(OperationVisitor):
         idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
         opname = f"{op_type}_{idx}"
 
+        _ = self.visit(operation.x)
+
         if any(p != 0 for p in operation.pads):
             raise self.translator_error("Padded max pooling is not supported.")
         if any(k != s for k, s in zip(operation.kernel_shape, operation.strides)):
@@ -192,6 +198,7 @@ def to_mipverify_inputs(
     lb: np.ndarray,
     ub: np.ndarray,
     op_graph: OperationGraph,
+    optimizer: str = "Gurobi",
     dirname: Optional[str] = None,
     translator_error: Type[VerifierTranslatorError] = VerifierTranslatorError,
 ) -> Dict[str, str]:
@@ -208,14 +215,11 @@ def to_mipverify_inputs(
     dtype = op_graph.input_details[0].dtype
     radii = (ub - lb) / 2
     max_radii = radii.max()
-    radii[(lb <= 0) | (ub >= 1)] = max_radii
     if not np.allclose(radii.min(), radii.max()):
-        logging.getLogger(__name__).warn(
-            "MIPVerify does not officially support problems with non-hypercube input regions"
+        raise translator_error(
+            "MIPVerify does not support problems with non-hypercube input regions"
         )
     center = ((lb + ub) / 2).astype(dtype)
-    center[(lb <= 0)] = ub[(lb <= 0)] - max_radii
-    center[(ub >= 0)] = lb[(ub >= 0)] + max_radii
     assert np.all(center >= 0)
     assert np.all(center <= 1)
 
@@ -231,7 +235,14 @@ def to_mipverify_inputs(
             with tempfile.NamedTemporaryFile(
                 mode="w+", dir=dirname, suffix=".jl", delete=False
             ) as julia_file:
-                builder.build(julia_file, weights_file, cex_file, center, radii.max())
+                builder.build(
+                    julia_file,
+                    Path(weights_file.name),
+                    Path(cex_file.name),
+                    center,
+                    max_radii,
+                    optimizer=optimizer,
+                )
                 mipverify_inputs["julia_file_path"] = julia_file.name
             mipverify_inputs["weights_file_path"] = weights_file.name
         mipverify_inputs["cex_file_path"] = cex_file.name

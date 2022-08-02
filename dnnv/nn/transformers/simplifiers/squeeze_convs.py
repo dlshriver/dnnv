@@ -1,15 +1,15 @@
-import numpy as np
-
 from copy import copy
 
-from .base import Simplifier
+import numpy as np
+
 from ... import operations
+from .base import Simplifier
 
 
 class SqueezeConvs(Simplifier):
     def is_diagonal(self, array):
         i, j = array.shape
-        return ~np.any(array.reshape(-1)[:-1].reshape(i - 1, j + 1)[:, 1:])
+        return (i == j) and ~np.any(array.reshape(-1)[:-1].reshape(i - 1, j + 1)[:, 1:])
 
     def visit_Conv(self, operation: operations.Conv) -> operations.Conv:
         if (
@@ -40,3 +40,6 @@ class SqueezeConvs(Simplifier):
 
             return op
         return operation
+
+
+__all__ = ["SqueezeConvs"]

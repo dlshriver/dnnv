@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from typing import Mapping, Optional, Tuple
+from typing import Any, Mapping, Optional, Tuple
 
 from .arithmetic import ArithmeticExpression
 from .base import Expression
 from .context import Context
 from .logic import LogicalExpression
+from .utils import empty_value
 
 
 class CallableExpression(Expression):
@@ -16,7 +17,7 @@ class CallableExpression(Expression):
 class Call(CallableExpression, ArithmeticExpression, LogicalExpression):
     def __init__(
         self,
-        function: Expression,
+        function: CallableExpression,
         args: Tuple[Expression, ...],
         kwargs: Mapping[str, Expression],
         *,
@@ -26,18 +27,17 @@ class Call(CallableExpression, ArithmeticExpression, LogicalExpression):
         self.function = function
         self.args = args
         self.kwargs = kwargs
-        self._value = None
+        self._value: Any = empty_value
+        self._hash_cache_call = None
 
     @property
     def value(self):
-        if self._value is not None:
+        if self._value is not empty_value:
             return self._value
-        if self.is_concrete:
-            args = tuple(arg.value for arg in self.args)
-            kwargs = {name: value.value for name, value in self.kwargs.items()}
-            self._value = self.function.value(*args, **kwargs)
-            return self._value
-        return super().value
+        args = tuple(arg.value for arg in self.args)
+        kwargs = {name: value.value for name, value in self.kwargs.items()}
+        self._value = self.function.value(*args, **kwargs)
+        return self._value
 
     def is_equivalent(self, other):
         if super().is_equivalent(other):
@@ -59,12 +59,14 @@ class Call(CallableExpression, ArithmeticExpression, LogicalExpression):
         return False
 
     def __hash__(self):
-        args_hash = 1
-        for arg in self.args:
-            args_hash *= hash(arg)
-        for key, arg in self.kwargs.items():
-            args_hash *= hash(key) * hash(arg)
-        return super().__hash__() * hash(self.function) * args_hash
+        if self._hash_cache_call is None:
+            args_hash = 1
+            for arg in self.args:
+                args_hash *= hash(arg)
+            for key, arg in self.kwargs.items():
+                args_hash *= hash(key) * hash(arg)
+            self._hash_cache_call = super().__hash__() * hash(self.function) * args_hash
+        return self._hash_cache_call
 
     def __repr__(self):
         function_name = repr(self.function)

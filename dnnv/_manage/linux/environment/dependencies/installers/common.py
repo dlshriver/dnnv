@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import subprocess as sp
 import typing
-
 from pathlib import Path
 from typing import Optional
 
-from .base import Installer
-from ..base import Dependency
 from .....errors import InstallError
+from ..base import Dependency
+from .base import Installer
 
 if typing.TYPE_CHECKING:
     from ...base import Environment
@@ -33,6 +32,7 @@ class GNUInstaller(Installer):
 
         library_paths = " ".join(f"-L{p}" for p in env.ld_library_paths)
         include_paths = " ".join(f"-I{p}" for p in env.include_paths)
+        cflags = f'CFLAGS="{include_paths} {library_paths}"'
 
         commands = [
             "set -ex",
@@ -40,7 +40,7 @@ class GNUInstaller(Installer):
             f"curl -o {identifier}.tar.gz -L {self.url}",
             f"tar xf {identifier}.tar.gz",
             f"cd {identifier}",
-            f'CFLAGS="{include_paths} {library_paths}" ./configure --prefix={cache_dir}',
+            f"{cflags} ./configure --prefix={cache_dir}",
             "make",
             "make install",
         ]
@@ -65,7 +65,9 @@ class GurobiInstaller(Installer):
                 return
 
         major_version, minor_version, *patch_version = self.version.split(".")
+        major_minor_version = f"{major_version}.{minor_version}"
         nondot_version = "".join([major_version, minor_version] + patch_version)
+        gurobi_id = f"gurobi{nondot_version}"
 
         identifier = f"gurobi-{self.version}"
         cache_dir = env.cache_dir / identifier
@@ -73,26 +75,25 @@ class GurobiInstaller(Installer):
 
         installation_path = env.env_dir / "opt"
         installation_path.mkdir(exist_ok=True, parents=True)
+        gurobi_linux_path = installation_path / gurobi_id / "linux64"
 
-        env.paths.append(
-            installation_path / f"gurobi{nondot_version}" / "linux64" / "bin"
-        )
-        env.include_paths.append(
-            installation_path / f"gurobi{nondot_version}" / "linux64" / "include"
-        )
-        env.ld_library_paths.append(
-            installation_path / f"gurobi{nondot_version}" / "linux64" / "lib"
-        )
+        env.paths.append(gurobi_linux_path / "bin")
+        env.include_paths.append(gurobi_linux_path / "include")
+        env.ld_library_paths.append(gurobi_linux_path / "lib")
         if dependency.is_installed(env):
             return
 
+        gurobi_url = (
+            f"https://packages.gurobi.com/{major_minor_version}/"
+            f"gurobi{self.version}_linux64.tar.gz"
+        )
         commands = [
             "set -ex",
             f"cd {cache_dir}",
-            f"curl -o {identifier}.tar.gz -L https://packages.gurobi.com/{major_version}.{minor_version}/gurobi{self.version}_linux64.tar.gz",
+            f"curl -o {identifier}.tar.gz -L {gurobi_url}",
             f"tar xf {identifier}.tar.gz",
-            f"cp -r gurobi{nondot_version} {installation_path}/gurobi{nondot_version}",
-            f"ln -s {installation_path}/gurobi{nondot_version}/linux64/bin/grbgetkey {env.env_dir}/bin/grbgetkey",
+            f"cp -r {gurobi_id} {installation_path}/{gurobi_id}",
+            f"ln -s {gurobi_linux_path}/bin/grbgetkey {env.env_dir}/bin/grbgetkey",
         ]
         install_script = "; ".join(commands)
         proc = sp.run(install_script, shell=True, env=env.vars())
@@ -114,10 +115,14 @@ class LpsolveInstaller(Installer):
         if dependency.is_installed(env):
             return
 
+        lpsolve_url = (
+            "https://downloads.sourceforge.net/project/lpsolve/lpsolve/"
+            f"{self.version}/lp_solve_{self.version}_dev_ux64.tar.gz"
+        )
         commands = [
             "set -ex",
             f"cd {cache_dir}",
-            f"curl -o {name}.tar.gz -L https://downloads.sourceforge.net/project/lpsolve/lpsolve/{self.version}/lp_solve_{self.version}_dev_ux64.tar.gz",
+            f"curl -o {name}.tar.gz -L {lpsolve_url}",
             f"tar xf {name}.tar.gz",
             "mkdir -p lpsolve",
             "cp *.h lpsolve/",
@@ -142,10 +147,13 @@ class OpenBLASInstaller(Installer):
         if dependency.is_installed(env):
             return
 
+        openblas_url = (
+            f"https://github.com/xianyi/OpenBLAS/archive/v{self.version}.tar.gz"
+        )
         commands = [
             "set -ex",
             f"cd {cache_dir}",
-            f"curl -o {name}.tar.gz -L https://github.com/xianyi/OpenBLAS/archive/v{self.version}.tar.gz",
+            f"curl -o {name}.tar.gz -L {openblas_url}",
             f"tar xf {name}.tar.gz",
             f"cd {name}",
             "make",
@@ -157,4 +165,9 @@ class OpenBLASInstaller(Installer):
             raise InstallError(f"Installation of {name} failed")
 
 
-__all__ = ["GNUInstaller", "GurobiInstaller", "LpsolveInstaller", "OpenBLASInstaller"]
+__all__ = [
+    "GNUInstaller",
+    "GurobiInstaller",
+    "LpsolveInstaller",
+    "OpenBLASInstaller",
+]

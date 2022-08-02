@@ -1,16 +1,12 @@
 import numpy as np
 
-from typing import Union
-
-from .base import Simplifier
 from ... import operations
 from ...graph import OperationGraph
+from .base import Simplifier
 
 
 class ConvertMul(Simplifier):
-    def visit_Mul(
-        self, operation: operations.Mul
-    ) -> Union[operations.Mul, operations.Gemm]:
+    def visit_Mul(self, operation: operations.Mul) -> operations.Operation:
         a = operation.a
         b = operation.b
         if isinstance(a, operations.Operation) and isinstance(b, operations.Operation):
@@ -48,20 +44,6 @@ class ConvertMul(Simplifier):
             if np.size(c) > input_shape[-1]:
                 return operation
             w = np.diag(np.reshape(c, -1))
-        elif len(input_shape) == 4:
-            num_channels = input_shape[1]
-            if not np.size(c) == num_channels:
-                return operation
-            w = np.diag(np.reshape(c, -1)).reshape(num_channels, num_channels, 1, 1)
-            c = np.reshape(c, -1)
-            return operations.Conv(
-                input_op,
-                w,
-                c,
-                kernel_shape=np.array([num_channels, num_channels]),
-                pads=np.array([0, 0, 0, 0]),
-                strides=np.array([1, 1]),
-            )
         else:
             return operation
         return operations.Add(operations.MatMul(input_op, w), b)

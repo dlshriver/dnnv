@@ -5,7 +5,7 @@ from dnnv.properties.visitors import DetailsInference
 def test_ExtSlice():
     inference = DetailsInference()
 
-    expr = ExtSlice(slice(1, -1), Constant(1))
+    expr = ExtSlice(Constant(slice(1, -1)), Constant(1))
     inference.visit(expr)
 
     assert inference.shapes[expr].is_concrete
