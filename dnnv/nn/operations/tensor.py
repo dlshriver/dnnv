@@ -19,6 +19,23 @@ class Cast(Operation):
         return cls(*inputs, to=to, name=onnx_node.name)
 
 
+class Clip(Operation):
+    def __init__(self, x, min=None, max=None, *, name: Optional[str] = None):
+        super().__init__(name=name)
+        self.x = x
+        self.min = min
+        self.max = max
+
+    @classmethod
+    def from_onnx(cls, onnx_node, *inputs):
+        attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
+        if len(inputs) == 1:
+            _min = attributes.get("min")
+            _max = attributes.get("max")
+            return cls(*inputs, min=_min, max=_max, name=onnx_node.name)
+        return cls(*inputs, name=onnx_node.name)
+
+
 class Concat(Operation):
     def __init__(self, x, axis, *, name: Optional[str] = None):
         super().__init__(name=name)
@@ -263,6 +280,48 @@ class Unsqueeze(Operation):
         return cls(*inputs, axes=axes, name=onnx_node.name)
 
 
+class ReduceL2(Operation):
+    def __init__(self, x, axes, keepdims, *, name: Optional[str] = None):
+        super().__init__(name=name)
+        self.x = x
+        self.axes = axes
+        self.keepdims = keepdims
+
+    @classmethod
+    def from_onnx(cls, onnx_node, *inputs):
+        attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
+        axes = attributes.get("axes")
+        keepdims = attributes.get("keepdims")
+        return cls(*inputs, axes=axes, keepdims=keepdims, name=onnx_node.name)
+
+
+class Squeeze(Operation):
+    def __init__(self, x, axes, *, name: Optional[str] = None):
+        super().__init__(name=name)
+        self.x = x
+        self.axes = axes
+
+    @classmethod
+    def from_onnx(cls, onnx_node, *inputs):
+        attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
+        axes = attributes.get("axes")
+        return cls(*inputs, axes=axes, name=onnx_node.name)
+
+
+class Upsample(Operation):
+    def __init__(self, x, scales, mode, *, name: Optional[str] = None):
+        super().__init__(name=name)
+        self.x = x
+        self.scales = scales
+        self.mode = mode
+
+    @classmethod
+    def from_onnx(cls, onnx_node, *inputs):
+        attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
+        mode = attributes.get("mode")
+        return cls(*inputs, mode=mode, name=onnx_node.name)
+
+
 __all__ = [
     "Cast",
     "Concat",
@@ -279,4 +338,8 @@ __all__ = [
     "Tile",
     "Transpose",
     "Unsqueeze",
+    "ReduceL2",
+    "Clip",
+    "Squeeze",
+    "Upsample",
 ]

@@ -132,6 +132,14 @@ class PrintVisitor(OperationVisitor):
         self.print_op_id(operation)
         print(f"Cast({self.get_op_id(operation.x)}, to={operation.to})")
 
+    def visit_Clip(self, operation: operations.Clip) -> None:
+        self.generic_visit(operation)
+        self.print_op_id(operation)
+        print(
+            "Clip(%s, min=%s, max=%s)"
+            % (self.get_op_id(operation.x), operation.min, operation.max)
+        )
+
     def visit_Concat(self, operation: operations.Concat) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
@@ -268,6 +276,14 @@ class PrintVisitor(OperationVisitor):
         self.print_op_id(operation)
         print(f"Pad({self.get_op_id(operation.x)}, pads={operation.pads})")
 
+    def visit_ReduceL2(self, operation: operations.ReduceL2) -> None:
+        self.generic_visit(operation)
+        self.print_op_id(operation)
+        print(
+            "ReduceL2(%s, axes=%s, keepdims=%s)"
+            % (self.get_op_id(operation.x), operation.axes, operation.keepdims)
+        )
+
     def visit_Relu(self, operation: operations.Relu) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
@@ -312,6 +328,11 @@ class PrintVisitor(OperationVisitor):
         self.print_op_id(operation)
         print(f"Shape({self.get_op_id(operation.x)})")
 
+    def visit_Sign(self, operation: operations.Sign) -> None:
+        self.generic_visit(operation)
+        self.print_op_id(operation)
+        print(f"Sign({self.get_op_id(operation.x)})")
+
     def visit_Sigmoid(self, operation: operations.Sigmoid) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
@@ -339,11 +360,6 @@ class PrintVisitor(OperationVisitor):
             ")"
         )
 
-    def visit_Sign(self, operation: operations.Sign) -> None:
-        self.generic_visit(operation)
-        self.print_op_id(operation)
-        print(f"Sign({self.get_op_id(operation.x)})")
-
     def visit_Softmax(self, operation: operations.Softmax) -> None:
         self.generic_visit(operation)
         self.print_op_id(operation)
@@ -356,6 +372,11 @@ class PrintVisitor(OperationVisitor):
             "Split(%s, axis=%s, split=%s)"
             % (self.get_op_id(operation.x), operation.axis, operation.split)
         )
+
+    def visit_Squeeze(self, operation: operations.Squeeze) -> None:
+        self.generic_visit(operation)
+        self.print_op_id(operation)
+        print("Squeeze(%s, axes=%s)" % (self.get_op_id(operation.x), operation.axes))
 
     def visit_Sub(self, operation: operations.Sub) -> None:
         self.generic_visit(operation)
@@ -384,6 +405,13 @@ class PrintVisitor(OperationVisitor):
         self.generic_visit(operation)
         self.print_op_id(operation)
         print(f"Unsqueeze({self.get_op_id(operation.x)}, axes={operation.axes})")
+
+    def visit_Upsample(self, operation: operations.Upsample) -> None:
+        self.generic_visit(operation)
+        self.print_op_id(operation)
+        print(
+            "Upsample(%s, scales=%s)" % (self.get_op_id(operation.x), operation.scales)
+        )
 
 
 __all__ = [

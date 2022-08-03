@@ -11,6 +11,10 @@ from ..utils import NUMPY_TO_ONNX_DTYPE
 from ..visitors import OperationVisitor
 
 
+class OnnxConverterError(Exception):
+    pass
+
+
 def convert(op_graph: OperationGraph, *, add_missing_optional_inputs=False):
     converter = OnnxConverter(
         op_graph, add_missing_optional_inputs=add_missing_optional_inputs
@@ -79,7 +83,7 @@ class OnnxConverter(OperationVisitor):
     ) -> Union[onnx.NodeProto, onnx.TensorProto, onnx.ValueInfoProto]:
         if isinstance(value, Operation):
             return self.visit(value)
-        if isinstance(value, np.ndarray):
+        if isinstance(value, (np.ndarray, np.number)):
             tensor_proto = onnx.numpy_helper.from_array(value, name=opname)
             self.initializer.append(tensor_proto)
             return tensor_proto
@@ -180,6 +184,29 @@ class OnnxConverter(OperationVisitor):
 
         node = onnx.helper.make_node(
             op_type, inputs=[x.name], outputs=[opname], to=to, name=opname
+        )
+
+        return node
+
+    def visit_Clip(self, operation: operations.Clip) -> onnx.NodeProto:
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        x = self._to_onnx_proto(operation.x, f"{opname}.x")
+        inputs = [x.name]
+        if operation.min is not None:
+            min = self._to_onnx_proto(operation.min, f"{opname}.min")
+            inputs.extend([min.name])
+        if operation.max is not None:
+            max = self._to_onnx_proto(operation.max, f"{opname}.max")
+            inputs.extend([max.name])
+
+        node = onnx.helper.make_node(
+            op_type,
+            inputs=inputs,
+            outputs=[opname],
+            name=opname,
         )
 
         return node
@@ -508,6 +535,26 @@ class OnnxConverter(OperationVisitor):
 
         return node
 
+    def visit_ReduceL2(self, operation: operations.ReduceL2) -> onnx.NodeProto:
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        x = self._to_onnx_proto(operation.x, f"{opname}.x")
+        axes = operation.axes
+        keepdims = operation.keepdims
+
+        node = onnx.helper.make_node(
+            op_type,
+            inputs=[x.name],
+            axes=axes,
+            keepdims=keepdims,
+            outputs=[opname],
+            name=opname,
+        )
+
+        return node
+
     def visit_Relu(self, operation: operations.Relu) -> onnx.NodeProto:
         idx = self.op_counts["Relu"] = self.op_counts["Relu"] + 1
         opname = f"Relu_{idx}"
@@ -572,6 +619,25 @@ class OnnxConverter(OperationVisitor):
             outputs=outputs,
             name=opname,
             axis=operation.axis,
+        )
+
+        return node
+
+    def visit_Squeeze(self, operation: operations.Squeeze) -> onnx.NodeProto:
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        x = self._to_onnx_proto(operation.x, f"{opname}.x")
+        inputs = [x.name]
+        if operation.axes is not None:
+            axes = self._to_onnx_proto(operation.axes, f"{opname}.axes")
+            if axes.data_type != onnx.TensorProto.INT64:
+                raise OnnxConverterError("Squeeze axes should be int64.")
+            inputs.extend([axes.name])
+
+        node = onnx.helper.make_node(
+            op_type, inputs=inputs, outputs=[opname], name=opname
         )
 
         return node
@@ -645,6 +711,24 @@ class OnnxConverter(OperationVisitor):
             outputs=[opname],
             name=opname,
             perm=list(operation.permutation),
+        )
+
+        return node
+
+    def visit_Upsample(self, operation: operations.Upsample) -> onnx.NodeProto:
+        op_type = str(operation)
+        idx = self.op_counts[op_type] = self.op_counts[op_type] + 1
+        opname = f"{op_type}_{idx}"
+
+        x = self._to_onnx_proto(operation.x, f"{opname}.x")
+        inputs = [x.name]
+        if operation.scales is not None:
+            scales = self._to_onnx_proto(operation.scales, f"{opname}.scales")
+            inputs.extend([scales.name])
+        mode = operation.mode
+
+        node = onnx.helper.make_node(
+            op_type, inputs=inputs, outputs=[opname], name=opname, mode=mode
         )
 
         return node

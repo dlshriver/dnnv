@@ -208,6 +208,21 @@ class TensorflowConverter(OperationVisitor):
 
         return cast_func
 
+    def visit_Clip(self, operation):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+        _min = operation.min
+        _max = operation.max
+
+        @self._cached
+        def clip_func(*inputs):
+            x = _concretize([x_], inputs)
+            x = tf.clip_by_value(x, _min, _max)
+            return x
+
+        return clip_func
+
     def visit_Concat(self, operation):
         tensors_ = []
         for x in operation.x:
@@ -227,20 +242,24 @@ class TensorflowConverter(OperationVisitor):
         x_ = operation.x
         if isinstance(x_, Operation):
             x_ = self.visit(x_)
+        w_ = operation.w
+        if isinstance(w_, Operation):
+            w_ = self.visit(w_)
 
         @self._cached
         def conv_func(*inputs):
-            x = _concretize([x_], inputs)
+            x, weights = _concretize([x_, w_], inputs)
             if len(operation.kernel_shape) != 2:
                 raise NotImplementedError(
                     "Non 2d convolutions are not currently supported."
                 )
-            weights = operation.w
+            if not isinstance(weights, np.ndarray):
+                weights = np.array(weights)
             if operation.b is not None:
                 bias = operation.b
             else:
                 bias = np.zeros((weights.shape[0],), dtype=weights.dtype)
-            assert np.all(operation.dilations == 1)
+            assert np.all(operation.group == 1)
             num_pads = len(operation.pads)
             pads = tuple(
                 zip(
@@ -258,6 +277,7 @@ class TensorflowConverter(OperationVisitor):
                     weights.transpose((2, 3, 1, 0)),
                     operation.strides,
                     padding="VALID",
+                    dilations=operation.dilations,
                 ),
                 bias,
             )
@@ -417,11 +437,13 @@ class TensorflowConverter(OperationVisitor):
         x_ = operation.x
         if isinstance(x_, Operation):
             x_ = self.visit(x_)
+        shape_ = operation.shape
+        if isinstance(shape_, Operation):
+            shape_ = self.visit(shape_)
 
         @self._cached
         def expand_func(*inputs):
-            x = _concretize([x_], inputs)
-            shape = operation.shape
+            x, shape = _concretize([x_, shape_], inputs)
             result = x * tf.ones(shape, x.dtype)
             return result
 
@@ -685,6 +707,21 @@ class TensorflowConverter(OperationVisitor):
 
         return pad_func
 
+    def visit_ReduceL2(self, operation):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+        axes = operation.axes
+        keepdims = operation.keepdims
+
+        @self._cached
+        def reduceL2_func(*inputs):
+            x = _concretize([x_], inputs)
+            x = tf.norm(x, ord=2, axis=axes, keepdims=keepdims)
+            return x
+
+        return reduceL2_func
+
     def visit_Relu(self, operation):
         x_ = operation.x
         if isinstance(x_, Operation):
@@ -738,6 +775,7 @@ class TensorflowConverter(OperationVisitor):
             assert operation.coordinate_transformation_mode in [
                 "asymmetric",
                 "tf_crop_and_resize",
+                "align_corners",
             ]
             assert operation.mode in ["nearest", "linear"]
             assert operation.exclude_outside == 0
@@ -873,6 +911,22 @@ class TensorflowConverter(OperationVisitor):
 
         return split_func
 
+    def visit_Squeeze(self, operation):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+        axes = operation.axes
+        if isinstance(axes, np.ndarray):
+            axes = axes.tolist()
+
+        @self._cached
+        def squeeze_func(*inputs):
+            x = _concretize([x_], inputs)
+            x = tf.squeeze(x, axis=axes)
+            return x
+
+        return squeeze_func
+
     def visit_Sub(self, operation):
         a_ = operation.a
         if isinstance(a_, Operation):
@@ -948,3 +1002,21 @@ class TensorflowConverter(OperationVisitor):
             return x
 
         return unsqueeze_func
+
+    def visit_Upsample(self, operation):
+        x_ = operation.x
+        if isinstance(x_, Operation):
+            x_ = self.visit(x_)
+        scales = operation.scales
+        mode = operation.mode
+
+        @self._cached
+        def upsample_func(*inputs):
+            x = _concretize([x_], inputs)
+            scaled_dim = [int(sd) for sd in x.shape[2:] * scales[2:]]
+            xr = tf.transpose(x, perm=[0, 2, 3, 1])
+            xr = tf.image.resize(xr, scaled_dim, method="nearest")
+            xr = tf.transpose(xr, perm=[0, 3, 1, 2])
+            return xr
+
+        return upsample_func
