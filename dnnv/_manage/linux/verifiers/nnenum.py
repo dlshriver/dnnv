@@ -79,7 +79,7 @@ if __name__ == "__main__":
 
 class NnenumInstaller(Installer):
     def run(self, env: Environment, dependency: Dependency):
-        commit_hash = "fa1463b6f345ca143662c4143dfb4774e6615672"
+        commit_hash = "58cca56040867fa84460209a8f4c09575e5f7a84"
         name = "nnenum"
 
         cache_dir = env.cache_dir / f"{name}-{commit_hash}"
@@ -105,14 +105,15 @@ class NnenumInstaller(Installer):
             "pip install --upgrade pip",
             (
                 "pip install"
-                ' "numpy>=1.19,<1.22"'
-                ' "onnx>=1.8,<1.11"'
-                ' "onnxruntime>=1.7,<1.11"'
-                ' "scipy>=1.4.1<1.8"'
-                ' "threadpoolctl==2.1.0"'
-                ' "skl2onnx==1.7.0"'
-                ' "swiglpk"'
-                ' "termcolor"'
+                ' "numpy>=1.21,<1.24"'
+                ' "onnx>=1.10,<1.12"'
+                ' "onnxruntime>=1.10,<1.13"'
+                ' "scipy>=1.7<1.10"'
+                ' "threadpoolctl==3.1.0"'
+                ' "skl2onnx==1.12"'
+                ' "swiglpk~=5.0"'
+                ' "termcolor==1.1.0"'
+                ' "packaging==21.3"'
                 ' "protobuf<=3.20"'
             ),
             f"cd {cache_dir}",
