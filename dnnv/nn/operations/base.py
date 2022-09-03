@@ -83,12 +83,6 @@ class Operation(metaclass=Op):
         for op_cls in get_subclasses(cls):
             if op_type == op_cls.__name__:
                 operation = op_cls.from_onnx(onnx_node, *inputs)
-                if all(not isinstance(i, Operation) for i in inputs) and isinstance(
-                    operation, Operation
-                ):
-                    logger.warning(
-                        "Operation on constant inputs returned non-constant."
-                    )
                 return operation
         raise ValueError(f"Unimplemented operation type: {op_type}")
 

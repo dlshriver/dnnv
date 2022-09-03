@@ -52,8 +52,6 @@ def test_from_onnx_Mul_constants(caplog):
     assert op_from_onnx.a == 2
     assert op_from_onnx.b == 5
 
-    assert "Operation on constant inputs returned non-constant." in caplog.text
-
 
 def test_from_onnx_Elu():
     input_op = Input(np.array([-1, 5]), np.dtype(np.float32))

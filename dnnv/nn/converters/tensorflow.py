@@ -75,6 +75,8 @@ class TensorflowConverter(OperationVisitor):
         self._cache.clear()
 
     def visit(self, operation):
+        if operation is None or not isinstance(operation, Operation):
+            return lambda *_, op=operation: op
         if operation not in self.results:
             result = super().visit(operation)
             self.results[operation] = result
@@ -88,13 +90,9 @@ class TensorflowConverter(OperationVisitor):
             )
         return super().generic_visit(operation)
 
-    def visit_Add(self, operation):
-        a_ = operation.a
-        if isinstance(a_, Operation):
-            a_ = self.visit(a_)
-        b_ = operation.b
-        if isinstance(b_, Operation):
-            b_ = self.visit(b_)
+    def visit_Add(self, operation: operations.Add):
+        a_ = self.visit(operation.a)
+        b_ = self.visit(operation.b)
 
         @self._cached
         def add_func(*inputs):
@@ -104,10 +102,8 @@ class TensorflowConverter(OperationVisitor):
 
         return add_func
 
-    def visit_Atan(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
+    def visit_Atan(self, operation: operations.Atan):
+        x_ = self.visit(operation.x)
 
         @self._cached
         def atan_func(*inputs):
@@ -117,10 +113,8 @@ class TensorflowConverter(OperationVisitor):
 
         return atan_func
 
-    def visit_AveragePool(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
+    def visit_AveragePool(self, operation: operations.AveragePool):
+        x_ = self.visit(operation.x)
 
         @self._cached
         def avgpool_func(*inputs):
@@ -163,18 +157,18 @@ class TensorflowConverter(OperationVisitor):
 
         return avgpool_func
 
-    def visit_BatchNormalization(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
+    def visit_BatchNormalization(self, operation: operations.BatchNormalization):
+        x_ = self.visit(operation.x)
+        scale_ = self.visit(operation.scale)
+        bias_ = self.visit(operation.bias)
+        mean_ = self.visit(operation.mean)
+        variance_ = self.visit(operation.variance)
 
         @self._cached
         def batchnorm_func(*inputs):
-            x = _concretize([x_], inputs)
-            scale = operation.scale
-            bias = operation.bias
-            mean = operation.mean
-            variance = operation.variance
+            x, scale, bias, mean, variance = _concretize(
+                [x_, scale_, bias_, mean_, variance_], inputs
+            )
             epsilon = operation.epsilon
 
             x_ndim = int(tf.rank(x))
@@ -195,10 +189,8 @@ class TensorflowConverter(OperationVisitor):
 
         return batchnorm_func
 
-    def visit_Cast(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
+    def visit_Cast(self, operation: operations.Cast):
+        x_ = self.visit(operation.x)
 
         @self._cached
         def cast_func(*inputs):
@@ -208,12 +200,10 @@ class TensorflowConverter(OperationVisitor):
 
         return cast_func
 
-    def visit_Concat(self, operation):
+    def visit_Concat(self, operation: operations.Concat):
         tensors_ = []
         for x in operation.x:
-            if isinstance(x, Operation):
-                x = self.visit(x)
-            tensors_.append(x)
+            tensors_.append(self.visit(x))
 
         @self._cached
         def concat_func(*inputs):
@@ -223,22 +213,19 @@ class TensorflowConverter(OperationVisitor):
 
         return concat_func
 
-    def visit_Conv(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
+    def visit_Conv(self, operation: operations.Conv):
+        x_ = self.visit(operation.x)
+        w_ = self.visit(operation.w)
+        b_ = self.visit(operation.b)
 
         @self._cached
         def conv_func(*inputs):
-            x = _concretize([x_], inputs)
+            x, weights, bias = _concretize([x_, w_, b_], inputs)
             if len(operation.kernel_shape) != 2:
                 raise NotImplementedError(
                     "Non 2d convolutions are not currently supported."
                 )
-            weights = operation.w
-            if operation.b is not None:
-                bias = operation.b
-            else:
+            if bias is None:
                 bias = np.zeros((weights.shape[0],), dtype=weights.dtype)
             assert np.all(operation.dilations == 1)
             num_pads = len(operation.pads)
@@ -269,14 +256,14 @@ class TensorflowConverter(OperationVisitor):
 
         return conv_func
 
-    def visit_ConvTranspose(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
+    def visit_ConvTranspose(self, operation: operations.ConvTranspose):
+        x_ = self.visit(operation.x)
+        w_ = self.visit(operation.w)
+        b_ = self.visit(operation.b)
 
         @self._cached
         def convtranspose_func(*inputs):
-            x = _concretize([x_], inputs)
+            x, weights, bias = _concretize([x_, w_, b_], inputs)
 
             if len(operation.kernel_shape) == 1:
                 conv_transpose = tf.nn.conv1d_transpose
@@ -302,10 +289,7 @@ class TensorflowConverter(OperationVisitor):
                     f"Unsupported dilations for ConvTranspose: {operation.dilations}"
                 )
 
-            weights = operation.w
-            if operation.b is not None:
-                bias = operation.b
-            else:
+            if bias is None:
                 bias = np.zeros((weights.shape[1],), dtype=weights.dtype)
 
             num_pads = len(operation.pads)
@@ -366,13 +350,9 @@ class TensorflowConverter(OperationVisitor):
 
         return convtranspose_func
 
-    def visit_Div(self, operation):
-        a_ = operation.a
-        if isinstance(a_, Operation):
-            a_ = self.visit(a_)
-        b_ = operation.b
-        if isinstance(b_, Operation):
-            b_ = self.visit(b_)
+    def visit_Div(self, operation: operations.Div):
+        a_ = self.visit(operation.a)
+        b_ = self.visit(operation.b)
 
         @self._cached
         def div_func(*inputs):
@@ -382,10 +362,8 @@ class TensorflowConverter(OperationVisitor):
 
         return div_func
 
-    def visit_Dropout(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
+    def visit_Dropout(self, operation: operations.Dropout):
+        x_ = self.visit(operation.x)
 
         @self._cached
         def dropout_func(*inputs):
@@ -395,10 +373,8 @@ class TensorflowConverter(OperationVisitor):
 
         return dropout_func
 
-    def visit_Elu(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
+    def visit_Elu(self, operation: operations.Elu):
+        x_ = self.visit(operation.x)
 
         @self._cached
         def elu_func(*inputs):
@@ -413,24 +389,20 @@ class TensorflowConverter(OperationVisitor):
 
         return elu_func
 
-    def visit_Expand(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
+    def visit_Expand(self, operation: operations.Expand):
+        x_ = self.visit(operation.x)
+        shape_ = self.visit(operation.shape)
 
         @self._cached
         def expand_func(*inputs):
-            x = _concretize([x_], inputs)
-            shape = operation.shape
+            x, shape = _concretize([x_, shape_], inputs)
             result = x * tf.ones(shape, x.dtype)
             return result
 
         return expand_func
 
-    def visit_Flatten(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
+    def visit_Flatten(self, operation: operations.Flatten):
+        x_ = self.visit(operation.x)
 
         @self._cached
         def flatten_func(*inputs):
@@ -442,13 +414,9 @@ class TensorflowConverter(OperationVisitor):
 
         return flatten_func
 
-    def visit_Gather(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
-        indices_ = operation.indices
-        if isinstance(indices_, Operation):
-            indices_ = self.visit(indices_)
+    def visit_Gather(self, operation: operations.Gather):
+        x_ = self.visit(operation.x)
+        indices_ = self.visit(operation.indices)
 
         @self._cached
         def gather_func(*inputs):
@@ -458,16 +426,10 @@ class TensorflowConverter(OperationVisitor):
 
         return gather_func
 
-    def visit_Gemm(self, operation):
-        a_ = operation.a
-        if isinstance(a_, Operation):
-            a_ = self.visit(a_)
-        b_ = operation.b
-        if isinstance(b_, Operation):
-            b_ = self.visit(b_)
-        c_ = operation.c
-        if isinstance(c_, Operation):
-            c_ = self.visit(c_)
+    def visit_Gemm(self, operation: operations.Gemm):
+        a_ = self.visit(operation.a)
+        b_ = self.visit(operation.b)
+        c_ = self.visit(operation.c)
 
         @self._cached
         def gemm_func(*inputs):
@@ -484,10 +446,8 @@ class TensorflowConverter(OperationVisitor):
 
         return gemm_func
 
-    def visit_GlobalAveragePool(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
+    def visit_GlobalAveragePool(self, operation: operations.GlobalAveragePool):
+        x_ = self.visit(operation.x)
 
         @self._cached
         def globalavgpool_func(*inputs):
@@ -506,10 +466,8 @@ class TensorflowConverter(OperationVisitor):
 
         return globalavgpool_func
 
-    def visit_Identity(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
+    def visit_Identity(self, operation: operations.Identity):
+        x_ = self.visit(operation.x)
 
         @self._cached
         def identity_func(*inputs):
@@ -518,7 +476,7 @@ class TensorflowConverter(OperationVisitor):
 
         return identity_func
 
-    def visit_Input(self, operation):
+    def visit_Input(self, operation: operations.Input):
         input_idx = self.input_count
 
         @self._cached
@@ -542,10 +500,8 @@ class TensorflowConverter(OperationVisitor):
 
         return input_func
 
-    def visit_LeakyRelu(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
+    def visit_LeakyRelu(self, operation: operations.LeakyRelu):
+        x_ = self.visit(operation.x)
 
         @self._cached
         def leakyrelu_func(*inputs):
@@ -555,10 +511,8 @@ class TensorflowConverter(OperationVisitor):
 
         return leakyrelu_func
 
-    def visit_LogSoftmax(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
+    def visit_LogSoftmax(self, operation: operations.LogSoftmax):
+        x_ = self.visit(operation.x)
 
         @self._cached
         def softmax_func(*inputs):
@@ -568,13 +522,9 @@ class TensorflowConverter(OperationVisitor):
 
         return softmax_func
 
-    def visit_MatMul(self, operation):
-        a_ = operation.a
-        if isinstance(a_, Operation):
-            a_ = self.visit(a_)
-        b_ = operation.b
-        if isinstance(b_, Operation):
-            b_ = self.visit(b_)
+    def visit_MatMul(self, operation: operations.MatMul):
+        a_ = self.visit(operation.a)
+        b_ = self.visit(operation.b)
 
         @self._cached
         def matmul_func(*inputs):
@@ -590,10 +540,8 @@ class TensorflowConverter(OperationVisitor):
 
         return matmul_func
 
-    def visit_MaxPool(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
+    def visit_MaxPool(self, operation: operations.MaxPool):
+        x_ = self.visit(operation.x)
 
         @self._cached
         def maxpool_func(*inputs):
@@ -636,13 +584,9 @@ class TensorflowConverter(OperationVisitor):
 
         return maxpool_func
 
-    def visit_Mul(self, operation):
-        a_ = operation.a
-        if isinstance(a_, Operation):
-            a_ = self.visit(a_)
-        b_ = operation.b
-        if isinstance(b_, Operation):
-            b_ = self.visit(b_)
+    def visit_Mul(self, operation: operations.Mul):
+        a_ = self.visit(operation.a)
+        b_ = self.visit(operation.b)
 
         @self._cached
         def mul_func(*inputs):
@@ -652,7 +596,7 @@ class TensorflowConverter(OperationVisitor):
 
         return mul_func
 
-    def visit_OutputSelect(self, operation):
+    def visit_OutputSelect(self, operation: operations.OutputSelect):
         x_ = self.visit(operation.operation)
 
         @self._cached
@@ -662,33 +606,31 @@ class TensorflowConverter(OperationVisitor):
 
         return output_select_func
 
-    def visit_Pad(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
+    def visit_Pad(self, operation: operations.Pad):
+        x_ = self.visit(operation.x)
+        pads_ = self.visit(operation.pads)
+        value_ = self.visit(operation.value)
 
         @self._cached
         def pad_func(*inputs):
-            x = _concretize([x_], inputs)
+            x, pads, value = _concretize([x_, pads_, value_], inputs)
             mode = operation.mode.upper()
             if mode != "CONSTANT":
                 raise ValueError(f"{mode} padding is not currently supported")
-            num_pads = len(operation.pads)
-            pads = tuple(
+            num_pads = len(pads)
+            pads_tuple = tuple(
                 zip(
-                    operation.pads[: num_pads // 2],
-                    operation.pads[num_pads // 2 :],
+                    pads[: num_pads // 2],
+                    pads[num_pads // 2 :],
                 )
             )
-            result = tf.pad(x, pads, mode=mode, constant_values=operation.value)
+            result = tf.pad(x, pads_tuple, mode=mode, constant_values=value)
             return result
 
         return pad_func
 
-    def visit_Relu(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
+    def visit_Relu(self, operation: operations.Relu):
+        x_ = self.visit(operation.x)
 
         @self._cached
         def relu_func(*inputs):
@@ -698,13 +640,9 @@ class TensorflowConverter(OperationVisitor):
 
         return relu_func
 
-    def visit_Reshape(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
-        shape_ = operation.shape
-        if isinstance(shape_, Operation):
-            shape_ = self.visit(shape_)
+    def visit_Reshape(self, operation: operations.Reshape):
+        x_ = self.visit(operation.x)
+        shape_ = self.visit(operation.shape)
 
         @self._cached
         def reshape_func(*inputs):
@@ -718,19 +656,11 @@ class TensorflowConverter(OperationVisitor):
 
         return reshape_func
 
-    def visit_Resize(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
-        roi_ = operation.roi
-        if isinstance(roi_, Operation):
-            roi_ = self.visit(roi_)
-        scales_ = operation.scales
-        if isinstance(scales_, Operation):
-            scales_ = self.visit(scales_)
-        sizes_ = operation.sizes
-        if isinstance(sizes_, Operation):
-            sizes_ = self.visit(sizes_)
+    def visit_Resize(self, operation: operations.Resize):
+        x_ = self.visit(operation.x)
+        roi_ = self.visit(operation.roi)
+        scales_ = self.visit(operation.scales)
+        sizes_ = self.visit(operation.sizes)
 
         @self._cached
         def resize_func(*inputs):
@@ -769,10 +699,8 @@ class TensorflowConverter(OperationVisitor):
 
         return resize_func
 
-    def visit_Shape(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
+    def visit_Shape(self, operation: operations.Shape):
+        x_ = self.visit(operation.x)
 
         @self._cached
         def shape_func(*inputs):
@@ -782,10 +710,8 @@ class TensorflowConverter(OperationVisitor):
 
         return shape_func
 
-    def visit_Sigmoid(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
+    def visit_Sigmoid(self, operation: operations.Sigmoid):
+        x_ = self.visit(operation.x)
 
         @self._cached
         def sigmoid_func(*inputs):
@@ -795,10 +721,8 @@ class TensorflowConverter(OperationVisitor):
 
         return sigmoid_func
 
-    def visit_Sign(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
+    def visit_Sign(self, operation: operations.Sign):
+        x_ = self.visit(operation.x)
 
         @self._cached
         def sign_func(*inputs):
@@ -809,21 +733,11 @@ class TensorflowConverter(OperationVisitor):
         return sign_func
 
     def visit_Slice(self, operation: operations.Slice):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
-        starts_ = operation.starts
-        if isinstance(starts_, Operation):
-            starts_ = self.visit(starts_)
-        ends_ = operation.ends
-        if isinstance(ends_, Operation):
-            ends_ = self.visit(ends_)
-        axes_ = operation.axes
-        if isinstance(axes_, Operation):
-            axes_ = self.visit(axes_)
-        steps_ = operation.steps
-        if isinstance(steps_, Operation):
-            steps_ = self.visit(steps_)
+        x_ = self.visit(operation.x)
+        starts_ = self.visit(operation.starts)
+        ends_ = self.visit(operation.ends)
+        axes_ = self.visit(operation.axes)
+        steps_ = self.visit(operation.steps)
 
         @self._cached
         def slice_func(*inputs):
@@ -843,10 +757,8 @@ class TensorflowConverter(OperationVisitor):
 
         return slice_func
 
-    def visit_Softmax(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
+    def visit_Softmax(self, operation: operations.Softmax):
+        x_ = self.visit(operation.x)
 
         @self._cached
         def softmax_func(*inputs):
@@ -856,30 +768,21 @@ class TensorflowConverter(OperationVisitor):
 
         return softmax_func
 
-    def visit_Split(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
-        split_ = operation.split
-        if isinstance(split_, Operation):
-            split_ = self.visit(split_)
-        axis = operation.axis
+    def visit_Split(self, operation: operations.Split):
+        x_ = self.visit(operation.x)
+        split_ = self.visit(operation.split)
 
         @self._cached
         def split_func(*inputs):
             x, split = _concretize([x_, split_], inputs)
-            x = tf.split(x, tf.convert_to_tensor(split), axis=axis)
+            x = tf.split(x, tf.convert_to_tensor(split), axis=operation.axis)
             return x
 
         return split_func
 
-    def visit_Sub(self, operation):
-        a_ = operation.a
-        if isinstance(a_, Operation):
-            a_ = self.visit(a_)
-        b_ = operation.b
-        if isinstance(b_, Operation):
-            b_ = self.visit(b_)
+    def visit_Sub(self, operation: operations.Sub):
+        a_ = self.visit(operation.a)
+        b_ = self.visit(operation.b)
 
         @self._cached
         def sub_func(*inputs):
@@ -889,10 +792,8 @@ class TensorflowConverter(OperationVisitor):
 
         return sub_func
 
-    def visit_Tanh(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
+    def visit_Tanh(self, operation: operations.Tanh):
+        x_ = self.visit(operation.x)
 
         @self._cached
         def tanh_func(*inputs):
@@ -902,13 +803,9 @@ class TensorflowConverter(OperationVisitor):
 
         return tanh_func
 
-    def visit_Tile(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
-        repeats_ = operation.repeats
-        if isinstance(repeats_, Operation):
-            repeats_ = self.visit(repeats_)
+    def visit_Tile(self, operation: operations.Tile):
+        x_ = self.visit(operation.x)
+        repeats_ = self.visit(operation.repeats)
 
         @self._cached
         def tile_func(*inputs):
@@ -918,10 +815,8 @@ class TensorflowConverter(OperationVisitor):
 
         return tile_func
 
-    def visit_Transpose(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
+    def visit_Transpose(self, operation: operations.Transpose):
+        x_ = self.visit(operation.x)
 
         @self._cached
         def transpose_func(*inputs):
@@ -932,13 +827,9 @@ class TensorflowConverter(OperationVisitor):
 
         return transpose_func
 
-    def visit_Unsqueeze(self, operation):
-        x_ = operation.x
-        if isinstance(x_, Operation):
-            x_ = self.visit(x_)
-        axes_ = operation.axes
-        if isinstance(axes_, Operation):
-            axes_ = self.visit(axes_)
+    def visit_Unsqueeze(self, operation: operations.Unsqueeze):
+        x_ = self.visit(operation.x)
+        axes_ = self.visit(operation.axes)
 
         @self._cached
         def unsqueeze_func(*inputs):
