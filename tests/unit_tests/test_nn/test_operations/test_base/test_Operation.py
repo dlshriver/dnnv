@@ -66,7 +66,7 @@ def test_from_onnx_Elu():
     assert op_from_onnx.alpha == 0.5
 
 
-def test_from_onnx_Elu():
+def test_from_onnx_Elu_unimplemented():
     input_op = Input(np.array([-1, 5]), np.dtype(np.float32))
 
     add_node = onnx.helper.make_node(
