@@ -207,7 +207,6 @@ class Slice(Operation):
 
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):
-        attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
         return cls(*inputs, name=onnx_node.name)
 
 
@@ -247,16 +246,6 @@ class Unsqueeze(Operation):
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):
         attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
-        if isinstance(inputs[0], np.ndarray):
-            if len(inputs) == 2:
-                axes = inputs[1]
-            else:
-                axes = attributes["axes"]
-            if not isinstance(axes, Operation):
-                a = inputs[0]
-                for axis in axes:
-                    a = np.expand_dims(a, axis)
-                return a
         if len(inputs) == 2:
             return cls(*inputs, name=onnx_node.name)
         axes = attributes["axes"]
