@@ -2,7 +2,7 @@ from copy import copy
 
 import numpy as np
 
-from ... import operations, OperationGraph
+from ... import OperationGraph, operations
 from ...analyzers import SplitAnalysis
 from .base import Simplifier
 
