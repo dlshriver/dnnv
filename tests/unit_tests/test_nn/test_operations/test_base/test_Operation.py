@@ -79,6 +79,20 @@ def test_from_onnx_Elu():
     assert str(excinfo.value) == "Unimplemented operation type: Fake"
 
 
+def test_from_onnx_Slice():
+    input_op = Input(np.array([-1, 5]), np.dtype(np.float32))
+
+    add_node = onnx.helper.make_node(
+        "Slice", inputs=["input"], outputs=["elu"], name="slice", starts=[0], ends=[1]
+    )
+    op_from_onnx = Operation.from_onnx(add_node, input_op)
+
+    assert type(op_from_onnx) is Slice
+    assert op_from_onnx.x is input_op
+    assert op_from_onnx.starts == [0]
+    assert op_from_onnx.ends == [1]
+
+
 def test_inputs():
     input_op_0 = Input((1, 4), np.dtype(np.float32))
     add_op = Add(input_op_0, np.ones((1, 4), dtype=np.float32))

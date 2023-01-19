@@ -208,7 +208,7 @@ class Slice(Operation):
     @classmethod
     def from_onnx(cls, onnx_node, *inputs):
         attributes = {a.name: as_numpy(a) for a in onnx_node.attribute}
-        return cls(*inputs, name=onnx_node.name)
+        return cls(*inputs, **attributes, name=onnx_node.name)
 
 
 class Tile(Operation):
