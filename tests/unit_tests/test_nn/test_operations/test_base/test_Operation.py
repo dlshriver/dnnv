@@ -83,7 +83,7 @@ def test_from_onnx_Slice():
     input_op = Input(np.array([-1, 5]), np.dtype(np.float32))
 
     add_node = onnx.helper.make_node(
-        "Slice", inputs=["input"], outputs=["elu"], name="slice", starts=[0], ends=[1]
+        "Slice", inputs=["input"], outputs=["slice"], name="slice", starts=[0], ends=[1]
     )
     op_from_onnx = Operation.from_onnx(add_node, input_op)
 
