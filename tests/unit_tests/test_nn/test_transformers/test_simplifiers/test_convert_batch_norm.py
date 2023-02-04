@@ -104,3 +104,49 @@ def test_convert_batch_norm_on_conv():
     y1 = op_graph(x)
     y2 = simplified_op_graph(x)
     assert np.allclose(y1, y2)
+
+
+def test_convert_batch_norm_default():
+    bn_size = 3
+    input_op = operations.Input((-1, 3, 5, 5), dtype=np.dtype(np.float64))
+    relu_op = operations.Relu(input_op)
+    bn_op = operations.BatchNormalization(
+        relu_op,
+        np.random.randn(bn_size).astype(input_op.dtype),
+        np.random.randn(bn_size).astype(input_op.dtype),
+        np.random.randn(bn_size).astype(input_op.dtype),
+        abs(np.random.randn(bn_size).astype(input_op.dtype)),
+    )
+    op_graph = OperationGraph([bn_op])
+    simplified_op_graph = simplify(op_graph, ConvertBatchNorm(op_graph))
+
+    assert simplified_op_graph.walk(
+        EnsureSupportVisitor([operations.Input, operations.Relu, operations.Conv])
+    )
+
+    x = np.random.randn(100, *input_op.shape[1:]).astype(input_op.dtype)
+    y1 = op_graph(x)
+    y2 = simplified_op_graph(x)
+    assert np.allclose(y1, y2)
+
+
+def test_convert_batch_norm_non_constant_inputs():
+    bn_size = 3
+    input_op = operations.Input((-1, 3, 5, 5), dtype=np.dtype(np.float64))
+    mean_op = operations.Input((3,), dtype=np.dtype(np.float64))
+    var_op = operations.Input((3,), dtype=np.dtype(np.float64))
+    bn_op = operations.BatchNormalization(
+        input_op,
+        np.random.randn(bn_size).astype(input_op.dtype),
+        np.random.randn(bn_size).astype(input_op.dtype),
+        mean_op,
+        var_op,
+    )
+    op_graph = OperationGraph([bn_op])
+    simplified_op_graph = simplify(op_graph, ConvertBatchNorm(op_graph))
+
+    assert simplified_op_graph.walk(OperationCounter())[0] == 4
+    assert simplified_op_graph.walk(
+        EnsureSupportVisitor([operations.Input, operations.BatchNormalization])
+    )
+    assert simplified_op_graph.output_operations[0] == bn_op
