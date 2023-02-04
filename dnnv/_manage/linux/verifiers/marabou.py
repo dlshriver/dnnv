@@ -77,7 +77,7 @@ if __name__ == "__main__":
 
 class MarabouInstaller(Installer):
     def run(self, env: Environment, dependency: Dependency):
-        commit_hash = "492c1b8c703c8a383f421468a104c34710e6d26d"
+        commit_hash = "663835df7b56be42af94b3d2723bf1b69494c0d5"
 
         cache_dir = env.cache_dir / f"marabou-{commit_hash}"
         cache_dir.mkdir(exist_ok=True, parents=True)
@@ -114,6 +114,7 @@ class MarabouInstaller(Installer):
                 ' "onnx>=1.8,<1.12"'
                 ' "onnxruntime>=1.7,<1.12"'
                 ' "protobuf<=3.20"'
+                ' "torch>=1.11"'
             ),
             f"cd {cache_dir}",
             f"if [ ! -e Marabou ]",
@@ -161,10 +162,10 @@ def install(env: Environment):
                     "cmake",
                     installer=GNUInstaller(
                         "cmake",
-                        "3.18.2",
+                        "3.25.2",
                         (
                             "https://github.com/Kitware/CMake/"
-                            "releases/download/v3.18.2/cmake-3.18.2.tar.gz"
+                            "releases/download/v3.25.2/cmake-3.25.2.tar.gz"
                         ),
                     ),
                     min_version="3.12.0",
