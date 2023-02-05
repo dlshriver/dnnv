@@ -78,6 +78,7 @@ class MNISTTests(unittest.TestCase):
         excluded_verifiers = {
             "bab",  # too slow
             "babsb",  # too slow
+            "marabou",  # inaccurate due to FP
             "mipverify",  # too slow
             "mipverify_HiGHS",  # too slow
             "planet",  # too slow
