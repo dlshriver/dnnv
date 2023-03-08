@@ -87,7 +87,7 @@ class VeriNetInstaller(Installer):
     def run(self, env: Environment, dependency: Dependency):
         name = "verinet"
         version = "1.0"
-        dnnv_version = "v0.5.0"
+        dnnv_version = "v0.6.0"
 
         cache_dir = env.cache_dir / f"{name}-{version}"
         cache_dir.mkdir(exist_ok=True, parents=True)

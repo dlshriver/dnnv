@@ -1,0 +1,22 @@
+; ACAS Xu property 1
+
+(declare-const X_0 Real)
+(declare-const X_1 Real)
+(declare-const X_2 Real)
+
+(declare-const Y_0 Real)
+(declare-const Y_1 Real)
+(declare-const Y_2 Real)
+
+(assert (<= X_0 1))
+(assert (>= X_0 0.5))
+
+(assert (<= X_1 0.5))
+(assert (>= X_1 0))
+
+(assert (<= X_2 0))
+(assert (>= X_2 -0.5))
+
+(assert (>= Y_0 1))
+(assert (<= Y_1 2))
+(assert (<= Y_1 Y_2))

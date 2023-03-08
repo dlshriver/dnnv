@@ -6,162 +6,235 @@ Author: Patrick Henriksen <patrick@henriksen.as>
 """
 
 
-from typing import Callable
+from copy import deepcopy
 
 import torch
 import torch.nn as nn
+import torch.onnx as tonnx
 
 
+# noinspection PyTypeChecker
 class VeriNetNN(nn.Module):
 
     """
-    The torch model used in VeriNet.
+    The torch _model used in VeriNet.
 
-    The preferred way of creating a neural network for VeriNet is to directly use this class by passing a list
-    with the layers/ activation functions to init.
-
-    Subclassing is also possible; however, the self.layers, self.logits and the forward function are essential
-    for the verification process and should not be altered.
+    The preferred way of creating a neural network for VeriNet is to save the _model
+    in onnx format and use the load() function of this class.
     """
 
-    def __init__(self, layers: list, out_activation: Callable=None, use_gpu: bool=False):
+    def __init__(self, nodes: list, use_gpu: bool = False):
 
         """
         Args:
-            layers          : A list with the layers/ activation functions of the model.
-            out_activation  : The activation function applied to the output. Any activation function can be used,
-                              however all verification is done on the logits, the values before this function is
-                              applied
-            use_gpu         : If true, and a GPU is available, the GPU is used, else the CPU is used
-
+            nodes:
+                A list of VeriNetNNNodes
+            use_gpu:
+                If true, and a GPU is available, the GPU is used, else the CPU is used
         """
 
         super().__init__()
-        self.layers = nn.ModuleList(self._flatten_layers(layers))
-        self.out_activation = out_activation
-        self.logits = None
-        self.device = None
 
-        self._set_device(use_gpu=use_gpu)
-
-    def _flatten_layers(self, layers_in: list) -> list:
-
-        """
-        Removes all sequential objects from self.layers and returns the content as a list.
-
-        Args:
-            layers_in: The torch.nn layer/activation function
-        Returns:
-            A list with all objects in layers_in, where nn.Sequential objects are removed and the contents are added
-            to the list instead.
-        """
-
-        layers_out = []
-
-        for layer in layers_in:
-            layers_out += self._flatten_layers_rec(layer)
-
-        return layers_out
-
-    def _flatten_layers_rec(self, layer) -> list:
-
-        """
-        Recursively iterating through nn.Sequential objects and returning all content as a list.
-
-        Args:
-            layer: The torch.nn layer/activation function
-        Returns:
-            If layer is not a nn.Sequential, [layer] is returned. Otherwise the content of the Sequential object is
-            recursively extracted and a list with all the content is returned.
-        """
+        self.nodes = nodes
 
         layers = []
+        for node in nodes:
+            layers.append(node.op)
 
-        if isinstance(layer, nn.Sequential):
-            for child in layer.children():
-                layers += self._flatten_layers_rec(child)
-        else:
-            layers.append(layer)
+        self.layers = nn.ModuleList(layers)
+        self.uses_gpu = None
+        self.set_device(use_gpu=use_gpu)
 
-        return layers
+    @property
+    def uses_64bit(self):
 
-    def _set_device(self, use_gpu: bool):
+        """
+        Returns true if at least one parameter uses double instead of float.
+        """
+
+        for param in self.parameters():
+            if isinstance(param, torch.DoubleTensor):
+                return True
+
+        return False
+
+    # noinspection PyAttributeOutsideInit
+    def set_device(self, use_gpu: bool):
 
         """
         Initializes the gpu/ cpu
 
         Args:
-            use_gpu: If true, and a GPU is available, the GPU is used, else the CPU is used
+            use_gpu:
+                If true, and a GPU is available, the GPU is used, else the CPU is used
         """
+
+        self.uses_gpu = use_gpu
 
         if use_gpu and torch.cuda.is_available():
             self.device = torch.device('cuda')
         else:
             self.device = torch.device('cpu')
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        self.to(device=self.device)
+
+    def forward(self, x: torch.Tensor, cleanup: bool = True) -> torch.Tensor:
 
         """
         Forward calculations for the network.
 
-        Each object in the self.layers list is applied sequentially.
-
         Args:
-            x   : The input, should be BxN for FC or BxNxHxW for Conv2d, where B is the batch size, N is the number
-                  of nodes, H his the height and W is the width.
+            x:
+                The input, should be BxN for FC or BxNxHxW for Conv2d, where B is the
+                batch size, N is the number of nodes, H his the height and W is the
+                width.
+            cleanup:
+                If true, intermediate results are deleted when not needed anymore.
 
         Returns:
-            The network output, of same shape as the input
+            The network output, of same shape as the input.
         """
 
-        if len(x.shape) == 1:
+        if len(x.shape) != 2 and len(x.shape) != 4:
+            raise ValueError("Input should have 2 or 4 dimensions where the first dimension is the batch")
 
-            # Add batch dimension for FC input
-            batch_size = 1
-            x = x.view(1, -1)
+        self.nodes[0].value = x
 
-        elif len(x.shape) == 3:
+        for node_num, node in enumerate(self.nodes[1:]):
+            node.input_value = [self.nodes[i].value.clone() for i in node.connections_from]
+            node.value = node(node.input_value)
 
-            # Add batch dimension for conv2d input
-            batch_size = 1
-            x = x.view(1, *x.shape)
+            if cleanup:
+                self.cleanup(node_num)
 
-        else:
-            batch_size = x.shape[0]
+        return [node.value for node in self.nodes if len(node.connections_to) == 0]
 
-        for layer in self.layers:
-            if isinstance(layer, nn.Linear):
-                x = x.reshape(batch_size, -1)
-            x = layer(x)
-
-        x = x.reshape(batch_size, -1)
-
-        self.logits = x.clone()
-
-        if self.out_activation is not None:
-            return self.out_activation(x)
-        else:
-            return x
-
-    def save(self, path: str):
+    def cleanup(self, node_num: int):
 
         """
-        Saves the network to the given path in torch.save format.
+        Removes computed values from all nodes that do not have a connection
+        past node_num.
 
         Args:
-            path: The path
+            node_num:
+                The number of the current node.
+        """
+
+        for node in self.nodes:
+
+            node.input_value = None
+
+            if len(node.connections_to) == 0:  # Output node
+                continue
+
+            remaining_connects = [i for i in node.connections_to if i > node_num]
+
+            if len(remaining_connects) == 0:
+                node.value = None
+
+    # noinspection PyTypeChecker
+    def save(self, dummy_in: torch.Tensor, path: str = "../../resources/networks/"):
+
+        """
+        Saves the _model to onnx format.
+
+        Args:
+            dummy_in:
+                A dummy tensor of the same shape as the real inputs. For example,
+                if the input has shape (3, 32, 32) use:
+
+                torch.randn(1, 3, 32, 32).to(device=self.device)
+
+            path:
+                The save path.
+        """
+
+        tonnx.export(self, dummy_in, path, verbose=False, opset_version=9)
+
+    @staticmethod
+    def load_onnx(path: str):
+
+        """
+        Loads an onnx _model.
+
+        Args:
+            path: The path of the onnx _model.
+        Returns:
+            The VeriNetNN object
+        """
+
+        from verinet.parsers.onnx_parser import ONNXParser
+
+        parser = ONNXParser(path)
+        return parser.to_pytorch()
+
+    def save_sd(self, path: str):
+
+        """
+        Saves the models state dict.
+
+        Args:
+            path:
+                The save path.
         """
 
         torch.save(self.state_dict(), path)
 
-    # noinspection PyUnresolvedReferences
-    def load(self, path: str):
+    def load_sd(self, path: str):
 
         """
-        Loads a network network in torch.save format from the given path
+        Loads the models state dict.
 
         Args:
-             path: The path
+            path:
+                The save path.
         """
 
-        self.load_state_dict(torch.load(path, map_location='cpu'))
+        self.load_state_dict(torch.load(path))
+
+
+class VeriNetNNNode:
+
+    """
+    This class stores a pytorch operation as well as the connected nodes and computed
+    values.
+    """
+
+    def __init__(self, idx: int, op: torch.nn, connections_from: list = None, connections_to: list = None):
+
+        """
+        Args:
+            idx:
+                The index of the node
+            op:
+                The torch.nn operation.
+            connections_from:
+                The indices of nodes that are connected to this node.
+            connections_to:
+                The indices of nodes this node is connected to.
+        """
+
+        self.idx = idx
+        self.op = op
+
+        self.connections_to = connections_to if connections_to is not None else []
+        self.connections_from = connections_from if connections_from is not None else []
+
+        self.value = None
+        self.input_value = None
+
+    def __call__(self, x: torch.Tensor):
+        return self.op(*x)
+
+    def __str__(self):
+        return f"VeriNetNNNode(idx: {self.idx}, op: {self.op}, " \
+               f"to: {self.connections_to}, from: {self.connections_from})"
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __copy__(self):
+        return VeriNetNNNode(self.idx, deepcopy(self.op), self.connections_from.copy(), self.connections_to.copy())
+
+    def copy(self):
+        return self.__copy__()
