@@ -7,18 +7,11 @@ from ...errors import InstallError, UninstallError
 from ..environment import (
     Dependency,
     Environment,
-    GurobiInstaller,
-    HeaderDependency,
     Installer,
-    LibraryDependency,
     ProgramDependency,
 )
 
 WRAPPED_PYTHON_TEMPLATE = """#!/bin/bash
-
-export GUROBI_HOME={gurobi_home}
-export PATH={gurobi_home}/bin:$PATH
-export LD_LIBRARY_PATH={gurobi_home}/lib:$LD_LIBRARY_PATH
 {python_venv}/bin/python $@
 """
 
@@ -98,9 +91,6 @@ class VeriNetInstaller(Installer):
         verifier_venv_path = env.env_dir / "verifier_virtualenvs" / name
         verifier_venv_path.parent.mkdir(exist_ok=True, parents=True)
 
-        libgurobi_path = LibraryDependency("libgurobi91").get_path(env)
-        assert libgurobi_path is not None
-        gurobi_path = libgurobi_path.parent.parent
 
         python_major_version, python_minor_version = sys.version_info[:2]
         python_version = f"python{python_major_version}.{python_minor_version}"
@@ -121,19 +111,26 @@ class VeriNetInstaller(Installer):
             "pip install --upgrade pip",
             (
                 "pip install"
-                ' "numba>=0.50,<0.60"'
-                ' "onnx>=1.8,<1.11"'
-                ' "torch>=1.8,<1.9"'
-                ' "torchvision>=0.9,<0.10"'
+                ' "numpy"'
+                ' "scipy"'
+                ' "setuptools"'
+                ' "torch>=1.8"'
+                ' "torchvision>=0.9"'
+                ' "pillow"'
+                ' "psutil"'
+                ' "onnx"'
+                ' "tqdm"'
+                ' "xpress"'
+                ' "matplotlib"'
+                ' "netron"'
             ),
-            f"cd {gurobi_path}",
-            "python setup.py install",
             f"cd {cache_dir}",
             f"rm -rf {name}",
-            f"curl -O -L {dnnv_url}",
+            # f"curl -O -L {dnnv_url}",
+            f"tar -czvf {dnnv_version}.tar.gz /home/marcel/projects/dnnv/third_party/VeriNet", # TODO: this should be downloaded
             (
                 f"tar xf {dnnv_version}.tar.gz"
-                " --wildcards */third_party/VeriNet --strip-components=2"
+                " --strip-components=2"
             ),
             f"cp -r VeriNet/src {site_packages_dir}",
         ]
@@ -146,7 +143,6 @@ class VeriNetInstaller(Installer):
             f.write(
                 WRAPPED_PYTHON_TEMPLATE.format(
                     python_venv=verifier_venv_path,
-                    gurobi_home=envvars.get("GUROBI_HOME", "."),
                 )
             )
         (verifier_venv_path / "bin" / "wrappedpython").chmod(0o700)
@@ -156,16 +152,10 @@ class VeriNetInstaller(Installer):
 
 
 def install(env: Environment):
-    gurobi_installer = GurobiInstaller("9.1.2")
     env.ensure_dependencies(
         ProgramDependency(
             "verinet",
             installer=VeriNetInstaller(),
-            dependencies=(
-                HeaderDependency("gurobi_c.h", installer=gurobi_installer),
-                LibraryDependency("libgurobi91", installer=gurobi_installer),
-                ProgramDependency("grbgetkey", installer=gurobi_installer),
-            ),
         )
     )
 
