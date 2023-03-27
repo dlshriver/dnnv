@@ -19,10 +19,10 @@ RUNNER_TEMPLATE = """#!{python_venv}/bin/wrappedpython
 import argparse
 import numpy as np
 
-from src.algorithm.verification_objectives import LocalRobustnessObjective
-from src.algorithm.verinet import VeriNet
-from src.algorithm.verinet_util import Status
-from src.data_loader.onnx_parser import ONNXParser
+from verinet.verification.objective import Objective
+from verinet.verification.verinet import VeriNet
+from verinet.verification.verifier_util import Status
+from verinet.parsers.onnx_parser import ONNXParser
 
 
 def parse_args():
@@ -33,8 +33,8 @@ def parse_args():
     parser.add_argument("-o", "--output", type=str)
 
     parser.add_argument("-p", "--max_procs", "--procs", type=int, default=1)
+    parser.add_argument('-g', "--use_gpu", "--gpu", default=False, action='store_true')
     parser.add_argument("-T", "--timeout", type=float, default=24 * 60 * 60)
-    parser.add_argument("-v", "--verbose", action="store_true")
 
     parser.add_argument("--no_split", action="store_true")
     return parser.parse_args()
@@ -45,15 +45,13 @@ def main(args):
     model = onnx_parser.to_pytorch()
 
     input_bounds = np.load(args.input_bounds)
-    output_bounds = np.array([[0.0, np.finfo(np.float32).max], [0.0, 0.0]])
 
-    solver = VeriNet(model, max_procs=args.max_procs)
-    objective = LocalRobustnessObjective(
-        correct_class=0, input_bounds=input_bounds, output_bounds=output_bounds
-    )
+    solver = VeriNet(max_procs=args.max_procs, use_gpu=args.use_gpu)
+    objective = Objective(input_bounds, output_size=1, model=model)
+    objective.add_constraints(objective.output_vars[0] == True) 
 
     solver.verify(
-        objective, timeout=args.timeout, verbose=args.verbose, no_split=args.no_split
+        objective, timeout=args.timeout
     )
 
     if args.output is not None:
@@ -80,7 +78,6 @@ class VeriNetInstaller(Installer):
     def run(self, env: Environment, dependency: Dependency):
         name = "verinet"
         version = "1.0"
-        dnnv_version = "v0.6.0"
 
         cache_dir = env.cache_dir / f"{name}-{version}"
         cache_dir.mkdir(exist_ok=True, parents=True)
@@ -95,11 +92,6 @@ class VeriNetInstaller(Installer):
         python_major_version, python_minor_version = sys.version_info[:2]
         python_version = f"python{python_major_version}.{python_minor_version}"
         site_packages_dir = f"{verifier_venv_path}/lib/{python_version}/site-packages/"
-
-        dnnv_url = (
-            "https://github.com/dlshriver/DNNV/"
-            f"archive/refs/tags/{dnnv_version}.tar.gz"
-        )
 
         envvars = env.vars()
         commands = [
@@ -123,16 +115,18 @@ class VeriNetInstaller(Installer):
                 ' "xpress"'
                 ' "matplotlib"'
                 ' "netron"'
+                ' "pipenv"'
+                #' "dnnv"' # VeriNet uses dnnv for network simplification, so it has to be installed in the venv as well
+                # However, VeriNet tries to use dnnv.nn which fails because "module 'dnnv' has no attribute 'nn'" if
+                # this is fixed we can re-add this line so that VeriNet can make use of dnnv
             ),
             f"cd {cache_dir}",
-            f"rm -rf {name}",
-            # f"curl -O -L {dnnv_url}",
-            f"tar -czvf {dnnv_version}.tar.gz /home/marcel/projects/dnnv/third_party/VeriNet", # TODO: this should be downloaded
-            (
-                f"tar xf {dnnv_version}.tar.gz"
-                " --strip-components=2"
-            ),
-            f"cp -r VeriNet/src {site_packages_dir}",
+            f"rm -rf VeriNet",
+            f"git clone https://github.com/vas-group-imperial/VeriNet",
+            f"cd VeriNet",
+            f"rm Pipfile.lock", # The Pipfile.lock has package versions that are not distributed anymore
+            f"pipenv install --skip-lock",
+            f"cp -r verinet {site_packages_dir}",
         ]
         install_script = "; ".join(commands)
         proc = sp.run(install_script, shell=True, env=envvars)
