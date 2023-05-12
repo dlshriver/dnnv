@@ -47,8 +47,10 @@ def main(args):
     input_bounds = np.load(args.input_bounds)
 
     solver = VeriNet(max_procs=args.max_procs, use_gpu=args.use_gpu)
-    objective = Objective(input_bounds, output_size=1, model=model)
-    objective.add_constraints(objective.output_vars[0] == True) 
+    objective = Objective(input_bounds, output_size=2, model=model)
+    objective.add_constraints(objective.output_vars[0] >= 5e-7)
+    objective.add_constraints(objective.output_vars[1] <= 5e-7)
+    objective.add_constraints(objective.output_vars[1] >= -5e-7)
 
     solver.verify(
         objective, timeout=args.timeout
@@ -57,7 +59,7 @@ def main(args):
     if args.output is not None:
         np.save(
             args.output,
-            (str(solver.status).split(".")[-1], solver.counter_example),
+            np.array([str(solver.status).split(".")[-1], solver.counter_example], dtype=object),
         )
     print(str(solver.status).split(".")[-1])
     if solver.counter_example is not None:
