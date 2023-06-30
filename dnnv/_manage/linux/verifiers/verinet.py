@@ -118,9 +118,7 @@ class VeriNetInstaller(Installer):
                 ' "matplotlib"'
                 ' "netron"'
                 ' "pipenv"'
-                #' "dnnv"' # VeriNet uses dnnv for network simplification, so it has to be installed in the venv as well
-                # However, VeriNet tries to use dnnv.nn which fails because "module 'dnnv' has no attribute 'nn'" if
-                # this is fixed we can re-add this line so that VeriNet can make use of dnnv
+                ' "dnnv"' # VeriNet uses dnnv for network simplification, so it has to be installed in the venv as well
             ),
             f"cd {cache_dir}",
             f"rm -rf VeriNet",
