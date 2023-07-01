@@ -102,6 +102,8 @@ class VeriNetInstaller(Installer):
             f"rm -rf {name}",
             f"python -m venv {name}",
             f". {name}/bin/activate",
+            f"pip install --upgrade pip",
+            f"pip install pipenv",
             f"cd {cache_dir}",
             f"rm -rf VeriNet",
             f"git clone https://github.com/vas-group-imperial/VeriNet",
