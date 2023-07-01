@@ -102,30 +102,12 @@ class VeriNetInstaller(Installer):
             f"rm -rf {name}",
             f"python -m venv {name}",
             f". {name}/bin/activate",
-            "pip install --upgrade pip",
-            (
-                "pip install"
-                ' "numpy"'
-                ' "scipy"'
-                ' "setuptools"'
-                ' "torch>=1.8"'
-                ' "torchvision>=0.9"'
-                ' "pillow"'
-                ' "psutil"'
-                ' "onnx"'
-                ' "tqdm"'
-                ' "xpress"'
-                ' "matplotlib"'
-                ' "netron"'
-                ' "pipenv"'
-                ' "dnnv"' # VeriNet uses dnnv for network simplification, so it has to be installed in the venv as well
-            ),
             f"cd {cache_dir}",
             f"rm -rf VeriNet",
             f"git clone https://github.com/vas-group-imperial/VeriNet",
             f"cd VeriNet",
-            f"rm Pipfile.lock", # The Pipfile.lock has package versions that are not distributed anymore
             f"pipenv install --skip-lock",
+            f"pipenv install xpress=='8.13.4'", # we need new packages, but xpress must be of a specific version
             f"cp -r verinet {site_packages_dir}",
         ]
         install_script = "; ".join(commands)
