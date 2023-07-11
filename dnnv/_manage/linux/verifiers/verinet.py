@@ -43,14 +43,13 @@ def parse_args():
 def main(args):
     onnx_parser = ONNXParser(args.model)
     model = onnx_parser.to_pytorch()
-
     input_bounds = np.load(args.input_bounds)
 
     solver = VeriNet(max_procs=args.max_procs, use_gpu=args.use_gpu)
     objective = Objective(input_bounds, output_size=2, model=model)
-    objective.add_constraints(objective.output_vars[0] >= 5e-7)
-    objective.add_constraints(objective.output_vars[1] <= 5e-7)
-    objective.add_constraints(objective.output_vars[1] >= -5e-7)
+    objective.add_constraints(objective.output_vars[0] >= 1e-5)
+    objective.add_constraints(objective.output_vars[1] <= 1e-5)
+    objective.add_constraints(objective.output_vars[1] >= -1e-5)
 
     solver.verify(
         objective, timeout=args.timeout
@@ -102,14 +101,11 @@ class VeriNetInstaller(Installer):
             f"rm -rf {name}",
             f"python -m venv {name}",
             f". {name}/bin/activate",
-            f"pip install --upgrade pip",
-            f"pip install pipenv",
             f"cd {cache_dir}",
             f"rm -rf VeriNet",
             f"git clone https://github.com/vas-group-imperial/VeriNet",
             f"cd VeriNet",
-            f"pipenv install --skip-lock",
-            f"pipenv install xpress=='8.13.4'", # we need new packages, but xpress must be of a specific version
+            f"pipenv install",
             f"cp -r verinet {site_packages_dir}",
         ]
         install_script = "; ".join(commands)
